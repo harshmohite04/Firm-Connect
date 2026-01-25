@@ -270,6 +270,7 @@ const CaseChat: React.FC = () => {
                                 </div>
                             </div>
                         )}
+                        <div className="h-8 w-full"></div>
                         <div ref={messagesEndRef} />
                     </div>
 
