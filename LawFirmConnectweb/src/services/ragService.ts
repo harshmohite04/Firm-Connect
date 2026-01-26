@@ -44,6 +44,16 @@ const ragService = {
     }
   },
 
+  getDocumentStatuses: async (caseId: string) => {
+    try {
+      const response = await axios.get(`${RAG_API_URL}/documents/${caseId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Fetch document statuses failed:", error);
+      return [];
+    }
+  },
+
   getHistory: async (caseId: string) => {
     try {
       const response = await axios.get(`${RAG_API_URL}/chat/history/${caseId}`);

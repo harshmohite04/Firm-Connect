@@ -11,7 +11,7 @@ from neo4j_graphrag.generation import GraphRAG
 from neo4j_graphrag.llm import OllamaLLM
 # from neo4j_graphrag.integrations.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetriever
-from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
 import os
 import requests
 from neo4j_graphrag.embeddings.ollama import OllamaEmbeddings
@@ -117,13 +117,57 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
         ]
     )
 
-    retriever = QdrantNeo4jRetriever(
-        driver=driver,
+    # Custom Retriever to Enforce Filtering
+    class CustomRetriever(QdrantNeo4jRetriever):
+        def __init__(self, client, collection, embedder, q_filter):
+            # Initialize parent to satisfy strict typing/validation if needed
+            # We explicitly pass None for driver if not used in custom logic, but parent might require it.
+            # However, QdrantNeo4jRetriever.__init__ requires driver.
+            # We can pass the global 'driver' available in scope.
+            super().__init__(
+                driver=driver, 
+                client=client, 
+                collection_name=collection, 
+                embedder=embedder,
+                id_property_external="chunk_id",
+                id_property_neo4j="id"
+            )
+            self.q_filter = q_filter
+            self.collection = collection # Ensure this is set
+            self.client = client
+            self.embedder = embedder
+            
+        def search(self, query_text: str, top_k: int = 5, **kwargs):
+            # 1. Embed
+            query_vector = self.embedder.embed_query(query_text)
+            
+            # 2. Search Qdrant with Filter
+            # Using query_points as 'search' might be deprecated or missing in this client version
+            result = self.client.query_points(
+                collection_name=self.collection,
+                query=query_vector,
+                query_filter=self.q_filter,
+                limit=top_k,
+                with_payload=True
+            )
+            points = result.points
+            
+            # 3. Format Results
+            from neo4j_graphrag.types import RetrieverResult
+            items = []
+            for point in points:
+                # Payload contains 'text' from ingestion
+                content = point.payload.get("text", "")
+                src = point.payload.get("source", "")
+                items.append(RetrieverResultItem(content=content, metadata={"score": point.score, "source": src}))
+                
+            return RetrieverResult(items=items)
+
+    retriever = CustomRetriever(
         client=qdrant,
-        collection_name=COLLECTION,
-        id_property_external="chunk_id",
-        id_property_neo4j="id",
+        collection=COLLECTION,
         embedder=embedder,
+        q_filter=qdrant_filter
     )
 
     # We need to manually inject the filter because the current wrapper init might not expose it easily 
@@ -155,6 +199,16 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
     if history:
          for msg in history:
              formatted_history.append(LLMMessage(role=msg["role"], content=msg["content"]))
+
+    # Dynamic Top-K Adjustment
+    # If the user asks for a "report", "summary", or "detailed", we need MORE context.
+    lower_query = query.lower()
+    if any(keyword in lower_query for keyword in ["report", "summary", "detailed", "everything", "full"]):
+        print("[INFO] Detailed query detected. Boosting top_k to 50.")
+        top_k = max(top_k, 50)
+    else:
+        # Minimum baseline for good context
+        top_k = max(top_k, 15)
 
     try:
         result = rag.search(
