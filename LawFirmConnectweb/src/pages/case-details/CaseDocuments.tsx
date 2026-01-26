@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService from '../../services/caseService';
 import ragService from '../../services/ragService';
@@ -78,6 +78,27 @@ const CaseDocuments: React.FC = () => {
     
     // Viewer State
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
+    const [aiStatuses, setAiStatuses] = useState<Record<string, string>>({});
+
+    useEffect(() => {
+        if (id) {
+            fetchAIStatuses();
+        }
+    }, [id]);
+
+    const fetchAIStatuses = async () => {
+        if (!id) return;
+        try {
+            const statuses = await ragService.getDocumentStatuses(id);
+            const statusMap: Record<string, string> = {};
+            statuses.forEach((s: any) => {
+                statusMap[s.filename] = s.status;
+            });
+            setAiStatuses(statusMap);
+        } catch (e) {
+            console.error("Failed to fetch AI statuses", e);
+        }
+    };
 
     const uploadCategories = ['Case Filing', 'Evidence', 'Correspondence', 'General'];
 
@@ -139,6 +160,7 @@ const CaseDocuments: React.FC = () => {
             setCaseData((prev: any) => ({ ...prev, documents: results }));
             
             alert("All documents uploaded successfully!");
+            fetchAIStatuses();
             setIsUploadModalOpen(false);
             setPendingFiles([]);
         } catch (error) {
@@ -267,6 +289,23 @@ const CaseDocuments: React.FC = () => {
                                         <h3 className="text-sm font-bold text-slate-900 truncate" title={fileName}>{fileName}</h3>
                                         <p className="text-xs text-slate-500">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
                                     </div>
+                                    <div className="mb-2">
+                                         {aiStatuses[doc.fileName] === 'Ready' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                                AI Ready
+                                            </span>
+                                        )}
+                                        {aiStatuses[doc.fileName] === 'Processing' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                Processing
+                                            </span>
+                                        )}
+                                        {aiStatuses[doc.fileName] === 'Failed' && (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                                AI Failed
+                                            </span>
+                                        )}
+                                    </div>
                                     <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-100">
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
                                             {doc.category}
@@ -316,6 +355,21 @@ const CaseDocuments: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold text-slate-900 mb-0.5">{fileName}</p>
+                                                        {aiStatuses[fileName] === 'Ready' && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                                                AI Ready
+                                                            </span>
+                                                        )}
+                                                         {aiStatuses[fileName] === 'Processing' && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                                Processing
+                                                            </span>
+                                                        )}
+                                                        {aiStatuses[fileName] === 'Failed' && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                                                AI Failed
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>

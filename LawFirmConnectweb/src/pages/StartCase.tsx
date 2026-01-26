@@ -11,11 +11,7 @@ const CheckIcon = () => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
 )
-const UploadIcon = () => (
-    <svg className="w-12 h-12 text-slate-300 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-    </svg>
-)
+
 const FamilyIcon = () => (
     <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -207,13 +203,12 @@ const StartCase: React.FC = () => {
                 {/* Progress Steps */}
                 <div className="flex items-center justify-between mb-10 relative">
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-200 -z-10"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 transition-all duration-300 -z-10" style={{ width: `${((step - 1) / 3) * 100}%` }}></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 transition-all duration-300 -z-10" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
 
                     {[
                         { num: 1, label: 'Case Information' },
-                        { num: 2, label: 'Upload Documents' },
-                        { num: 3, label: 'Team Formation' },
-                        { num: 4, label: 'Review & Submit' }
+                        { num: 2, label: 'Team Formation' },
+                        { num: 3, label: 'Review & Submit' }
                     ].map((s) => (
                         <div key={s.num} className="flex items-center gap-3 bg-slate-50 px-2">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${step >= s.num ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
@@ -282,72 +277,8 @@ const StartCase: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Step 2: Upload Documents */}
+                            {/* Step 2: Team Formation (Renumbered) */}
                             {step === 2 && (
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-slate-900">Case Documents</h3>
-                                    </div>
-
-                                    <div
-                                        className="border-2 border-dashed border-slate-200 rounded-xl p-10 text-center hover:bg-slate-50 transition-colors cursor-pointer group"
-                                        onClick={() => document.getElementById('file-upload')?.click()}
-                                    >
-                                        <input
-                                            type="file"
-                                            id="file-upload"
-                                            multiple
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                if (e.target.files) {
-                                                    setFormData({
-                                                        ...formData,
-                                                        files: [...formData.files, ...Array.from(e.target.files)]
-                                                    });
-                                                }
-                                            }}
-                                        />
-                                        <div className="group-hover:scale-110 transition-transform duration-300">
-                                            <UploadIcon />
-                                        </div>
-                                        <p className="mt-4 text-sm font-bold text-slate-900">Click to upload <span className="font-normal text-slate-500">or drag and drop</span></p>
-                                        <p className="text-xs text-slate-400 mt-1">PDF, DOCX, JPG (MAX. 10MB)</p>
-                                    </div>
-
-                                    {formData.files.length > 0 && (
-                                        <div className="space-y-2">
-                                            {formData.files.map((file, index) => (
-                                                <div key={index} className="flex items-center justify-between bg-slate-50 p-3 rounded text-sm">
-                                                    <span className="truncate">{file.name}</span>
-                                                    <button
-                                                        onClick={() => setFormData({
-                                                            ...formData,
-                                                            files: formData.files.filter((_, i) => i !== index)
-                                                        })}
-                                                        className="text-red-500 font-bold ml-2"
-                                                    >
-                                                        Remove
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    <div className="bg-blue-50 p-4 rounded-lg flex gap-3">
-                                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1 a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
-                                        <p className="text-xs text-blue-800">
-                                            Uploading documents now helps us review your case faster. You can also upload them later in the case details portal.
-                                        </p>
-                                    </div>
-                                    </div>
-
-                            )}
-
-                            {/* Step 3: Team Formation */}
-                            {step === 3 && (
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 mb-2">
                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
@@ -583,8 +514,8 @@ const StartCase: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Step 4: Review */}
-                            {step === 4 && (
+                                    {/* Step 3: Review (Renumbered) */}
+                            {step === 3 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
@@ -616,34 +547,19 @@ const StartCase: React.FC = () => {
                                                     {formData.teamType === 'team' && <span className="text-slate-500 font-normal text-sm">({formData.teamMembers.length} members invited)</span>}
                                                 </div>
                                             </div>
-                                            <button onClick={() => setStep(3)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                            <button onClick={() => setStep(2)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
                                         </div>
                                         <div>
                                             <p className="text-sm text-slate-700 leading-relaxed">{formData.description}</p>
                                         </div>
-                                        {formData.files.length > 0 && (
-                                            <div className="border-b border-slate-200 pb-4">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <p className="text-xs font-bold text-slate-500 uppercase">Documents ({formData.files.length})</p>
-                                                    <button onClick={() => setStep(2)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
-                                                </div>
-                                                <div className="space-y-1">
-                                                    {formData.files.map((file, idx) => (
-                                                        <p key={idx} className="text-sm text-slate-900 flex items-center gap-2">
-                                                            <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                                                            {file.name}
-                                                        </p>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
+                                        
                                         <div className="border-t border-slate-200 pt-4">
                                             <div className="flex justify-between">
                                                 <div>
                                                     <p className="text-xs font-bold text-slate-500 uppercase">Team Type</p>
                                                     <p className="font-bold text-slate-900 capitalize">{formData.teamType}</p>
                                                 </div>
-                                                <button onClick={() => setStep(3)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                                <button onClick={() => setStep(2)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
                                             </div>
 
                                             <div className="mt-4">
@@ -702,7 +618,7 @@ const StartCase: React.FC = () => {
                                         Back
                                     </button>
                                 )}
-                                {step < 4 ? (
+                                {step < 3 ? (
                                     <button 
                                         onClick={handleNext}
                                         disabled={!formData.title || !formData.category || !formData.description}

@@ -5,6 +5,7 @@ from typing import List, Optional
 import shutil
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 from pymongo import MongoClient
 
 from rag.rag import ask
@@ -18,10 +19,12 @@ app = FastAPI(
 )
 
 # ---------- MONGO DB ----------
+# Dependencies updated
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["lawfirm"]
 chat_collection = db["chat_history"]
+document_status_collection = db["document_status"]
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -37,7 +40,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     caseId: str
-    top_k: int = 5
+    top_k: int = 15
 
 class ContextItem(BaseModel):
     content: str
@@ -162,22 +165,52 @@ def chat(request: ChatRequest):
 @app.post("/ingest")
 async def ingest_file(file: UploadFile = File(...), caseId: str = Form(...)):
     try:
+        # Set status to Processing
+        document_status_collection.update_one(
+            {"case_id": caseId, "filename": file.filename},
+            {"$set": {"status": "Processing", "filename": file.filename, "case_id": caseId, "last_updated": datetime.utcnow()}},
+            upsert=True
+        )
+
         # Save file locally
         file_location = f"documents/{file.filename}"
         with open(file_location, "wb+") as file_object:
             shutil.copyfileobj(file.file, file_object)
             
-        # Read content
-        with open(file_location, "r", encoding="utf-8") as f:
-            text = f.read()
+        # Read content using loader
+        from ingestion.loader import parse_file
+        text = parse_file(file_location)
+
+        if not text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from file or file is empty.")
 
         # Ingest
         ingest_document(text, source_name=file.filename, case_id=caseId)
         
+        # Set status to Ready
+        document_status_collection.update_one(
+            {"case_id": caseId, "filename": file.filename},
+            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+        )
+        
         return {"status": "success", "filename": file.filename, "caseId": caseId}
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error during ingestion: {e}")
+        # Set status to Failed
+        document_status_collection.update_one(
+            {"case_id": caseId, "filename": file.filename},
+            {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
+        )
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/documents/{caseId}")
+def get_documents_status(caseId: str):
+    docs = list(document_status_collection.find({"case_id": caseId}, {"_id": 0}))
+    return docs
 
 
 @app.get("/health")
