@@ -174,3 +174,50 @@ if __name__ == "__main__":
         text = f.read()
 
     ingest_document(text, source_name="sample1.txt", case_id=case_id_arg)
+
+
+# ------------------ DELETE DOCUMENT ------------------
+def delete_document(case_id: str, filename: str):
+    """
+    Deletes a document from both Neo4j and Qdrant based on case_id and filename.
+    """
+    print(f"\n=== Deleting: {filename} for Case: {case_id} ===")
+
+    # 1. Delete from Neo4j
+    # We match chunks that have BOTH caseId and source
+    query = """
+    MATCH (c:Chunk {caseId: $case_id, source: $filename})
+    DETACH DELETE c
+    """
+    try:
+        with driver.session() as s:
+            s.run(query, case_id=case_id, filename=filename)
+        print("[INFO] Deleted chunks from Neo4j.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete from Neo4j: {e}")
+
+    # 2. Delete from Qdrant
+    # We delete points where payload.case_id == case_id AND payload.source == filename
+    try:
+        qdrant.delete(
+            collection_name=QDRANT_COLLECTION,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="case_id",
+                            match=models.MatchValue(value=case_id),
+                        ),
+                        models.FieldCondition(
+                            key="source",
+                            match=models.MatchValue(value=filename),
+                        ),
+                    ]
+                )
+            ),
+        )
+        print("[INFO] Deleted points from Qdrant.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete from Qdrant: {e}")
+
+    print("[DONE] Deletion completed!")

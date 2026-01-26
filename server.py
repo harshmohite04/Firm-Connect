@@ -9,7 +9,7 @@ from datetime import datetime
 from pymongo import MongoClient
 
 from rag.rag import ask
-from ingestion.injector import ingest_document
+from ingestion.injector import ingest_document, delete_document
 
 load_dotenv()
 
@@ -40,7 +40,17 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     caseId: str
+    sessionId: Optional[str] = None
     top_k: int = 15
+
+class CreateSessionRequest(BaseModel):
+    caseId: str
+    title: Optional[str] = "New Chat"
+
+class SessionResponse(BaseModel):
+    session_id: str
+    title: str
+    created_at: datetime
 
 class ContextItem(BaseModel):
     content: str
@@ -62,12 +72,59 @@ class ChatHistoryResponse(BaseModel):
 
 # ---------- ROUTES ----------
 import re
+import uuid
 
-@app.get("/chat/history/{caseId}", response_model=ChatHistoryResponse)
-def get_chat_history(caseId: str):
+@app.post("/chat/session", response_model=SessionResponse)
+def create_session(request: CreateSessionRequest):
     try:
-        case_doc = chat_collection.find_one({"case_id": caseId})
-        if not case_doc or "messages" not in case_doc:
+        session_id = str(uuid.uuid4())
+        new_session = {
+            "session_id": session_id,
+            "case_id": request.caseId,
+            "title": request.title,
+            "created_at": datetime.utcnow(),
+            "messages": []
+        }
+        chat_collection.insert_one(new_session)
+        return SessionResponse(
+            session_id=session_id,
+            title=new_session["title"],
+            created_at=new_session["created_at"]
+        )
+    except Exception as e:
+        print(f"Error creating session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/sessions/{caseId}", response_model=List[SessionResponse])
+def get_sessions(caseId: str):
+    try:
+        cursor = chat_collection.find({"case_id": caseId}).sort("created_at", -1)
+        sessions = []
+        for doc in cursor:
+            # Handle legacy docs that might not have session_id
+            if "session_id" not in doc:
+                continue
+            sessions.append(SessionResponse(
+                session_id=doc["session_id"],
+                title=doc.get("title", "Untitled Chat"),
+                created_at=doc.get("created_at", datetime.utcnow())
+            ))
+        return sessions
+    except Exception as e:
+        print(f"Error fetching sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/chat/history/{sessionId}", response_model=ChatHistoryResponse)
+def get_chat_history(sessionId: str):
+    try:
+        # Try to find by session_id first
+        session_doc = chat_collection.find_one({"session_id": sessionId})
+        
+        # Fallback: check if the ID passed is actually a caseId (legacy single-chat mode)
+        if not session_doc:
+             session_doc = chat_collection.find_one({"case_id": sessionId, "session_id": {"$exists": False}})
+
+        if not session_doc or "messages" not in session_doc:
             return ChatHistoryResponse(history=[])
         
         # Convert to Message objects
@@ -77,7 +134,7 @@ def get_chat_history(caseId: str):
                 content=m["content"],
                 contexts=[ContextItem(**c) for c in m.get("contexts", [])] if m.get("contexts") else None
             ) 
-            for m in case_doc["messages"]
+            for m in session_doc["messages"]
         ]
         return ChatHistoryResponse(history=messages)
 
@@ -89,9 +146,16 @@ def get_chat_history(caseId: str):
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
+        session_doc = None
+        
         # 1. Fetch history from MongoDB
-        case_doc = chat_collection.find_one({"case_id": request.caseId})
-        history = case_doc["messages"] if case_doc else []
+        if request.sessionId:
+            session_doc = chat_collection.find_one({"session_id": request.sessionId})
+        else:
+            # Legacy fallback
+            session_doc = chat_collection.find_one({"case_id": request.caseId, "session_id": {"$exists": False}})
+        
+        history = session_doc["messages"] if session_doc else []
         
         # Limit history to last 10 messages to fit token limits
         recent_history = history[-10:]
@@ -143,11 +207,19 @@ def chat(request: ChatRequest):
         }
 
         # Update MongoDB (upsert)
-        chat_collection.update_one(
-            {"case_id": request.caseId},
-            {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
-            upsert=True
-        )
+        if request.sessionId:
+            chat_collection.update_one(
+                {"session_id": request.sessionId},
+                {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                upsert=True # This should ideally be False if we ensure session creation first, but True keeps it robust
+            )
+        else:
+             # Legacy
+             chat_collection.update_one(
+                {"case_id": request.caseId, "session_id": {"$exists": False}},
+                {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                upsert=True
+            )
 
         return ChatResponse(
             answer=result.answer,
@@ -211,6 +283,32 @@ async def ingest_file(file: UploadFile = File(...), caseId: str = Form(...)):
 def get_documents_status(caseId: str):
     docs = list(document_status_collection.find({"case_id": caseId}, {"_id": 0}))
     return docs
+
+
+@app.delete("/documents/{caseId}/{filename}")
+def delete_document_endpoint(caseId: str, filename: str):
+    try:
+        # 1. Delete from Neo4j & Qdrant (Remove from AI Context)
+        delete_document(caseId, filename)
+
+        # 2. Soft Delete in MongoDB: Update status to 'Archived'
+        # We generally want to keep the record but mark it as not active for RAG
+        result = document_status_collection.update_one(
+            {"case_id": caseId, "filename": filename},
+            {"$set": {"status": "Archived", "last_updated": datetime.utcnow()}}
+        )
+        
+        if result.matched_count == 0:
+            print(f"[WARN] Document {filename} not found in MongoDB status for case {caseId}")
+
+        # 3. Preserve file on disk (Do NOT delete)
+        print(f"[INFO] Document {filename} archived. File preserved on disk.")
+
+        return {"status": "success", "message": f"Document {filename} archived successfully"}
+
+    except Exception as e:
+        print(f"Error deleting document: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")
