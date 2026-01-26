@@ -40,18 +40,93 @@ interface Message {
     contexts?: ContextItem[];
 }
 
+import ReactMarkdown from 'react-markdown';
+
+interface Session {
+    session_id: string;
+    title: string;
+    created_at: string;
+}
+
 const CaseChat: React.FC = () => {
     // @ts-ignore
     const { caseData } = useOutletContext<{ caseData: CaseData }>();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Session State
+    const [sessions, setSessions] = useState<Session[]>([]);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+    const [isSidebarOpen, setSidebarOpen] = useState(true);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     
     // Selection & Sources State
     const [selectionCoords, setSelectionCoords] = useState<{x: number, y: number} | null>(null);
     const [selectedContexts, setSelectedContexts] = useState<ContextItem[] | null>(null);
     const [showSourcesModal, setShowSourcesModal] = useState(false);
+
+    // Initial Load: Get Sessions
+    useEffect(() => {
+        const loadSessions = async () => {
+            if (!caseData?._id) return;
+            try {
+                const fetchedSessions = await ragService.getSessions(caseData._id);
+                if (fetchedSessions && fetchedSessions.length > 0) {
+                    setSessions(fetchedSessions);
+                    setCurrentSessionId(fetchedSessions[0].session_id);
+                } else {
+                    // Create first session automatically if none exist
+                    await handleCreateSession();
+                }
+            } catch (error) {
+                console.error("Error loading sessions", error);
+            }
+        };
+        loadSessions();
+    }, [caseData._id]);
+
+    // Load History when Session Changes
+    useEffect(() => {
+        const fetchHistory = async () => {
+            if (!caseData?._id || !currentSessionId) return;
+            try {
+                const data = await ragService.getHistory(currentSessionId);
+                if (data.history && Array.isArray(data.history)) {
+                    const historyMessages: Message[] = data.history.map((msg: {role: string, content: string}, index: number) => ({
+                        id: index, 
+                        sender: msg.role === 'user' ? 'You' : 'AI Assistant',
+                        avatar: msg.role === 'assistant' ? 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff' : undefined,
+                        content: msg.content,
+                        time: '', 
+                        isUser: msg.role === 'user',
+                        // @ts-ignore
+                        contexts: msg.contexts || [] 
+                    }));
+                    setMessages(historyMessages);
+                } else {
+                    setMessages([]);
+                }
+            } catch (err) {
+                console.error("Failed to load history", err);
+            }
+        };
+
+        fetchHistory();
+    }, [currentSessionId, caseData._id]);
+
+    const handleCreateSession = async () => {
+         if (!caseData?._id) return;
+         try {
+             const newSession = await ragService.createSession(caseData._id, `Chat ${sessions.length + 1}`);
+             setSessions([newSession, ...sessions]);
+             setCurrentSessionId(newSession.session_id);
+             setMessages([]); // Clear view for new chat
+         } catch (error) {
+             console.error("Failed to create session", error);
+         }
+    };
 
     const handleMouseUp = (msgContexts?: ContextItem[]) => {
         const selection = window.getSelection();
@@ -63,10 +138,9 @@ const CaseChat: React.FC = () => {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
         
-        // Calculate relative position or absolute
         setSelectionCoords({
             x: rect.left + (rect.width / 2),
-            y: rect.top - 10 // slightly above
+            y: rect.top - 10 
         });
         setSelectedContexts(msgContexts);
     };
@@ -88,37 +162,11 @@ const CaseChat: React.FC = () => {
     };
 
     useEffect(() => {
-        const fetchHistory = async () => {
-            if (!caseData?._id) return;
-            try {
-                const data = await ragService.getHistory(caseData._id);
-                if (data.history && Array.isArray(data.history)) {
-                    const historyMessages: Message[] = data.history.map((msg: {role: string, content: string}, index: number) => ({
-                        id: index, // Simple ID for history
-                        sender: msg.role === 'user' ? 'You' : 'AI Assistant',
-                        avatar: msg.role === 'assistant' ? 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff' : undefined,
-                        content: msg.content,
-                        time: '', // No timestamp in history yet
-                        isUser: msg.role === 'user',
-                        // @ts-ignore
-                        contexts: msg.contexts || [] 
-                    }));
-                    setMessages(historyMessages);
-                }
-            } catch (err) {
-                console.error("Failed to load history", err);
-            }
-        };
-
-        fetchHistory();
-    }, [caseData._id]);
-
-    useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
     const handleSendMessage = async () => {
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || !currentSessionId) return;
 
         const newUserMsg: Message = {
             id: Date.now(),
@@ -133,7 +181,8 @@ const CaseChat: React.FC = () => {
         setIsLoading(true);
 
         try {
-            const responseData = await ragService.chat(caseData._id, newUserMsg.content);
+            // Pass currentSessionId
+            const responseData = await ragService.chat(caseData._id, newUserMsg.content, 5, currentSessionId);
 
             const botMsg: Message = {
                 id: Date.now() + 1,
@@ -177,16 +226,49 @@ const CaseChat: React.FC = () => {
             </div>
 
             {/* Split layout */}
-            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+            <div className="flex flex-col lg:flex-row flex-1 overflow-hidden h-[calc(100vh-140px)]">
                 
+                {/* SESSIONS SIDEBAR */}
+                <div className={`${isSidebarOpen ? 'w-64' : 'w-0'} transition-all duration-300 bg-white border-r border-slate-200 flex flex-col flex-shrink-0 overflow-hidden`}>
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-bold text-slate-700 text-sm">Chats</h3>
+                        <button onClick={handleCreateSession} className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors" title="New Chat">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                        {sessions.map(session => (
+                            <button
+                                key={session.session_id}
+                                onClick={() => setCurrentSessionId(session.session_id)}
+                                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2.5 ${currentSessionId === session.session_id ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm ring-1 ring-blue-200' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 status-bar-item'}`}
+                            >
+                                <svg className={`w-4 h-4 ${currentSessionId === session.session_id ? 'text-blue-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                                <span className="truncate">{session.title}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 {/* Main Chat Area */}
-                <div className="flex-1 flex flex-col relative bg-slate-50/50">
+                <div className="flex-1 flex flex-col relative bg-slate-50/50 min-w-0">
+                    
+                     {/* Toggle Sidebar Button (Mobile/Desktop) */}
+                    <div className="absolute top-4 left-4 z-10">
+                        <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/80 backdrop-blur shadow-sm border border-slate-200 rounded-lg text-slate-500 hover:text-blue-600 transition-colors">
+                            {isSidebarOpen ? (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+                            ) : (
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                            )}
+                        </button>
+                    </div>
+
                     {/* Messages List */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-                        
+                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth">
                         {messages.length === 0 && (
                             <div className="text-center text-slate-500 py-20 flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
-                                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 text-blue-600">
+                                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 text-blue-600 shadow-sm border border-blue-100">
                                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
                                 </div>
                                 <h3 className="text-slate-900 font-bold text-lg mb-1">AI Legal Assistant</h3>
@@ -197,14 +279,14 @@ const CaseChat: React.FC = () => {
                         {messages.map((msg) => (
                             <div 
                                 key={msg.id} 
-                                className={`flex gap-4 ${msg.isUser ? 'flex-row-reverse' : ''} animate-in slide-in-from-bottom-4 fade-in duration-500 fill-mode-backwards`}
+                                className={`flex gap-4 ${msg.isUser ? 'flex-row-reverse' : ''} animate-in slide-in-from-bottom-2 fade-in duration-300 fill-mode-backwards`}
                             >
                                 {!msg.isUser && (
                                     <div className="flex-shrink-0">
                                         <img src={msg.avatar || "https://ui-avatars.com/api/?name=" + msg.sender} alt={msg.sender} className="w-8 h-8 rounded-full object-cover shadow-sm ring-2 ring-white" />
                                     </div>
                                 )}
-                                <div className={`max-w-[85%] lg:max-w-2xl ${msg.isUser ? 'items-end flex flex-col' : ''}`}>
+                                <div className={`max-w-[85%] lg:max-w-3xl ${msg.isUser ? 'items-end flex flex-col' : ''}`}>
                                     <div className={`flex items-baseline gap-2 mb-1 px-1 ${msg.isUser ? 'flex-row-reverse' : ''}`}>
                                         <span className="text-xs font-bold text-slate-700">{msg.sender}</span>
                                         <span className="text-[10px] text-slate-400 font-medium">{msg.time}</span>
@@ -217,10 +299,27 @@ const CaseChat: React.FC = () => {
                                                 ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-tr-sm shadow-blue-200' 
                                                 : 'bg-white border border-slate-100 text-slate-700 rounded-tl-sm shadow-slate-100 hover:shadow-md'
                                             }
-                                            selection:bg-blue-200 selection:text-blue-900
+                                            selection:bg-blue-200 selection:text-blue-900 prose prose-sm max-w-none
+                                            ${msg.isUser ? 'prose-invert' : 'prose-slate'}
                                         `}
                                     >
-                                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                                        {msg.isUser ? (
+                                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                                        ) : (
+                                            <ReactMarkdown 
+                                                components={{
+                                                    ul: ({node, ...props}) => <ul className="list-disc pl-4 space-y-1 my-2" {...props} />,
+                                                    ol: ({node, ...props}) => <ol className="list-decimal pl-4 space-y-1 my-2" {...props} />,
+                                                    strong: ({node, ...props}) => <strong className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors" {...props} />,
+                                                    a: ({node, ...props}) => <a className="text-blue-600 hover:underline font-medium" {...props} />,
+                                                    table: ({node, ...props}) => <div className='overflow-x-auto my-4 rounded-lg border border-slate-200'><table className='w-full text-left text-xs' {...props} /></div>,
+                                                    th: ({node, ...props}) => <th className='bg-slate-50 px-3 py-2 border-b border-slate-200 font-bold text-slate-700' {...props} />,
+                                                    td: ({node, ...props}) => <td className='px-3 py-2 border-b border-slate-100' {...props} />,
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        )}
                                         
                                         {/* Sources Section */}
                                         {msg.contexts && msg.contexts.length > 0 && (

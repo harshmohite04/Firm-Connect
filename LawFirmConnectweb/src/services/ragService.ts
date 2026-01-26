@@ -30,12 +30,21 @@ const ragService = {
    * Sends a chat message to the RAG system.
    * (Replaces direct axios calls in CaseChat.tsx for cleaner code)
    */
-  chat: async (caseId: string, message: string, top_k: number = 5) => {
+  /**
+   * Sends a chat message to the RAG system.
+   */
+  chat: async (
+    caseId: string,
+    message: string,
+    top_k: number = 5,
+    sessionId?: string,
+  ) => {
     try {
       const response = await axios.post(`${RAG_API_URL}/chat`, {
         message,
         caseId,
         top_k,
+        sessionId, // Optional
       });
       return response.data;
     } catch (error) {
@@ -54,13 +63,41 @@ const ragService = {
     }
   },
 
-  getHistory: async (caseId: string) => {
+  /**
+   * Get chat history by sessionId (or caseId for legacy support)
+   */
+  getHistory: async (id: string) => {
     try {
-      const response = await axios.get(`${RAG_API_URL}/chat/history/${caseId}`);
-      return response.data; // Expected: { history: [{role: '', content: ''}] }
+      const response = await axios.get(`${RAG_API_URL}/chat/history/${id}`);
+      return response.data;
     } catch (error) {
       console.error("Fetch history failed:", error);
       throw error;
+    }
+  },
+
+  createSession: async (caseId: string, title: string = "New Chat") => {
+    try {
+      const response = await axios.post(`${RAG_API_URL}/chat/session`, {
+        caseId,
+        title,
+      });
+      return response.data; // { session_id, title, created_at }
+    } catch (error) {
+      console.error("Create session failed:", error);
+      throw error;
+    }
+  },
+
+  getSessions: async (caseId: string) => {
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/chat/sessions/${caseId}`,
+      );
+      return response.data; // [{ session_id, title, created_at }]
+    } catch (error) {
+      console.error("Fetch sessions failed:", error);
+      return [];
     }
   },
 };
