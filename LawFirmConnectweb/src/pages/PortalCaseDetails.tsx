@@ -66,7 +66,7 @@ const PortalCaseDetails: React.FC = () => {
   return (
     <PortalLayout>
       <div
-        className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col ${location.pathname.includes("/chat") ? "h-[calc(100vh-140px)]" : "min-h-[calc(100vh-140px)]"}`}
+        className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col ${location.pathname.includes("/chat") || location.pathname.includes("/investigation") ? "h-[calc(100vh-140px)]" : "min-h-[calc(100vh-140px)]"}`}
       >
         {/* Custom Page Header */}
         <div className="border-b border-slate-200 px-6 pt-6 pb-0 bg-white">
@@ -107,6 +107,9 @@ const PortalCaseDetails: React.FC = () => {
                   AI
                 </>
               )}
+            </NavLink>
+            <NavLink to="investigation" className={getNavLinkClass}>
+              Investigation
             </NavLink>
             <NavLink to="billing" className={getNavLinkClass}>
               Billing

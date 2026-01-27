@@ -100,6 +100,29 @@ const ragService = {
       return [];
     }
   },
+
+  // --- INVESTIGATION ---
+  startInvestigation: async (caseId: string) => {
+    try {
+      const response = await axios.post(`${RAG_API_URL}/investigate/${caseId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Start investigation failed:", error);
+      throw error;
+    }
+  },
+
+  getInvestigationStatus: async (caseId: string) => {
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/investigate/${caseId}/status`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Get investigation status failed:", error);
+      throw error;
+    }
+  },
 };
 
 export default ragService;

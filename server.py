@@ -10,6 +10,8 @@ from pymongo import MongoClient
 
 from rag.rag import ask
 from ingestion.injector import ingest_document, delete_document
+from investigation.agent import investigator
+import threading
 
 load_dotenv()
 
@@ -23,7 +25,8 @@ app = FastAPI(
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["lawfirm"]
-chat_collection = db["chat_history"]
+chat_collection = db["chat_sessions"]
+investigation_collection = db["investigations"]
 document_status_collection = db["document_status"]
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -318,6 +321,71 @@ def health():
 
 # Mount the documents directory to serve static files
 app.mount("/files", StaticFiles(directory="documents"), name="files")
+
+# ------------------ INVESTIGATION ENDPOINTS ------------------
+
+@app.post("/investigate/{caseId}")
+async def start_investigation(caseId: str):
+    """
+    Starts an autonomous investigation for the given case.
+    Runs in a background thread to allow status updates.
+    """
+    # Create initial record
+    investigation_id = str(uuid.uuid4())
+    investigation_collection.insert_one({
+        "case_id": caseId,
+        "investigation_id": investigation_id,
+        "status": "Running",
+        "progress": ["Initializing engine..."],
+        "report": None,
+        "created_at": datetime.utcnow().isoformat()
+    })
+
+    def run_wrapper():
+        try:
+            gen = investigator.run_investigation(caseId)
+            
+            for status in gen:
+                if status.startswith("REPORT: "):
+                    report_content = status[8:]
+                    investigation_collection.update_one(
+                        {"investigation_id": investigation_id},
+                        {"$set": {"status": "Completed", "report": report_content}}
+                    )
+                else:
+                    # Update progress in DB
+                    investigation_collection.update_one(
+                        {"investigation_id": investigation_id},
+                        {"$push": {"progress": status}}
+                    )
+            
+        except Exception as e:
+            print(f"Investigation error: {e}")
+            investigation_collection.update_one(
+                {"investigation_id": investigation_id},
+                {"$set": {"status": "Failed", "report": f"Error: {str(e)}"}}
+            )
+
+    # Trigger background task
+    thread = threading.Thread(target=run_wrapper)
+    thread.start()
+
+    return {"investigation_id": investigation_id, "status": "Started"}
+
+@app.get("/investigate/{caseId}/status")
+async def get_investigation_status(caseId: str):
+    latest = investigation_collection.find_one(
+        {"case_id": caseId}, 
+        sort=[("created_at", -1)]
+    )
+    if not latest:
+        return {"status": "Not Started"}
+    
+    return {
+        "status": latest["status"],
+        "progress": latest["progress"],
+        "report": latest.get("report")
+    }
 
 if __name__ == "__main__":
     import uvicorn 

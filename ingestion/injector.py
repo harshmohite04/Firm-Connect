@@ -45,9 +45,82 @@ def create_chunk_node(driver, chunk_id: str, text: str, source: str, case_id: st
         s.run(query, id=chunk_id, text=text, source=source, case_id=case_id)
 
 
+
+# ------------------ ENTITY EXTRACTION ------------------
+from neo4j_graphrag.llm import OllamaLLM
+import json
+import re
+
+# Initialize LLM for extraction (using same model as RAG for now, or lighter one)
+llm = OllamaLLM(
+    model_name=os.getenv("OLLAMA_LLM_MODEL", "llama3.2:latest"),
+    model_params={"temperature": 0.0} # Deterministic for extraction
+)
+
+def extract_entities(text: str) -> dict:
+    prompt = f"""
+    Internalize the following text and extract ALL entities.
+    Return ONLY a JSON object with keys: "People", "Organizations", "Locations", "Dates".
+    Values should be lists of strings.
+    
+    Text:
+    "{text[:2000]}" 
+    
+    JSON:
+    """
+    try:
+        response = llm.invoke(prompt)
+        # Attempt to parse JSON. LLM might add extra text, so we clean it.
+        # Find first { and last }
+        start = response.content.find('{')
+        end = response.content.rfind('}') + 1
+        if start != -1 and end != -1:
+            json_str = response.content[start:end]
+            return json.loads(json_str)
+        return {"People": [], "Organizations": [], "Locations": [], "Dates": []}
+    except Exception as e:
+        print(f"[WARN] Entity extraction failed: {e}")
+        return {"People": [], "Organizations": [], "Locations": [], "Dates": []}
+
 def create_entity_relations(driver, chunk_id: str, text: str):
-    # Placeholder – you can later add entity extraction here
-    return
+    """
+    Extracts entities from text and creates (:Chunk)-[:MENTIONS]->(:Entity) relationships.
+    """
+    print(f"   [EXTRACT] finding entities in chunk...")
+    entities = extract_entities(text)
+    
+    query = """
+    MATCH (c:Chunk {id: $chunk_id})
+    
+    FOREACH (name IN $people | 
+        MERGE (e:Entity:Person {name: name})
+        MERGE (c)-[:MENTIONS]->(e)
+    )
+    FOREACH (name IN $orgs | 
+        MERGE (e:Entity:Organization {name: name})
+        MERGE (c)-[:MENTIONS]->(e)
+    )
+    FOREACH (name IN $locs | 
+        MERGE (e:Entity:Location {name: name})
+        MERGE (c)-[:MENTIONS]->(e)
+    )
+    FOREACH (name IN $dates | 
+        MERGE (e:Entity:Date {name: name})
+        MERGE (c)-[:MENTIONS]->(e)
+    )
+    """
+    
+    try:
+        with driver.session() as s:
+            s.run(query, 
+                  chunk_id=chunk_id,
+                  people=entities.get("People", []),
+                  orgs=entities.get("Organizations", []),
+                  locs=entities.get("Locations", []),
+                  dates=entities.get("Dates", [])
+            )
+    except Exception as e:
+        print(f"[ERROR] Failed to create entity relations: {e}")
 
 
 # ------------------ QDRANT HELPERS ------------------
@@ -154,12 +227,62 @@ def ingest_document(text: str, source_name: str, case_id: str):
 
         # Store in Neo4j
         create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
+        
+        # EXTRACT & LINK ENTITIES
         create_entity_relations(driver, chunk_id, chunk_text)
 
     # Upsert into Qdrant
     qdrant_upsert(qdrant, QDRANT_COLLECTION, vectors, payloads)
 
     print("[DONE] Ingestion completed!")
+
+
+# ------------------ DELETE DOCUMENT ------------------
+def delete_document(case_id: str, filename: str):
+    """
+    Deletes a document from both Neo4j and Qdrant based on case_id and filename.
+    """
+    print(f"\n=== Deleting: {filename} for Case: {case_id} ===")
+
+    # 1. Delete from Neo4j
+    # We match chunks that have BOTH caseId and source
+    # Also delete orphan entities if needed? For now just chunks.
+    query = """
+    MATCH (c:Chunk {caseId: $case_id, source: $filename})
+    DETACH DELETE c
+    """
+    try:
+        with driver.session() as s:
+            s.run(query, case_id=case_id, filename=filename)
+        print("[INFO] Deleted chunks from Neo4j.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete from Neo4j: {e}")
+
+    # 2. Delete from Qdrant
+    # We delete points where payload.case_id == case_id AND payload.source == filename
+    try:
+        qdrant.delete(
+            collection_name=QDRANT_COLLECTION,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="case_id",
+                            match=models.MatchValue(value=case_id),
+                        ),
+                        models.FieldCondition(
+                            key="source",
+                            match=models.MatchValue(value=filename),
+                        ),
+                    ]
+                )
+            ),
+        )
+        print("[INFO] Deleted points from Qdrant.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete from Qdrant: {e}")
+
+    print("[DONE] Deletion completed!")
 
 
 # ------------------ MAIN ------------------
