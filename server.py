@@ -237,41 +237,142 @@ def chat(request: ChatRequest):
 @app.post("/ingest")
 async def ingest_file(file: UploadFile = File(...), caseId: str = Form(...)):
     try:
-        # Set status to Processing
+        # Initial status
         document_status_collection.update_one(
             {"case_id": caseId, "filename": file.filename},
-            {"$set": {"status": "Processing", "filename": file.filename, "case_id": caseId, "last_updated": datetime.utcnow()}},
+            {"$set": {"status": "Uploading", "filename": file.filename, "case_id": caseId, "last_updated": datetime.utcnow()}},
             upsert=True
         )
 
-        # Save file locally
         file_location = f"documents/{file.filename}"
         with open(file_location, "wb+") as file_object:
             shutil.copyfileobj(file.file, file_object)
-            
-        # Read content using loader
+
+        ext = os.path.splitext(file.filename)[1].lower()
         from ingestion.loader import parse_file
-        text = parse_file(file_location)
 
-        if not text.strip():
-            raise HTTPException(status_code=400, detail="Could not extract text from file or file is empty.")
+        # --- A. ZIP HANDLING ---
+        if ext == ".zip":
+            import zipfile
+            print(f"Processing ZIP: {file.filename}")
+            
+            # Extract to a subdirectory
+            extract_dir = f"documents/extracted_{os.path.splitext(file.filename)[0]}"
+            os.makedirs(extract_dir, exist_ok=True)
+            
+            extracted_files = []
+            with zipfile.ZipFile(file_location, 'r') as zip_ref:
+                zip_ref.extractall(extract_dir)
+                
+            # Process each file in the zip
+            for root, dirs, files in os.walk(extract_dir):
+                for subfile in files:
+                    if subfile.startswith(".") or "__MACOSX" in root: continue
+                    
+                    subfile_path = os.path.join(root, subfile)
+                    subfile_name = os.path.relpath(subfile_path, extract_dir) # Use relative path as name
+                    
+                    # Register subfile
+                    document_status_collection.update_one(
+                        {"case_id": caseId, "filename": subfile_name},
+                        {"$set": {"status": "Processing", "filename": subfile_name, "case_id": caseId, "last_updated": datetime.utcnow()}},
+                        upsert=True
+                    )
+                    
+                    try:
+                        text = parse_file(subfile_path)
+                        if text.strip() and not text.startswith("Unsupported"):
+                            ingest_document(text, source_name=subfile_name, case_id=caseId)
+                            status = "Ready"
+                        else:
+                            status = "Skipped (Unsupported/Empty)"
+                            
+                        document_status_collection.update_one(
+                            {"case_id": caseId, "filename": subfile_name},
+                            {"$set": {"status": status, "last_updated": datetime.utcnow()}}
+                        )
+                    except Exception as e:
+                        print(f"Failed to ingest zip member {subfile_name}: {e}")
+                        document_status_collection.update_one(
+                            {"case_id": caseId, "filename": subfile_name},
+                            {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
+                        )
+            
+            # Mark the original zip as Expanded
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": file.filename},
+                {"$set": {"status": "Expanded", "last_updated": datetime.utcnow()}}
+            )
+            return {"status": "success", "message": "Zip extracted and processed", "filename": file.filename}
 
-        # Ingest
-        ingest_document(text, source_name=file.filename, case_id=caseId)
-        
-        # Set status to Ready
-        document_status_collection.update_one(
-            {"case_id": caseId, "filename": file.filename},
-            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
-        )
-        
-        return {"status": "success", "filename": file.filename, "caseId": caseId}
+        # --- B. AUDIO HANDLING ---
+        elif ext in [".mp3", ".wav", ".m4a", ".ogg", ".mpeg"]:
+            print(f"Processing AUDIO: {file.filename}")
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": file.filename},
+                {"$set": {"status": "Transcribing", "last_updated": datetime.utcnow()}}
+            )
+            
+            # 1. Transcribe
+            transcript = parse_file(file_location)
+            
+            # 2. Generate Report
+            from utils.ai_helper import generate_report
+            report_text = generate_report(transcript, source_type="Audio Transcript")
+            
+            # 3. Save Report File
+            report_filename = f"Report_{file.filename}.txt"
+            report_path = f"documents/{report_filename}"
+            with open(report_path, "w", encoding="utf-8") as f:
+                f.write(report_text)
+                
+            # 4. Ingest REPORT (Not the raw transcript, unless desired. Here we ingest the report)
+            # Register Report Doc
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": report_filename},
+                {"$set": {"status": "Processing", "filename": report_filename, "case_id": caseId, "last_updated": datetime.utcnow()}},
+                upsert=True
+            )
+            ingest_document(report_text, source_name=report_filename, case_id=caseId)
+            
+            # Update Report Status
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": report_filename},
+                {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+            )
+            
+            # Update Original Audio Status to 'Processed'
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": file.filename},
+                {"$set": {"status": "Processed (Report Generated)", "last_updated": datetime.utcnow()}}
+            )
+            
+            return {"status": "success", "message": "Audio processed and report generated", "report": report_filename}
+
+        # --- C. STANDARD HANDLING ---
+        else:
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": file.filename},
+                {"$set": {"status": "Processing", "last_updated": datetime.utcnow()}}
+            )
+            
+            text = parse_file(file_location)
+            if not text.strip():
+                raise HTTPException(status_code=400, detail="Could not extract text or file is empty.")
+
+            ingest_document(text, source_name=file.filename, case_id=caseId)
+            
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": file.filename},
+                {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+            )
+            
+            return {"status": "success", "filename": file.filename}
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"Error during ingestion: {e}")
-        # Set status to Failed
         document_status_collection.update_one(
             {"case_id": caseId, "filename": file.filename},
             {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
