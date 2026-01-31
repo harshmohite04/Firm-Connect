@@ -108,6 +108,9 @@ const PortalCaseDetails: React.FC = () => {
                 </>
               )}
             </NavLink>
+            <NavLink to="draft" className={getNavLinkClass}>
+              Drafting
+            </NavLink>
             <NavLink to="billing" className={getNavLinkClass}>
               Billing
             </NavLink>
