@@ -172,6 +172,36 @@ const runInvestigation = async (
 ): Promise<{ final_report: string }> => {
   const response = await axios.post(`${RAG_API_URL}/investigation/run`, {
     caseId,
+// -- Document Generation --
+const generateDocument = async (
+  caseId: string,
+  instructions: string,
+): Promise<string> => {
+  // using raw axios or api instance. server.py has /generate-document
+  // server.py runs on 8000, but caseService seems to use api instance which might point to 5000 (node backend)?
+  // Wait, the python server is likely the one with RAG.
+  // server.py is FastAPI on 8000.
+  // createCase uses localhost:5000.
+  // I need to hit the Python server for RAG.
+
+  // server.py has: @app.post("/generate-document")
+
+  const response = await axios.post("http://localhost:8000/generate-document", {
+    caseId,
+    instructions,
+  });
+  return response.data.content;
+};
+
+const saveGeneratedDocument = async (
+  caseId: string,
+  filename: string,
+  content: string,
+): Promise<any> => {
+  const response = await axios.post("http://localhost:8000/save-document", {
+    caseId,
+    filename,
+    content,
   });
   return response.data;
 };
@@ -193,6 +223,8 @@ const caseService = {
   addCaseBilling,
 
   updateCaseSettings,
+  generateDocument,
+  saveGeneratedDocument,
 
   runInvestigation,
 

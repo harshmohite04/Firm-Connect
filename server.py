@@ -10,6 +10,9 @@ from pymongo import MongoClient
 
 from rag.rag import ask
 from ingestion.injector import ingest_document, delete_document
+from investigation.generator import DocumentGenerator
+
+generator = DocumentGenerator()
 
 load_dotenv()
 
@@ -106,6 +109,15 @@ class Message(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     history: List[Message]
+
+class GenerateDocumentRequest(BaseModel):
+    caseId: str
+    instructions: str
+
+class SaveDocumentRequest(BaseModel):
+    caseId: str
+    filename: str
+    content: str
 
 # ---------- ROUTES ----------
 import re
@@ -345,6 +357,55 @@ def delete_document_endpoint(caseId: str, filename: str):
 
     except Exception as e:
         print(f"Error deleting document: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/generate-document")
+def generate_document_endpoint(request: GenerateDocumentRequest):
+    try:
+        content = generator.generate(request.caseId, request.instructions)
+        return {"content": content}
+    except Exception as e:
+        print(f"Error generating document: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/save-document")
+def save_document_endpoint(request: SaveDocumentRequest):
+    try:
+        # Ensure filename has extension
+        if not request.filename.endswith(".txt") and not request.filename.endswith(".md"):
+            request.filename += ".txt"
+            
+        file_location = f"documents/{request.filename}"
+        
+        # Save to disk
+        with open(file_location, "w", encoding="utf-8") as f:
+            f.write(request.content)
+            
+        # Ingest
+        # Set status to Processing
+        document_status_collection.update_one(
+            {"case_id": request.caseId, "filename": request.filename},
+            {"$set": {"status": "Processing", "filename": request.filename, "case_id": request.caseId, "last_updated": datetime.utcnow()}},
+            upsert=True
+        )
+
+        ingest_document(request.content, source_name=request.filename, case_id=request.caseId)
+        
+        # Set status to Ready
+        document_status_collection.update_one(
+            {"case_id": request.caseId, "filename": request.filename},
+            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+        )
+
+        return {"status": "success", "filename": request.filename}
+
+    except Exception as e:
+        print(f"Error saving document: {e}")
+        document_status_collection.update_one(
+            {"case_id": request.caseId, "filename": request.filename},
+            {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
