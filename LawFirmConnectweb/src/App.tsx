@@ -24,6 +24,8 @@ import CaseDocuments from './pages/case-details/CaseDocuments';
 import CaseChat from './pages/case-details/CaseChat';
 import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
+import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
+
 import { Navigate } from 'react-router-dom';
 
 // ScrollToTop component to handle scroll position on route change
@@ -61,7 +63,9 @@ const App: React.FC = () => {
                 <Route path="activity" element={<CaseActivity />} />
                 <Route path="documents" element={<CaseDocuments />} />
                 <Route path="chat" element={<CaseChat />} />
+                <Route path="investigator" element={<InvestigatorAgent />} />
                 <Route path="billing" element={<CaseBilling />} />
+
                 <Route path="settings" element={<CaseSettings />} />
             </Route>
             <Route path="/portal/billing" element={<PortalBilling />} />

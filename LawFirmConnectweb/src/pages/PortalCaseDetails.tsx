@@ -114,6 +114,15 @@ const PortalCaseDetails: React.FC = () => {
             <NavLink to="settings" className={getNavLinkClass}>
               Settings
             </NavLink>
+            <NavLink 
+                to="investigator" 
+                className={({ isActive }) => 
+                    `pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${isActive ? "text-purple-600 border-b-2 border-purple-600 font-bold" : "text-slate-500 hover:text-slate-900"}`
+                }
+            >
+               {/* Use the new Purple color for Investigator */}
+               Investigator Agent
+            </NavLink>
           </div>
         </div>
 

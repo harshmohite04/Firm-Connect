@@ -13,6 +13,36 @@ from ingestion.injector import ingest_document, delete_document
 
 load_dotenv()
 
+# --- Investigator Engine Import Setup ---
+import sys
+import importlib.util
+from pathlib import Path
+
+# Add Investigator Engine to sys.path to allow importing its modules
+investigator_path = Path(__file__).parent / "Investigator Engine"
+sys.path.append(str(investigator_path))
+
+# Now we can import from Investigator Engine modules
+# Note: Since 'Investigator Engine' has a space, accessing it directly is tricky, 
+# but adding it to path allows us to import 'src' processing modules if they are top level in that dir.
+# However, main.py imports 'from src...', so we need to make sure 'src' is resolvable.
+
+try:
+    from src.state import InvestigatorState
+    # dynamic import for main because of the space in folder name, or just rely on path
+    # But main.py is inside "Investigator Engine". 
+    # Let's import create_graph from main logic.
+    # We can use importlib to import 'main.py' from that directory.
+    spec = importlib.util.spec_from_file_location("investigator_main", investigator_path / "main.py")
+    investigator_main = importlib.util.module_from_spec(spec)
+    sys.modules["investigator_main"] = investigator_main
+    spec.loader.exec_module(investigator_main)
+    create_graph = investigator_main.create_graph
+except ImportError as e:
+    print(f"Warning: Could not import Investigator Engine: {e}")
+    create_graph = None
+
+
 app = FastAPI(
     title="Hospital RAG API",
     version="1.0"
@@ -42,6 +72,13 @@ class ChatRequest(BaseModel):
     caseId: str
     sessionId: Optional[str] = None
     top_k: int = 15
+
+class InvestigatorRequest(BaseModel):
+    caseId: str
+
+class InvestigatorResponse(BaseModel):
+    final_report: str
+
 
 class CreateSessionRequest(BaseModel):
     caseId: str
@@ -314,6 +351,72 @@ def delete_document_endpoint(caseId: str, filename: str):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+@app.post("/investigation/run", response_model=InvestigatorResponse)
+async def run_investigation(request: InvestigatorRequest):
+    if not create_graph:
+        raise HTTPException(status_code=500, detail="Investigator Engine not loaded properly.")
+
+    try:
+        # 1. Fetch documents for the case
+        # We need to get the text content of documents. 
+        # In this system, we use Qdrant for RAG, but the Investigator Engine expects raw text.
+        # We can either fetch from Qdrant scroll or read files from disk.
+        # Reading from disk is safer for full context.
+        
+        # Get list of ready documents
+        docs_status = list(document_status_collection.find({"case_id": request.caseId, "status": "Ready"}))
+        
+        doc_list = []
+        for doc in docs_status:
+            filename = doc["filename"]
+            file_path = f"documents/{filename}"
+            if os.path.exists(file_path):
+                try:
+                    # Reuse the same loader logic or simple read
+                    # For simplicity, we'll do a basic read here, preferably using the ingestion loader
+                    from ingestion.loader import parse_file
+                    content = parse_file(file_path)
+                    if content.strip():
+                        doc_list.append({
+                            "id": filename,
+                            "content": content,
+                            "metadata": {"source": filename}
+                        })
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+        
+        if not doc_list:
+             # Fallback to mock if no docs (or raise error)
+             # raise HTTPException(status_code=404, detail="No documents found for this case.")
+             pass
+
+        # 2. Initialize State
+        initial_state = {
+            "documents": doc_list,
+            "entities": [],
+            "facts": [],
+            "timeline": [],
+            "revision_count": 0,
+            # Add any other required keys from InvestigatorState
+        }
+
+        # 3. Invoke Graph
+        # We need to run this async or in a separate thread because it might block
+        # For now, running synchronously (beware of timeout)
+        workflow = create_graph()
+        final_state = workflow.invoke(initial_state)
+        
+        report = final_state.get("final_report", "Analysis completed but no report was generated.")
+
+        return InvestigatorResponse(final_report=report)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Investigation failed: {str(e)}")
+
+
 
 
 # Mount the documents directory to serve static files
