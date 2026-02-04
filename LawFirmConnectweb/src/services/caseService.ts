@@ -15,6 +15,7 @@ export interface Case {
   createdAt: string;
   updatedAt: string;
   recordStatus: number;
+  investigationReport?: string; // Optional field for stored report
   settings?: {
     notifications: {
       email: boolean;
@@ -156,6 +157,21 @@ const updateCaseSettings = async (id: string, updates: any): Promise<Case> => {
   return response.data;
 };
 
+// -- Investigator Agent --
+
+// Note: This calls the Python server (port 8000) directly or via proxy if configured.
+// However, the current setup seems to have two backends: Node/Express (port 5000) and Python (port 8000).
+// 'api' instance likely points to Node backend.
+// checking ragService.ts, it uses direct axios call to 8000 for AI stuff.
+// So we should do the same here.
+
+const RAG_API_URL = "http://localhost:8000";
+
+const runInvestigation = async (
+  caseId: string,
+): Promise<{ final_report: string }> => {
+  const response = await axios.post(`${RAG_API_URL}/investigation/run`, {
+    caseId,
 // -- Document Generation --
 const generateDocument = async (
   caseId: string,
@@ -209,6 +225,8 @@ const caseService = {
   updateCaseSettings,
   generateDocument,
   saveGeneratedDocument,
+
+  runInvestigation,
 
   // -- Team Management --
   validateTeamMember: async (id: string, email: string) => {
