@@ -172,6 +172,10 @@ const runInvestigation = async (
 ): Promise<{ final_report: string }> => {
   const response = await axios.post(`${RAG_API_URL}/investigation/run`, {
     caseId,
+  });
+  return response.data;
+};
+
 // -- Document Generation --
 const generateDocument = async (
   caseId: string,
