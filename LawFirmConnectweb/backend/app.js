@@ -21,12 +21,36 @@ const app = express();
 // Security and utility middleware
 app.use(
   cors({
-    origin: ['http://localhost:5173', 'https://rag-with-knowledge-graph.vercel.app', 'https://rag-with-knowledge-graph.vercel.app/'],
+    origin: process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : ['http://localhost:5173'],
     credentials: true
   })
 );
-// Allow all for now, or restrict to process.env.CLIENT_URL in production
-app.use(helmet());
+
+// Enhanced Helmet configuration with Content Security Policy
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],  // Adjust for your frontend needs
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "http://localhost:8000", "https://api.deepseek.com"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  },
+  crossOriginEmbedderPolicy: false, // May need to disable for some integrations
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 

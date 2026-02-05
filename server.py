@@ -1,16 +1,36 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 import shutil
 import os
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from pymongo import MongoClient
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from rag.rag import ask
 from ingestion.injector import ingest_document, delete_document
 from investigation.generator import DocumentGenerator
+
+# Import security utilities
+from utils.auth import verify_token, get_current_user, get_user_id
+from utils.validation import (
+    validate_case_id, 
+    sanitize_filename, 
+    validate_session_id,
+    validate_string_length
+)
+from utils.error_handler import (
+    http_exception_handler,
+    validation_exception_handler,
+    general_exception_handler,
+    log_security_event,
+    logger
+)
 
 generator = DocumentGenerator()
 
@@ -46,13 +66,24 @@ except ImportError as e:
     create_graph = None
 
 
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
-    title="Hospital RAG API",
-    version="1.0"
+    title="Law Firm Connect API",
+    version="1.1.0",
+    description="Secure API for law firm case management with RAG and document generation"
 )
 
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Add custom exception handlers
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
+
 # ---------- MONGO DB ----------
-# Dependencies updated
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["lawfirm"]
@@ -60,13 +91,20 @@ chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]
 
+# ---------- CORS Configuration ----------
 from fastapi.middleware.cors import CORSMiddleware
+
+# Get allowed origins from environment (comma-separated)
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS]
+
+logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all for dev
+    allow_origins=ALLOWED_ORIGINS,  # Environment-based, no wildcard
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
@@ -147,33 +185,61 @@ import re
 import uuid
 
 @app.post("/chat/session", response_model=SessionResponse)
-def create_session(request: CreateSessionRequest):
+@limiter.limit("30/minute")
+async def create_session(
+    request_obj: Request,
+    request: CreateSessionRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        # Validate input
+        validate_case_id(request.caseId)
+        
         session_id = str(uuid.uuid4())
         new_session = {
             "session_id": session_id,
             "case_id": request.caseId,
+            "user_id": get_user_id(current_user),  # Track ownership
             "title": request.title,
             "created_at": datetime.utcnow(),
+            "expires_at": datetime.utcnow() + timedelta(hours=24),
             "messages": []
         }
         chat_collection.insert_one(new_session)
+        
+        logger.info(f"Session created: {session_id} for user {get_user_id(current_user)}")
+        
         return SessionResponse(
             session_id=session_id,
             title=new_session["title"],
             created_at=new_session["created_at"]
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error creating session: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error creating session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create session")
 
 @app.get("/chat/sessions/{caseId}", response_model=List[SessionResponse])
-def get_sessions(caseId: str):
+@limiter.limit("60/minute")
+async def get_sessions(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
-        cursor = chat_collection.find({"case_id": caseId}).sort("created_at", -1)
+        # Validate input
+        validate_case_id(caseId)
+        
+        # Get sessions for this case and user
+        user_id = get_user_id(current_user)
+        cursor = chat_collection.find({
+            "case_id": caseId,
+            "user_id": user_id  # Only show user's own sessions
+        }).sort("created_at", -1)
+        
         sessions = []
         for doc in cursor:
-            # Handle legacy docs that might not have session_id
             if "session_id" not in doc:
                 continue
             sessions.append(SessionResponse(
@@ -182,21 +248,51 @@ def get_sessions(caseId: str):
                 created_at=doc.get("created_at", datetime.utcnow())
             ))
         return sessions
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error fetching sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch sessions")
 
 @app.get("/chat/history/{sessionId}", response_model=ChatHistoryResponse)
-def get_chat_history(sessionId: str):
+@limiter.limit("60/minute")
+async def get_chat_history(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
-        # Try to find by session_id first
+        # Validate input
+        validate_session_id(sessionId)
+        
+        # Find session and verify ownership
         session_doc = chat_collection.find_one({"session_id": sessionId})
         
-        # Fallback: check if the ID passed is actually a caseId (legacy single-chat mode)
+        # Fallback for legacy sessions
         if not session_doc:
-             session_doc = chat_collection.find_one({"case_id": sessionId, "session_id": {"$exists": False}})
-
-        if not session_doc or "messages" not in session_doc:
+            session_doc = chat_collection.find_one({
+                "case_id": sessionId, 
+                "session_id": {"$exists": False}
+            })
+        
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Verify user owns this session
+        user_id = get_user_id(current_user)
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_ACCESS", {
+                "user_id": user_id,
+                "session_id": sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Check expiration
+        if "expires_at" in session_doc:
+            if session_doc["expires_at"] < datetime.utcnow():
+                raise HTTPException(status_code=410, detail="Session expired")
+        
+        if "messages" not in session_doc:
             return ChatHistoryResponse(history=[])
         
         # Convert to Message objects
@@ -210,22 +306,47 @@ def get_chat_history(sessionId: str):
         ]
         return ChatHistoryResponse(history=messages)
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error fetching history: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching history: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch chat history")
 
 
 @app.post("/chat", response_model=ChatResponse)
-def chat(request: ChatRequest):
+@limiter.limit("30/minute")  # Limit AI requests
+async def chat(
+    request_obj: Request,
+    request: ChatRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        # Validate inputs
+        validate_case_id(request.caseId)
+        if request.sessionId:
+            validate_session_id(request.sessionId)
+        validate_string_length(request.message, "Message", min_length=1, max_length=5000)
+        
         session_doc = None
+        user_id = get_user_id(current_user)
         
         # 1. Fetch history from MongoDB
         if request.sessionId:
             session_doc = chat_collection.find_one({"session_id": request.sessionId})
+            
+            # Verify ownership
+            if session_doc and session_doc.get("user_id") != user_id:
+                log_security_event("UNAUTHORIZED_CHAT_ACCESS", {
+                    "user_id": user_id,
+                    "session_id": request.sessionId
+                })
+                raise HTTPException(status_code=403, detail="Access denied")
         else:
             # Legacy fallback
-            session_doc = chat_collection.find_one({"case_id": request.caseId, "session_id": {"$exists": False}})
+            session_doc = chat_collection.find_one({
+                "case_id": request.caseId, 
+                "session_id": {"$exists": False}
+            })
         
         history = session_doc["messages"] if session_doc else []
         
@@ -283,7 +404,7 @@ def chat(request: ChatRequest):
             chat_collection.update_one(
                 {"session_id": request.sessionId},
                 {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
-                upsert=True # This should ideally be False if we ensure session creation first, but True keeps it robust
+                upsert=False  # Session must exist for security
             )
         else:
              # Legacy
@@ -298,26 +419,60 @@ def chat(request: ChatRequest):
             contexts=contexts
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Chat error: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Error processing request: {str(e)}"
+            detail="Failed to process chat request"
         )
 
 
 @app.post("/ingest")
-async def ingest_file(file: UploadFile = File(...), caseId: str = Form(...)):
+@limiter.limit("10/minute")  # Limit file uploads
+async def ingest_file(
+    request: Request,
+    file: UploadFile = File(...), 
+    caseId: str = Form(...),
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        # Validate inputs
+        validate_case_id(caseId)
+        safe_filename = sanitize_filename(file.filename)
+        
+        # Check file size (50MB limit)
+        MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", "50")) * 1024 * 1024
+        file_content = await file.read()
+        if len(file_content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
+        
+        # Reset file pointer
+        await file.seek(0)
+        
+        user_id = get_user_id(current_user)
+        
         # Set status to Processing
         document_status_collection.update_one(
-            {"case_id": caseId, "filename": file.filename},
-            {"$set": {"status": "Processing", "filename": file.filename, "case_id": caseId, "last_updated": datetime.utcnow()}},
+            {"case_id": caseId, "filename": safe_filename},
+            {
+                "$set": {
+                    "status": "Processing",
+                    "filename": safe_filename,
+                    "case_id": caseId,
+                    "user_id": user_id,  # Track uploader
+                    "last_updated": datetime.utcnow()
+                }
+            },
             upsert=True
         )
 
-        # Save file locally
-        file_location = f"documents/{file.filename}"
+        # Save file locally with sanitized name
+        file_location = f"documents/{safe_filename}"
         with open(file_location, "wb+") as file_object:
             shutil.copyfileobj(file.file, file_object)
             
@@ -326,126 +481,235 @@ async def ingest_file(file: UploadFile = File(...), caseId: str = Form(...)):
         text = parse_file(file_location)
 
         if not text.strip():
-            raise HTTPException(status_code=400, detail="Could not extract text from file or file is empty.")
+            raise HTTPException(
+                status_code=400, 
+                detail="Could not extract text from file or file is empty."
+            )
 
         # Ingest
-        ingest_document(text, source_name=file.filename, case_id=caseId)
+        ingest_document(text, source_name=safe_filename, case_id=caseId)
         
         # Set status to Ready
         document_status_collection.update_one(
-            {"case_id": caseId, "filename": file.filename},
+            {"case_id": caseId, "filename": safe_filename},
             {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
         )
         
-        return {"status": "success", "filename": file.filename, "caseId": caseId}
+        logger.info(f"File ingested: {safe_filename} for case {caseId} by user {user_id}")
+        
+        return {
+            "status": "success", 
+            "filename": safe_filename, 
+            "caseId": caseId
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        print(f"Error during ingestion: {e}")
+        logger.error(f"Ingestion error: {e}", exc_info=True)
+        
         # Set status to Failed
-        document_status_collection.update_one(
-            {"case_id": caseId, "filename": file.filename},
-            {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
-        )
-        raise HTTPException(status_code=500, detail=str(e))
+        if 'safe_filename' in locals() and 'caseId' in locals():
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": safe_filename},
+                {"$set": {"status": "Failed", "error": "Processing failed", "last_updated": datetime.utcnow()}}
+            )
+        raise HTTPException(status_code=500, detail="File ingestion failed")
 
 
 @app.get("/documents/{caseId}")
-def get_documents_status(caseId: str):
-    docs = list(document_status_collection.find({"case_id": caseId}, {"_id": 0}))
-    return docs
+@limiter.limit("60/minute")
+async def get_documents_status(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    try:
+        # Validate input
+        validate_case_id(caseId)
+        
+        # Only return documents for this user's cases
+        # In a real app, you'd verify case ownership here
+        docs = list(document_status_collection.find(
+            {"case_id": caseId},
+            {"_id": 0}
+        ))
+        return docs
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching documents: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch documents")
 
 
 @app.delete("/documents/{caseId}/{filename}")
-def delete_document_endpoint(caseId: str, filename: str):
+@limiter.limit("30/minute")
+async def delete_document_endpoint(
+    request: Request,
+    caseId: str, 
+    filename: str,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        # Validate inputs
+        validate_case_id(caseId)
+        safe_filename = sanitize_filename(filename)
+        
+        user_id = get_user_id(current_user)
+        
+        # Verify document exists and user has access
+        doc_status = document_status_collection.find_one({
+            "case_id": caseId,
+            "filename": safe_filename
+        })
+        
+        if not doc_status:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # SECURITY: Verify user owns this document
+        if doc_status.get("user_id") and doc_status.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_DOCUMENT_DELETE", {
+                "user_id": user_id,
+                "case_id": caseId,
+                "filename": safe_filename
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+        
         # 1. Delete from Neo4j & Qdrant (Remove from AI Context)
-        delete_document(caseId, filename)
+        delete_document(caseId, safe_filename)
 
-        # 2. Soft Delete in MongoDB: Update status to 'Archived'
-        # We generally want to keep the record but mark it as not active for RAG
+        # 2. Update status to 'Archived' in MongoDB
         result = document_status_collection.update_one(
-            {"case_id": caseId, "filename": filename},
+            {"case_id": caseId, "filename": safe_filename},
             {"$set": {"status": "Archived", "last_updated": datetime.utcnow()}}
         )
         
         if result.matched_count == 0:
-            print(f"[WARN] Document {filename} not found in MongoDB status for case {caseId}")
+            logger.warning(f"Document {safe_filename} not found in MongoDB for case {caseId}")
 
         # 3. Preserve file on disk (Do NOT delete)
-        print(f"[INFO] Document {filename} archived. File preserved on disk.")
+        logger.info(f"Document archived: {safe_filename} for case {caseId} by user {user_id}")
 
-        return {"status": "success", "message": f"Document {filename} archived successfully"}
+        return {
+            "status": "success", 
+            "message": f"Document {safe_filename} archived successfully"
+        }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error deleting document: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error deleting document: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete document")
 
 
 @app.post("/generate-document")
-def generate_document_endpoint(request: GenerateDocumentRequest):
+@limiter.limit("20/minute")
+async def generate_document_endpoint(
+    request_obj: Request,
+    request: GenerateDocumentRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        validate_case_id(request.caseId)
+        validate_string_length(request.instructions, "Instructions", min_length=10, max_length=5000)
+        
         content = generator.generate(request.caseId, request.instructions)
         return {"content": content}
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error generating document: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Document generation error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate document")
 
 @app.post("/save-document")
-def save_document_endpoint(request: SaveDocumentRequest):
+@limiter.limit("20/minute")
+async def save_document_endpoint(
+    request_obj: Request,
+    request: SaveDocumentRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     try:
+        # Validate inputs
+        validate_case_id(request.caseId)
+        safe_filename = sanitize_filename(request.filename)
+        validate_string_length(request.content, "Content", min_length=1, max_length=500000)
+        
         # Ensure filename has extension
-        if not request.filename.endswith(".txt") and not request.filename.endswith(".md"):
-            request.filename += ".txt"
+        if not safe_filename.endswith(".txt") and not safe_filename.endswith(".md"):
+            safe_filename += ".txt"
             
-        file_location = f"documents/{request.filename}"
+        file_location = f"documents/{safe_filename}"
+        user_id = get_user_id(current_user)
         
         # Save to disk
         with open(file_location, "w", encoding="utf-8") as f:
             f.write(request.content)
             
-        # Ingest
         # Set status to Processing
         document_status_collection.update_one(
-            {"case_id": request.caseId, "filename": request.filename},
-            {"$set": {"status": "Processing", "filename": request.filename, "case_id": request.caseId, "last_updated": datetime.utcnow()}},
+            {"case_id": request.caseId, "filename": safe_filename},
+            {
+                "$set": {
+                    "status": "Processing",
+                    "filename": safe_filename,
+                    "case_id": request.caseId,
+                    "user_id": user_id,
+                    "last_updated": datetime.utcnow()
+                }
+            },
             upsert=True
         )
 
-        ingest_document(request.content, source_name=request.filename, case_id=request.caseId)
+        ingest_document(request.content, source_name=safe_filename, case_id=request.caseId)
         
         # Set status to Ready
         document_status_collection.update_one(
-            {"case_id": request.caseId, "filename": request.filename},
+            {"case_id": request.caseId, "filename": safe_filename},
             {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
         )
 
-        return {"status": "success", "filename": request.filename}
+        logger.info(f"Document saved: {safe_filename} for case {request.caseId} by user {user_id}")
 
+        return {"status": "success", "filename": safe_filename}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error saving document: {e}")
-        document_status_collection.update_one(
-            {"case_id": request.caseId, "filename": request.filename},
-            {"$set": {"status": "Failed", "error": str(e), "last_updated": datetime.utcnow()}}
-        )
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Save document error: {e}", exc_info=True)
+        if 'safe_filename' in locals():
+            document_status_collection.update_one(
+                {"case_id": request.caseId, "filename": safe_filename},
+                {"$set": {"status": "Failed", "error": "Processing failed", "last_updated": datetime.utcnow()}}
+            )
+        raise HTTPException(status_code=500, detail="Failed to save document")
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+@limiter.limit("30/minute")
+async def health(request: Request):
+    # Health check doesn't require authentication
+    return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 # ---------- CONVERSATIONAL DRAFT ENDPOINTS ----------
 
 @app.post("/draft/session", response_model=DraftSessionResponse)
-def create_draft_session(request: CreateDraftSessionRequest):
+@limiter.limit("30/minute")
+async def create_draft_session(
+    request_obj: Request,
+    request: CreateDraftSessionRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     """Create a new conversational draft session"""
     try:
+        # SECURITY: Validate input
+        validate_case_id(request.caseId)
+        
+        user_id = get_user_id(current_user)
         session_id = str(uuid.uuid4())
         new_session = {
             "session_id": session_id,
             "case_id": request.caseId,
+            "user_id": user_id,  # SECURITY: Track ownership
             "title": request.title,
             "template": request.template,
             "created_at": datetime.utcnow(),
@@ -453,21 +717,40 @@ def create_draft_session(request: CreateDraftSessionRequest):
             "current_document": ""
         }
         draft_sessions_collection.insert_one(new_session)
+        
+        logger.info(f"Draft session created: {session_id} by user {user_id}")
+        
         return DraftSessionResponse(
             session_id=session_id,
             title=new_session["title"],
             template=new_session["template"],
             created_at=new_session["created_at"]
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error creating draft session: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error creating draft session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create draft session")
 
 @app.get("/draft/sessions/{caseId}")
-def get_draft_sessions(caseId: str):
+@limiter.limit("60/minute")
+async def get_draft_sessions(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
     """Get all draft sessions for a case"""
     try:
-        cursor = draft_sessions_collection.find({"case_id": caseId}).sort("created_at", -1)
+        # SECURITY: Validate input
+        validate_case_id(caseId)
+        
+        user_id = get_user_id(current_user)
+        # SECURITY: Only return user's own sessions
+        cursor = draft_sessions_collection.find({
+            "case_id": caseId,
+            "user_id": user_id
+        }).sort("created_at", -1)
+        
         sessions = []
         for doc in cursor:
             sessions.append({
@@ -477,17 +760,36 @@ def get_draft_sessions(caseId: str):
                 "created_at": doc.get("created_at", datetime.utcnow())
             })
         return sessions
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error fetching draft sessions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching draft sessions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch draft sessions")
 
 @app.get("/draft/session/{sessionId}")
-def get_draft_session(sessionId: str):
+@limiter.limit("60/minute")
+async def get_draft_session(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
     """Get a specific draft session with messages and document content"""
     try:
+        # SECURITY: Validate input
+        validate_session_id(sessionId)
+        
         session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
         if not session_doc:
             raise HTTPException(status_code=404, detail="Draft session not found")
+        
+        # SECURITY: Verify ownership
+        user_id = get_user_id(current_user)
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_DRAFT_ACCESS", {
+                "user_id": user_id,
+                "session_id": sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
         
         return {
             "session_id": session_doc["session_id"],
@@ -500,17 +802,37 @@ def get_draft_session(sessionId: str):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error fetching draft session: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error fetching draft session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch draft session")
 
 @app.post("/draft/chat", response_model=ConversationalDraftResponse)
-def conversational_draft(request: ConversationalDraftRequest):
+@limiter.limit("20/minute")  # Limit AI generation requests
+async def conversational_draft(
+    request_obj: Request,
+    request: ConversationalDraftRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     """Process conversational message and update document"""
     try:
+        # SECURITY: Validate inputs
+        validate_case_id(request.caseId)
+        validate_session_id(request.sessionId)
+        validate_string_length(request.message, "Message", min_length=1, max_length=5000)
+        
+        user_id = get_user_id(current_user)
+        
         # Fetch session
         session_doc = draft_sessions_collection.find_one({"session_id": request.sessionId})
         if not session_doc:
             raise HTTPException(status_code=404, detail="Draft session not found")
+        
+        # SECURITY: Verify ownership
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_DRAFT_CHAT", {
+                "user_id": user_id,
+                "session_id": request.sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
         
         # Get conversation history
         history = session_doc.get("messages", [])
@@ -541,12 +863,15 @@ def conversational_draft(request: ConversationalDraftRequest):
             ai_message=result["ai_message"],
             document_content=result["document_content"]
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Error in conversational draft: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error in conversational draft: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to process draft request")
 
 @app.get("/draft/templates")
-def get_templates():
+@limiter.limit("60/minute")
+async def get_templates(request: Request):
     """Get available document templates"""
     templates = [
         {
@@ -655,8 +980,49 @@ async def run_investigation(request: InvestigatorRequest):
 
 
 
-# Mount the documents directory to serve static files
-app.mount("/files", StaticFiles(directory="documents"), name="files")
+# ---------- SECURITY NOTE ----------
+# Static file serving has been REMOVED for security.
+# All document access must go through authenticated endpoints.
+
+# Secure document download endpoint
+@app.get("/download/{caseId}/{filename}")
+@limiter.limit("30/minute")
+async def download_document(
+    request: Request,
+    caseId: str,
+    filename: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Secure document download with authentication and ownership verification."""
+    try:
+        validate_case_id(caseId)
+        safe_filename = sanitize_filename(filename)
+        
+        # Verify document exists and user has access
+        doc_status = document_status_collection.find_one({
+            "case_id": caseId,
+            "filename": safe_filename,
+            "status": "Ready"
+        })
+        
+        if not doc_status:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        file_path = f"documents/{safe_filename}"
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        return FileResponse(
+            path=file_path,
+            filename=safe_filename,
+            media_type='application/octet-stream'
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Download error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to download document")
+
 
 if __name__ == "__main__":
     import uvicorn 

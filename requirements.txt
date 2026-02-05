@@ -22,3 +22,5 @@ langchain-ollama
 langgraph
 pydantic
 python-dotenv
+slowapi
+PyJWT

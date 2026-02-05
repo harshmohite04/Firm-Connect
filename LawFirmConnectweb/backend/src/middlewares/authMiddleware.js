@@ -2,13 +2,19 @@ const jwt = require('jsonwebtoken');
 const asyncHandler = require('express-async-handler');
 const User = require('../models/User'); // Assuming User model exists, need to check path
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    throw new Error('CRITICAL: JWT_SECRET environment variable not set. Cannot start server.');
+}
+
 const protect = asyncHandler(async (req, res, next) => {
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
             token = req.headers.authorization.split(' ')[1];
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            const decoded = jwt.verify(token, JWT_SECRET);
             
             // Check if User model exists, otherwise mock? 
             // Better to assume User model is at ../models/User (standard)
