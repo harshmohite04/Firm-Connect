@@ -2,6 +2,9 @@ const Case = require('../models/Case');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const AdmZip = require('adm-zip');
+const axios = require('axios');
+const FormData = require('form-data');
 
 // @desc    Get all cases (Lawyer View)
 // @route   GET /cases
@@ -222,80 +225,140 @@ const uploadDocument = async (req, res, next) => {
 
         const processedDocuments = [];
 
-        // Process each file
-        for (const f of req.files) {
-            // 1. Add original file
+        // Helper function to process a single file
+        const processSingleFile = async (fileData) => {
+            const { originalname, mimetype, location, filename, path: localPath, size } = fileData;
+            
+            // Add original file document object
             const originalDoc = {
-                fileName: f.originalname,
-                filePath: f.location || `/uploads/${f.filename}`,
+                fileName: originalname,
+                filePath: location || `/uploads/${filename}`,
                 category: category || 'General',
                 uploadedBy: req.user._id,
-                fileSize: f.size,
+                fileSize: size,
                 recordStatus: 1
             };
             processedDocuments.push(originalDoc);
 
-            // 2. Check if audio and needs transcription
-            const mimeType = f.mimetype;
-            const isAudio = mimeType.startsWith('audio') || 
-                            ['.mp3', '.wav', '.m4a', '.ogg'].includes(path.extname(f.originalname).toLowerCase());
+            // Check if audio and needs transcription
+            const isAudio = mimetype.startsWith('audio') || 
+                            ['.mp3', '.wav', '.m4a', '.ogg'].includes(path.extname(originalname).toLowerCase());
 
-            if (isAudio) {
+            if (isAudio && localPath) {
                 try {
-                    console.log(`Starting transcription for ${f.originalname}...`);
-                    // Note: This relies on the file being accessible locally. 
-                    // If using S3 (f.location), we'd need to download it first or handle it differently.
-                    // For now, assuming local file path for transcription or we need a way to pass URL or stream.
-                    // implementation_plan assumed local execution or access.
-                    // If hybrid storage uses S3, `f.path` might optionally exist if multer works certain ways, or we need to download.
-                    // Let's check `fileUpload.js`. It uses `multerS3` or `diskStorage`.
-                    // If `multerS3`, we don't have a local path easily.
-                    // BUT for this task, let's assume if it's S3, we might skip or need a temp download.
-                    // However, user setup usually local for dev ("d:\harsh...").
+                    console.log(`Starting transcription for ${originalname}...`);
+                    const transcriptText = await runTranscription(localPath);
                     
-                    let localFilePath = f.path; // Available if diskStorage
+                    // Save transcript as a new file
+                    const transcriptFileName = `Transcript - ${path.basename(originalname, path.extname(originalname))}.md`;
+                    const transcriptSavePath = path.join('uploads', `${Date.now()}-${transcriptFileName}`);
+                    fs.writeFileSync(transcriptSavePath, transcriptText);
+
+                    const transcriptDoc = {
+                        fileName: transcriptFileName,
+                        filePath: `/uploads/${path.basename(transcriptSavePath)}`, 
+                        category: 'Transcripts',
+                        uploadedBy: req.user._id,
+                        fileSize: Buffer.byteLength(transcriptText),
+                        recordStatus: 1
+                    };
+                    processedDocuments.push(transcriptDoc);
                     
-                    // If S3, we can't easily run python on a URL without valid auth or download.
-                    // For MVP safety, we'll only transcribe if we have a local path.
-                    if (localFilePath) {
-                         const transcriptText = await runTranscription(localFilePath);
-                         
-                         // Save transcript as a new file
-                         const transcriptFileName = `Transcript - ${path.basename(f.originalname, path.extname(f.originalname))}.md`;
-                         const transcriptSavePath = path.join('uploads', `${Date.now()}-${transcriptFileName}`);
-                         
-                         // Write to disk (even if using S3, we need to save the transcript somewhere)
-                         // If using S3, we should ideally upload it there too. 
-                         // For now, let's save locally to 'uploads/' as it's static served.
-                         fs.writeFileSync(transcriptSavePath, transcriptText);
-
-                         const transcriptDoc = {
-                             fileName: transcriptFileName,
-                             filePath: `/uploads/${path.basename(transcriptSavePath)}`, 
-                             category: 'Transcripts',
-                             uploadedBy: req.user._id,
-                             fileSize: Buffer.byteLength(transcriptText),
-                             recordStatus: 1
-                         };
-                         processedDocuments.push(transcriptDoc);
-                         
-                         caseDoc.activityLog.push({
-                            type: 'transcription_generated',
-                            description: `Generated transcript for ${f.originalname}`,
-                            performedBy: req.user._id
-                        });
-                    } else {
-                        console.log('Skipping transcription: No local file path (S3 storage?).');
-                    }
-
-                } catch (transcribeErr) {
-                    console.error('Transcription error:', transcribeErr);
-                    // Don't fail the whole upload, just log error
                     caseDoc.activityLog.push({
-                        type: 'transcription_failed',
-                        description: `Transcription failed for ${f.originalname}`,
+                        type: 'transcription_generated',
+                        description: `Generated transcript for ${originalname}`,
                         performedBy: req.user._id
                     });
+                } catch (transcribeErr) {
+                    console.error('Transcription error:', transcribeErr);
+                    caseDoc.activityLog.push({
+                        type: 'transcription_failed',
+                        description: `Transcription failed for ${originalname}`,
+                        performedBy: req.user._id
+                    });
+                }
+            }
+        };
+
+        // Process each uploaded file
+        for (const f of req.files) {
+            const fileExt = path.extname(f.originalname).toLowerCase();
+            
+            // Check if this is a zip file
+            if (fileExt === '.zip') {
+                console.log(`Extracting zip file: ${f.originalname}`);
+                
+                try {
+                    // Only extract if we have a local path
+                    if (!f.path) {
+                        console.log('Skipping zip extraction: No local file path (S3 storage?).');
+                        continue;
+                    }
+
+                    const zip = new AdmZip(f.path);
+                    const zipEntries = zip.getEntries();
+                    
+                    let extractedCount = 0;
+                    
+                    // Process each file in the zip
+                    for (const entry of zipEntries) {
+                        if (entry.isDirectory) continue; // Skip directories
+                        
+                        const entryName = entry.entryName;
+                        const entryData = entry.getData();
+                        
+                        // Save extracted file to uploads directory
+                        const extractedFileName = `${Date.now()}-${path.basename(entryName)}`;
+                        const extractedFilePath = path.join('uploads', extractedFileName);
+                        
+                        fs.writeFileSync(extractedFilePath, entryData);
+                        
+                        // Create file object mimicking multer structure
+                        const extractedFileData = {
+                            originalname: path.basename(entryName),
+                            mimetype: getMimeType(path.basename(entryName)),
+                            filename: extractedFileName,
+                            path: extractedFilePath,
+                            size: entryData.length,
+                            location: null // Local storage
+                        };
+                        
+                        // Process this extracted file (including transcription if audio)
+                        await processSingleFile(extractedFileData);
+                        extractedCount++;
+                        
+                        // Trigger ingestion for this file
+                        await ingestToRAG(extractedFilePath, path.basename(entryName), req.params.id);
+                    }
+                    
+                    // Delete the zip file itself (we don't want it in documents)
+                    try {
+                        fs.unlinkSync(f.path);
+                    } catch (unlinkErr) {
+                        console.error('Error deleting zip file:', unlinkErr);
+                    }
+                    
+                    caseDoc.activityLog.push({
+                        type: 'zip_extracted',
+                        description: `Extracted ${extractedCount} files from ${f.originalname}`,
+                        performedBy: req.user._id
+                    });
+                    
+                } catch (zipErr) {
+                    console.error('Zip extraction error:', zipErr);
+                    caseDoc.activityLog.push({
+                        type: 'zip_extraction_failed',
+                        description: `Failed to extract ${f.originalname}`,
+                        performedBy: req.user._id
+                    });
+                }
+            } else {
+                // Regular file (not a zip)
+                await processSingleFile(f);
+                
+                // Trigger ingestion for regular files
+                if (f.path) {
+                    await ingestToRAG(f.path, f.originalname, req.params.id);
                 }
             }
         }
@@ -311,6 +374,49 @@ const uploadDocument = async (req, res, next) => {
         res.status(201).json(caseDoc.documents.filter(d => d.recordStatus === 1));
     } catch (error) { next(error); }
 };
+
+// Helper to get MIME type from filename
+function getMimeType(filename) {
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes = {
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.txt': 'text/plain',
+        '.md': 'text/markdown',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.m4a': 'audio/mp4',
+        '.ogg': 'audio/ogg'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+}
+
+// Helper to trigger RAG ingestion
+async function ingestToRAG(filePath, filename, caseId) {
+    try {
+        console.log(`Triggering RAG ingestion for ${filename}...`);
+        
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(filePath));
+        formData.append('caseId', caseId);
+        
+        // Call Python server ingestion endpoint
+        const PYTHON_SERVER = process.env.PYTHON_SERVER_URL || 'http://localhost:8000';
+        await axios.post(`${PYTHON_SERVER}/ingest`, formData, {
+            headers: formData.getHeaders(),
+            timeout: 60000 // 60 second timeout
+        });
+        
+        console.log(`Successfully ingested ${filename}`);
+    } catch (error) {
+        console.error(`Ingestion failed for ${filename}:`, error.message);
+        // Don't throw - ingestion failure shouldn't block upload
+    }
+}
 
 const deleteDocument = async (req, res, next) => {
     try {
