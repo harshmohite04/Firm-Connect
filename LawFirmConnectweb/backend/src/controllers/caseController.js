@@ -1,4 +1,7 @@
 const Case = require('../models/Case');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 // @desc    Get all cases (Lawyer View)
 // @route   GET /cases
@@ -170,6 +173,45 @@ const getCaseDocuments = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+
+
+// Helper to run python script
+const runTranscription = (filePath) => {
+    return new Promise((resolve, reject) => {
+        // Adjust path to where transcribe.py is located
+        const scriptPath = path.join(__dirname, '../utils/transcribe.py');
+        const process = spawn('python', [scriptPath, filePath]);
+
+        let dataString = '';
+        let errorString = '';
+
+        process.stdout.on('data', (data) => {
+            dataString += data.toString();
+        });
+
+        process.stderr.on('data', (data) => {
+            errorString += data.toString();
+        });
+
+        process.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`Transcription script failed: ${errorString}`));
+                return;
+            }
+            try {
+                const json = JSON.parse(dataString);
+                if (json.success) {
+                    resolve(json.formatted_transcript);
+                } else {
+                    reject(new Error(json.error || 'Unknown error in transcription script'));
+                }
+            } catch (e) {
+                reject(new Error(`Failed to parse script output: ${dataString}`));
+            }
+        });
+    });
+};
+
 const uploadDocument = async (req, res, next) => {
     try {
         const { category } = req.body;
@@ -178,19 +220,90 @@ const uploadDocument = async (req, res, next) => {
         const caseDoc = await Case.findById(req.params.id);
         if (!caseDoc) { res.status(404); throw new Error('Case not found'); }
 
-        const newDocs = req.files.map(f => ({
-            fileName: f.originalname,
-            filePath: f.location || `/uploads/${f.filename}`,
-            category: category || 'General',
-            uploadedBy: req.user._id,
-            fileSize: f.size,
-            recordStatus: 1
-        }));
+        const processedDocuments = [];
+
+        // Process each file
+        for (const f of req.files) {
+            // 1. Add original file
+            const originalDoc = {
+                fileName: f.originalname,
+                filePath: f.location || `/uploads/${f.filename}`,
+                category: category || 'General',
+                uploadedBy: req.user._id,
+                fileSize: f.size,
+                recordStatus: 1
+            };
+            processedDocuments.push(originalDoc);
+
+            // 2. Check if audio and needs transcription
+            const mimeType = f.mimetype;
+            const isAudio = mimeType.startsWith('audio') || 
+                            ['.mp3', '.wav', '.m4a', '.ogg'].includes(path.extname(f.originalname).toLowerCase());
+
+            if (isAudio) {
+                try {
+                    console.log(`Starting transcription for ${f.originalname}...`);
+                    // Note: This relies on the file being accessible locally. 
+                    // If using S3 (f.location), we'd need to download it first or handle it differently.
+                    // For now, assuming local file path for transcription or we need a way to pass URL or stream.
+                    // implementation_plan assumed local execution or access.
+                    // If hybrid storage uses S3, `f.path` might optionally exist if multer works certain ways, or we need to download.
+                    // Let's check `fileUpload.js`. It uses `multerS3` or `diskStorage`.
+                    // If `multerS3`, we don't have a local path easily.
+                    // BUT for this task, let's assume if it's S3, we might skip or need a temp download.
+                    // However, user setup usually local for dev ("d:\harsh...").
+                    
+                    let localFilePath = f.path; // Available if diskStorage
+                    
+                    // If S3, we can't easily run python on a URL without valid auth or download.
+                    // For MVP safety, we'll only transcribe if we have a local path.
+                    if (localFilePath) {
+                         const transcriptText = await runTranscription(localFilePath);
+                         
+                         // Save transcript as a new file
+                         const transcriptFileName = `Transcript - ${path.basename(f.originalname, path.extname(f.originalname))}.md`;
+                         const transcriptSavePath = path.join('uploads', `${Date.now()}-${transcriptFileName}`);
+                         
+                         // Write to disk (even if using S3, we need to save the transcript somewhere)
+                         // If using S3, we should ideally upload it there too. 
+                         // For now, let's save locally to 'uploads/' as it's static served.
+                         fs.writeFileSync(transcriptSavePath, transcriptText);
+
+                         const transcriptDoc = {
+                             fileName: transcriptFileName,
+                             filePath: `/uploads/${path.basename(transcriptSavePath)}`, 
+                             category: 'Transcripts',
+                             uploadedBy: req.user._id,
+                             fileSize: Buffer.byteLength(transcriptText),
+                             recordStatus: 1
+                         };
+                         processedDocuments.push(transcriptDoc);
+                         
+                         caseDoc.activityLog.push({
+                            type: 'transcription_generated',
+                            description: `Generated transcript for ${f.originalname}`,
+                            performedBy: req.user._id
+                        });
+                    } else {
+                        console.log('Skipping transcription: No local file path (S3 storage?).');
+                    }
+
+                } catch (transcribeErr) {
+                    console.error('Transcription error:', transcribeErr);
+                    // Don't fail the whole upload, just log error
+                    caseDoc.activityLog.push({
+                        type: 'transcription_failed',
+                        description: `Transcription failed for ${f.originalname}`,
+                        performedBy: req.user._id
+                    });
+                }
+            }
+        }
         
-        caseDoc.documents.push(...newDocs);
+        caseDoc.documents.push(...processedDocuments);
         caseDoc.activityLog.push({
             type: 'document_uploaded',
-            description: `Uploaded ${newDocs.length} documents`,
+            description: `Uploaded ${req.files.length} files`,
             performedBy: req.user._id
         });
         
