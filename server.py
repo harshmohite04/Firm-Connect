@@ -58,6 +58,7 @@ mongo_client = MongoClient(MONGO_URI)
 db = mongo_client["lawfirm"]
 chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
+draft_sessions_collection = db["draft_sessions"]
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -118,6 +119,28 @@ class SaveDocumentRequest(BaseModel):
     caseId: str
     filename: str
     content: str
+
+class ConversationalDraftRequest(BaseModel):
+    caseId: str
+    sessionId: str
+    message: str
+    currentDocument: Optional[str] = ""
+    template: Optional[str] = None
+
+class ConversationalDraftResponse(BaseModel):
+    ai_message: str
+    document_content: str
+
+class CreateDraftSessionRequest(BaseModel):
+    caseId: str
+    template: Optional[str] = "blank"
+    title: Optional[str] = "New Document"
+
+class DraftSessionResponse(BaseModel):
+    session_id: str
+    title: str
+    template: str
+    created_at: datetime
 
 # ---------- ROUTES ----------
 import re
@@ -412,6 +435,158 @@ def save_document_endpoint(request: SaveDocumentRequest):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+# ---------- CONVERSATIONAL DRAFT ENDPOINTS ----------
+
+@app.post("/draft/session", response_model=DraftSessionResponse)
+def create_draft_session(request: CreateDraftSessionRequest):
+    """Create a new conversational draft session"""
+    try:
+        session_id = str(uuid.uuid4())
+        new_session = {
+            "session_id": session_id,
+            "case_id": request.caseId,
+            "title": request.title,
+            "template": request.template,
+            "created_at": datetime.utcnow(),
+            "messages": [],
+            "current_document": ""
+        }
+        draft_sessions_collection.insert_one(new_session)
+        return DraftSessionResponse(
+            session_id=session_id,
+            title=new_session["title"],
+            template=new_session["template"],
+            created_at=new_session["created_at"]
+        )
+    except Exception as e:
+        print(f"Error creating draft session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/draft/sessions/{caseId}")
+def get_draft_sessions(caseId: str):
+    """Get all draft sessions for a case"""
+    try:
+        cursor = draft_sessions_collection.find({"case_id": caseId}).sort("created_at", -1)
+        sessions = []
+        for doc in cursor:
+            sessions.append({
+                "session_id": doc["session_id"],
+                "title": doc.get("title", "Untitled Document"),
+                "template": doc.get("template", "blank"),
+                "created_at": doc.get("created_at", datetime.utcnow())
+            })
+        return sessions
+    except Exception as e:
+        print(f"Error fetching draft sessions: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/draft/session/{sessionId}")
+def get_draft_session(sessionId: str):
+    """Get a specific draft session with messages and document content"""
+    try:
+        session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        
+        return {
+            "session_id": session_doc["session_id"],
+            "title": session_doc.get("title", "Untitled Document"),
+            "template": session_doc.get("template", "blank"),
+            "created_at": session_doc.get("created_at", datetime.utcnow()),
+            "messages": session_doc.get("messages", []),
+            "current_document": session_doc.get("current_document", "")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching draft session: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/draft/chat", response_model=ConversationalDraftResponse)
+def conversational_draft(request: ConversationalDraftRequest):
+    """Process conversational message and update document"""
+    try:
+        # Fetch session
+        session_doc = draft_sessions_collection.find_one({"session_id": request.sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        
+        # Get conversation history
+        history = session_doc.get("messages", [])
+        template = session_doc.get("template", "blank")
+        
+        # Generate AI response and updated document
+        result = generator.generate_conversational(
+            case_id=request.caseId,
+            message=request.message,
+            current_document=request.currentDocument,
+            history=history[-6:],  # Last 6 messages for context
+            template=template
+        )
+        
+        # Save to history
+        new_user_msg = {"role": "user", "content": request.message}
+        new_ai_msg = {"role": "assistant", "content": result["ai_message"]}
+        
+        draft_sessions_collection.update_one(
+            {"session_id": request.sessionId},
+            {
+                "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}},
+                "$set": {"current_document": result["document_content"]}
+            }
+        )
+        
+        return ConversationalDraftResponse(
+            ai_message=result["ai_message"],
+            document_content=result["document_content"]
+        )
+    except Exception as e:
+        print(f"Error in conversational draft: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/draft/templates")
+def get_templates():
+    """Get available document templates"""
+    templates = [
+        {
+            "id": "noc",
+            "name": "No Objection Certificate (NOC)",
+            "description": "Generate NOC for property, employment, or other purposes",
+            "category": "Certificate"
+        },
+        {
+            "id": "demand_letter",
+            "name": "Demand Letter",
+            "description": "Legal demand letter for payment or action",
+            "category": "Letter"
+        },
+        {
+            "id": "legal_notice",
+            "name": "Legal Notice",
+            "description": "Formal legal notice under law",
+            "category": "Notice"
+        },
+        {
+            "id": "contract",
+            "name": "Contract Agreement",
+            "description": "Standard contract or agreement template",
+            "category": "Contract"
+        },
+        {
+            "id": "affidavit",
+            "name": "Affidavit",
+            "description": "Sworn statement of facts",
+            "category": "Affidavit"
+        },
+        {
+            "id": "blank",
+            "name": "Blank Document",
+            "description": "Start from scratch with AI assistance",
+            "category": "General"
+        }
+    ]
+    return templates
 
 @app.post("/investigation/run", response_model=InvestigatorResponse)
 async def run_investigation(request: InvestigatorRequest):

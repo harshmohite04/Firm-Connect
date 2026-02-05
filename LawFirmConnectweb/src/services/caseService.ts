@@ -250,6 +250,54 @@ const caseService = {
     const response = await api.delete(`/cases/${id}/team/members/${userId}`);
     return response.data;
   },
+
+  // -- Conversational Draft --
+  createDraftSession: async (
+    caseId: string,
+    template: string,
+    title: string,
+  ) => {
+    const response = await axios.post(`${RAG_API_URL}/draft/session`, {
+      caseId,
+      template,
+      title,
+    });
+    return response.data;
+  },
+
+  getDraftSessions: async (caseId: string) => {
+    const response = await axios.get(`${RAG_API_URL}/draft/sessions/${caseId}`);
+    return response.data;
+  },
+
+  getDraftSession: async (sessionId: string) => {
+    const response = await axios.get(
+      `${RAG_API_URL}/draft/session/${sessionId}`,
+    );
+    return response.data;
+  },
+
+  sendDraftMessage: async (
+    caseId: string,
+    sessionId: string,
+    message: string,
+    currentDocument: string,
+    template?: string,
+  ) => {
+    const response = await axios.post(`${RAG_API_URL}/draft/chat`, {
+      caseId,
+      sessionId,
+      message,
+      currentDocument,
+      template,
+    });
+    return response.data;
+  },
+
+  getTemplates: async () => {
+    const response = await axios.get(`${RAG_API_URL}/draft/templates`);
+    return response.data;
+  },
 };
 
 export default caseService;
