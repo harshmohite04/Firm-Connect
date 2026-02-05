@@ -1,4 +1,10 @@
 const Case = require('../models/Case');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const AdmZip = require('adm-zip');
+const axios = require('axios');
+const FormData = require('form-data');
 
 // @desc    Get all cases (Lawyer View)
 // @route   GET /cases
@@ -170,6 +176,45 @@ const getCaseDocuments = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
+
+
+// Helper to run python script
+const runTranscription = (filePath) => {
+    return new Promise((resolve, reject) => {
+        // Adjust path to where transcribe.py is located
+        const scriptPath = path.join(__dirname, '../utils/transcribe.py');
+        const process = spawn('python', [scriptPath, filePath]);
+
+        let dataString = '';
+        let errorString = '';
+
+        process.stdout.on('data', (data) => {
+            dataString += data.toString();
+        });
+
+        process.stderr.on('data', (data) => {
+            errorString += data.toString();
+        });
+
+        process.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`Transcription script failed: ${errorString}`));
+                return;
+            }
+            try {
+                const json = JSON.parse(dataString);
+                if (json.success) {
+                    resolve(json.formatted_transcript);
+                } else {
+                    reject(new Error(json.error || 'Unknown error in transcription script'));
+                }
+            } catch (e) {
+                reject(new Error(`Failed to parse script output: ${dataString}`));
+            }
+        });
+    });
+};
+
 const uploadDocument = async (req, res, next) => {
     try {
         const { category } = req.body;
@@ -178,19 +223,150 @@ const uploadDocument = async (req, res, next) => {
         const caseDoc = await Case.findById(req.params.id);
         if (!caseDoc) { res.status(404); throw new Error('Case not found'); }
 
-        const newDocs = req.files.map(f => ({
-            fileName: f.originalname,
-            filePath: f.location || `/uploads/${f.filename}`,
-            category: category || 'General',
-            uploadedBy: req.user._id,
-            fileSize: f.size,
-            recordStatus: 1
-        }));
+        const processedDocuments = [];
+
+        // Helper function to process a single file
+        const processSingleFile = async (fileData) => {
+            const { originalname, mimetype, location, filename, path: localPath, size } = fileData;
+            
+            // Add original file document object
+            const originalDoc = {
+                fileName: originalname,
+                filePath: location || `/uploads/${filename}`,
+                category: category || 'General',
+                uploadedBy: req.user._id,
+                fileSize: size,
+                recordStatus: 1
+            };
+            processedDocuments.push(originalDoc);
+
+            // Check if audio and needs transcription
+            const isAudio = mimetype.startsWith('audio') || 
+                            ['.mp3', '.wav', '.m4a', '.ogg'].includes(path.extname(originalname).toLowerCase());
+
+            if (isAudio && localPath) {
+                try {
+                    console.log(`Starting transcription for ${originalname}...`);
+                    const transcriptText = await runTranscription(localPath);
+                    
+                    // Save transcript as a new file
+                    const transcriptFileName = `Transcript - ${path.basename(originalname, path.extname(originalname))}.md`;
+                    const transcriptSavePath = path.join('uploads', `${Date.now()}-${transcriptFileName}`);
+                    fs.writeFileSync(transcriptSavePath, transcriptText);
+
+                    const transcriptDoc = {
+                        fileName: transcriptFileName,
+                        filePath: `/uploads/${path.basename(transcriptSavePath)}`, 
+                        category: 'Transcripts',
+                        uploadedBy: req.user._id,
+                        fileSize: Buffer.byteLength(transcriptText),
+                        recordStatus: 1
+                    };
+                    processedDocuments.push(transcriptDoc);
+                    
+                    caseDoc.activityLog.push({
+                        type: 'transcription_generated',
+                        description: `Generated transcript for ${originalname}`,
+                        performedBy: req.user._id
+                    });
+                } catch (transcribeErr) {
+                    console.error('Transcription error:', transcribeErr);
+                    caseDoc.activityLog.push({
+                        type: 'transcription_failed',
+                        description: `Transcription failed for ${originalname}`,
+                        performedBy: req.user._id
+                    });
+                }
+            }
+        };
+
+        // Process each uploaded file
+        for (const f of req.files) {
+            const fileExt = path.extname(f.originalname).toLowerCase();
+            
+            // Check if this is a zip file
+            if (fileExt === '.zip') {
+                console.log(`Extracting zip file: ${f.originalname}`);
+                
+                try {
+                    // Only extract if we have a local path
+                    if (!f.path) {
+                        console.log('Skipping zip extraction: No local file path (S3 storage?).');
+                        continue;
+                    }
+
+                    const zip = new AdmZip(f.path);
+                    const zipEntries = zip.getEntries();
+                    
+                    let extractedCount = 0;
+                    
+                    // Process each file in the zip
+                    for (const entry of zipEntries) {
+                        if (entry.isDirectory) continue; // Skip directories
+                        
+                        const entryName = entry.entryName;
+                        const entryData = entry.getData();
+                        
+                        // Save extracted file to uploads directory
+                        const extractedFileName = `${Date.now()}-${path.basename(entryName)}`;
+                        const extractedFilePath = path.join('uploads', extractedFileName);
+                        
+                        fs.writeFileSync(extractedFilePath, entryData);
+                        
+                        // Create file object mimicking multer structure
+                        const extractedFileData = {
+                            originalname: path.basename(entryName),
+                            mimetype: getMimeType(path.basename(entryName)),
+                            filename: extractedFileName,
+                            path: extractedFilePath,
+                            size: entryData.length,
+                            location: null // Local storage
+                        };
+                        
+                        // Process this extracted file (including transcription if audio)
+                        await processSingleFile(extractedFileData);
+                        extractedCount++;
+                        
+                        // Trigger ingestion for this file
+                        await ingestToRAG(extractedFilePath, path.basename(entryName), req.params.id);
+                    }
+                    
+                    // Delete the zip file itself (we don't want it in documents)
+                    try {
+                        fs.unlinkSync(f.path);
+                    } catch (unlinkErr) {
+                        console.error('Error deleting zip file:', unlinkErr);
+                    }
+                    
+                    caseDoc.activityLog.push({
+                        type: 'zip_extracted',
+                        description: `Extracted ${extractedCount} files from ${f.originalname}`,
+                        performedBy: req.user._id
+                    });
+                    
+                } catch (zipErr) {
+                    console.error('Zip extraction error:', zipErr);
+                    caseDoc.activityLog.push({
+                        type: 'zip_extraction_failed',
+                        description: `Failed to extract ${f.originalname}`,
+                        performedBy: req.user._id
+                    });
+                }
+            } else {
+                // Regular file (not a zip)
+                await processSingleFile(f);
+                
+                // Trigger ingestion for regular files
+                if (f.path) {
+                    await ingestToRAG(f.path, f.originalname, req.params.id);
+                }
+            }
+        }
         
-        caseDoc.documents.push(...newDocs);
+        caseDoc.documents.push(...processedDocuments);
         caseDoc.activityLog.push({
             type: 'document_uploaded',
-            description: `Uploaded ${newDocs.length} documents`,
+            description: `Uploaded ${req.files.length} files`,
             performedBy: req.user._id
         });
         
@@ -198,6 +374,49 @@ const uploadDocument = async (req, res, next) => {
         res.status(201).json(caseDoc.documents.filter(d => d.recordStatus === 1));
     } catch (error) { next(error); }
 };
+
+// Helper to get MIME type from filename
+function getMimeType(filename) {
+    const ext = path.extname(filename).toLowerCase();
+    const mimeTypes = {
+        '.pdf': 'application/pdf',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.txt': 'text/plain',
+        '.md': 'text/markdown',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.mp3': 'audio/mpeg',
+        '.wav': 'audio/wav',
+        '.m4a': 'audio/mp4',
+        '.ogg': 'audio/ogg'
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
+}
+
+// Helper to trigger RAG ingestion
+async function ingestToRAG(filePath, filename, caseId) {
+    try {
+        console.log(`Triggering RAG ingestion for ${filename}...`);
+        
+        const formData = new FormData();
+        formData.append('file', fs.createReadStream(filePath));
+        formData.append('caseId', caseId);
+        
+        // Call Python server ingestion endpoint
+        const PYTHON_SERVER = process.env.PYTHON_SERVER_URL || 'http://localhost:8000';
+        await axios.post(`${PYTHON_SERVER}/ingest`, formData, {
+            headers: formData.getHeaders(),
+            timeout: 60000 // 60 second timeout
+        });
+        
+        console.log(`Successfully ingested ${filename}`);
+    } catch (error) {
+        console.error(`Ingestion failed for ${filename}:`, error.message);
+        // Don't throw - ingestion failure shouldn't block upload
+    }
+}
 
 const deleteDocument = async (req, res, next) => {
     try {
