@@ -1,47 +1,51 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
 import PortalLayout from '../components/PortalLayout';
+import type { Case } from '../services/caseService';
+import caseService from '../services/caseService';
 
+// Icons - matching UserPortal style
 const CaseIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
     </svg>
-)
-const ClipboardIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+);
+
+const FolderIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
     </svg>
-)
-const CalendarIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+);
+
+const CheckCircleIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
-)
+);
+
 const SearchIcon = () => (
     <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
     </svg>
-)
-const FilterIcon = () => (
-    <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-    </svg>
-)
+);
+
 const PlusIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
     </svg>
-)
-const LockIcon = () => (
-    <svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+);
+
+const ArrowRightIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
     </svg>
-)
+);
 
-
-import type { Case } from '../services/caseService';
-import caseService from '../services/caseService';
+const ClockIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
 
 const PortalCases: React.FC = () => {
     const navigate = useNavigate();
@@ -61,210 +65,216 @@ const PortalCases: React.FC = () => {
                 setLoading(false);
             }
         };
-
         fetchCases();
     }, []);
 
+    const activeCases = cases.filter(c => c.status !== 'Closed');
+    const closedCases = cases.filter(c => c.status === 'Closed');
+
     const filteredCases = cases.filter((c: Case) => {
         if (!c) return false;
-        const matchesFilter = filter === 'All' ? true : c.status === filter;
-        
-        const title = c.title || '';
-        const description = c.description || '';
-        const id = c._id || '';
+        const matchesFilter = filter === 'All' ? true : (filter === 'Active' ? c.status !== 'Closed' : c.status === 'Closed');
         const query = searchQuery.toLowerCase();
-        
-        const matchesSearch = title.toLowerCase().includes(query) || 
-                              description.toLowerCase().includes(query) ||
-                              id.toLowerCase().includes(query);
+        const matchesSearch = c.title?.toLowerCase().includes(query) ||
+            c.description?.toLowerCase().includes(query);
         return matchesFilter && matchesSearch;
     });
 
-    if (loading) {
-        return <PortalLayout><div className="flex justify-center p-10">Loading Cases...</div></PortalLayout>;
-    }
+    const getStatusStyle = (status: string) => {
+        switch (status?.toLowerCase()) {
+            case 'open':
+            case 'active':
+                return 'bg-emerald-100 text-emerald-700';
+            case 'closed':
+                return 'bg-slate-100 text-slate-600';
+            default:
+                return 'bg-amber-100 text-amber-700';
+        }
+    };
 
+    if (loading) {
+        return (
+            <PortalLayout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-center">
+                        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-slate-600 font-medium">Loading your cases...</p>
+                    </div>
+                </div>
+            </PortalLayout>
+        );
+    }
 
     return (
         <PortalLayout>
+            <div className="max-w-7xl mx-auto space-y-6">
 
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">My Legal Matters</h2>
-                    <p className="text-slate-500 mt-1">Overview of your active and archived cases.</p>
-                </div>
-                <Link to="/portal/start-case" className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 rounded-lg text-sm font-bold text-white hover:bg-blue-700 shadow-md transition-all">
-                    <PlusIcon /> Start New Case
-                </Link>
-            </div>
-
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Active Cases</p>
-                        <p className="text-3xl font-bold text-slate-900 mt-2">{cases.filter(c => c.status !== 'Closed').length}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-blue-600">
-                        <CaseIcon />
-                    </div>
-                </div>
-                {/* Placeholder stats */}
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Total Cases</p>
-                        <p className="text-3xl font-bold text-slate-900 mt-2">{cases.length}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-orange-500">
-                        <ClipboardIcon />
-                    </div>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500">Closed Cases</p>
-                        <p className="text-3xl font-bold text-slate-900 mt-2">{cases.filter(c => c.status === 'Closed').length}</p>
-                    </div>
-                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-emerald-500">
-                        <CalendarIcon />
-                    </div>
-                </div>
-            </div>
-
-            {/* Controls */}
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6 flex flex-col md:flex-row gap-4">
-                <div className="flex-grow relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <SearchIcon />
-                    </div>
-                    <input 
-                        type="text" 
-                        placeholder="Search by case name or reference ID..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-                    />
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setFilter('All')}
-                        className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${filter === 'All' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-                    >
-                        <FilterIcon /> All
-                    </button>
-                    <button
-                        onClick={() => setFilter('Open')}
-                        className={`px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${filter === 'Open' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-                    >
-                        Active
-                    </button>
-                    <button
-                        onClick={() => setFilter('Closed')}
-                        className={`px-4 py-2.5 border rounded-lg text-sm font-medium transition-colors ${filter === 'Closed' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'}`}
-                    >
-                        Closed
-                    </button>
-                </div>
-            </div>
-
-            {/* Cases Table */}
-            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Case Name / Desc</th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Lead Attorney</th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date Created</th>
-                                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Last Update</th>
-                                <th scope="col" className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
-
-                            {filteredCases.map((caseItem: Case) => (
-                                <tr 
-                                    key={caseItem._id} 
-                                    onClick={(e) => {
-                                        if ((e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('button')) return;
-                                        navigate(`/portal/cases/${caseItem._id}`);
-                                    }}
-                                    className="hover:bg-slate-50 transition-colors cursor-pointer"
-                                >
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center">
-                                            <div className="flex-shrink-0 h-8 w-8 bg-blue-50 rounded-lg flex items-center justify-center mr-4">
-                                                <LockIcon />
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-900 hover:text-blue-600 transition-colors">
-                                                    <Link to={`/portal/cases/${caseItem._id}`}>{caseItem.title}</Link>
-                                                </div>
-                                                <div className="text-xs text-slate-500 truncate max-w-[150px]">{caseItem.description}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center group cursor-pointer">
-                                            <Link to={caseItem.leadAttorney ? `/portal/messages?contact=${caseItem.leadAttorney.name}` : '#'} className="flex items-center">
-                                                <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                                    {caseItem.leadAttorney ? caseItem.leadAttorney.name.split(' ').map((n:any) => n[0]).join('').substring(0,2).toUpperCase() : 'NA'}
-                                                </div>
-                                                <div className="ml-3">
-                                                    <div className="text-sm font-medium text-slate-900 group-hover:text-blue-600 group-hover:underline transition-colors">
-                                                        {caseItem.leadAttorney ? caseItem.leadAttorney.name : 'Unassigned'}
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-bold rounded-full ${caseItem.status === 'Open' ? 'bg-emerald-100 text-emerald-800' :
-                                            caseItem.status === 'Closed' ? 'bg-slate-100 text-slate-500' :
-                                                'bg-blue-100 text-blue-800'
-                                            }`}>
-                                            {caseItem.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-slate-900">{new Date(caseItem.createdAt).toLocaleDateString()}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                        {caseItem.updatedAt ? new Date(caseItem.updatedAt).toLocaleDateString() : '-'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <Link to={`/portal/cases/${caseItem._id}`} className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg font-bold transition-colors">Details</Link>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-
-                            {filteredCases.length === 0 && (
-                                <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-slate-500">
-                                        No cases found.
-                                    </td>
-                                </tr>
-                            )}
-
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Pagination (Static for now) */}
-                <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-slate-200 sm:px-6">
-                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                {/* Header - Matching UserPortal style */}
+                <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
-                            <p className="text-sm text-slate-700">
-                                Showing <span className="font-bold">1</span> to <span className="font-bold">{filteredCases.length}</span> of <span className="font-bold">{filteredCases.length}</span> cases
-                            </p>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">My Legal Matters</h1>
+                            <p className="text-slate-500 mt-2">Overview of all your active and archived cases.</p>
+                        </div>
+                        <div className="flex gap-3">
+                            <Link
+                                to="/portal"
+                                className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
+                            >
+                                Dashboard
+                            </Link>
+                            <Link
+                                to="/portal/start-case"
+                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
+                            >
+                                <PlusIcon /> New Case
+                            </Link>
                         </div>
                     </div>
                 </div>
-            </div>
 
+                {/* Stats Grid - Matching UserPortal style */}
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                                <CaseIcon />
+                            </div>
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Active</span>
+                        </div>
+                        <p className="text-2xl font-bold text-slate-900">{activeCases.length}</p>
+                        <p className="text-sm text-slate-500 mt-1">Active Cases</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 group-hover:scale-110 transition-transform">
+                                <FolderIcon />
+                            </div>
+                        </div>
+                        <p className="text-2xl font-bold text-slate-900">{cases.length}</p>
+                        <p className="text-sm text-slate-500 mt-1">Total Cases</p>
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group col-span-2 lg:col-span-1">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                                <CheckCircleIcon />
+                            </div>
+                        </div>
+                        <p className="text-2xl font-bold text-slate-900">{closedCases.length}</p>
+                        <p className="text-sm text-slate-500 mt-1">Closed Cases</p>
+                    </div>
+                </div>
+
+                {/* Search & Filter - Matching UserPortal card style */}
+                <div className="bg-white p-4 rounded-xl border border-slate-200">
+                    <div className="flex flex-col lg:flex-row gap-4">
+                        <div className="flex-grow relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <SearchIcon />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search by case name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-300 text-sm transition-all"
+                            />
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {['All', 'Active', 'Closed'].map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setFilter(f)}
+                                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${filter === f
+                                        ? 'bg-slate-900 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Cases List - Card style matching UserPortal "Active Matters" */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center text-slate-600">
+                                <FolderIcon />
+                            </div>
+                            <h3 className="font-bold text-slate-900">
+                                {filter === 'All' ? 'All Cases' : filter === 'Active' ? 'Active Cases' : 'Closed Cases'}
+                            </h3>
+                        </div>
+                        <span className="text-sm text-slate-500">{filteredCases.length} {filteredCases.length === 1 ? 'case' : 'cases'}</span>
+                    </div>
+
+                    <div className="divide-y divide-slate-100">
+                        {filteredCases.map((caseItem: Case) => (
+                            <Link
+                                to={`/portal/cases/${caseItem._id}`}
+                                key={caseItem._id}
+                                className="p-5 hover:bg-slate-50 transition-colors block"
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex gap-4 flex-1">
+                                        <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                                            {caseItem.title?.charAt(0) || 'C'}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className="font-bold text-slate-900 truncate">{caseItem.title}</h4>
+                                            <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">
+                                                {caseItem.description || 'No description provided'}
+                                            </p>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusStyle(caseItem.status)}`}>
+                                                    {caseItem.status}
+                                                </span>
+                                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                    <ClockIcon />
+                                                    {new Date(caseItem.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                </span>
+                                                {caseItem.leadAttorney && (
+                                                    <span className="text-xs text-slate-400">
+                                                        Attorney: {caseItem.leadAttorney.name}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-slate-400">
+                                        <ArrowRightIcon />
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+
+                        {filteredCases.length === 0 && (
+                            <div className="p-8 text-center">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <FolderIcon />
+                                </div>
+                                <p className="font-semibold text-slate-900">No cases found</p>
+                                <p className="text-sm text-slate-500 mt-1">
+                                    {searchQuery ? 'Try adjusting your search' : 'Start by creating your first case'}
+                                </p>
+                                {!searchQuery && (
+                                    <Link
+                                        to="/portal/start-case"
+                                        className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors"
+                                    >
+                                        <PlusIcon /> Create Case
+                                    </Link>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </PortalLayout>
     );
 };

@@ -14,6 +14,7 @@ export interface CalendarEvent {
   caseId?: string;
   status?: string;
   type?: string;
+  isOnlineMeeting?: boolean;
 }
 
 const getEvents = async (): Promise<CalendarEvent[]> => {
@@ -30,10 +31,19 @@ const deleteEvent = async (id: string): Promise<void> => {
   await api.delete(`/schedule/${id}`);
 };
 
+const updateEvent = async (
+  id: string,
+  eventData: any,
+): Promise<CalendarEvent> => {
+  const response = await api.put(`/schedule/${id}`, eventData);
+  return response.data;
+};
+
 const scheduleService = {
   getEvents,
   createEvent,
   deleteEvent,
+  updateEvent,
 };
 
 export default scheduleService;

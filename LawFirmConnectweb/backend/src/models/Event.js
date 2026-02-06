@@ -33,11 +33,15 @@ const eventSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        default: 'Appointment'
+        default: 'Meeting'
     },
     status: {
         type: String,
         default: 'Scheduled'
+    },
+    isOnlineMeeting: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
