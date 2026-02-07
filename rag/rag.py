@@ -14,7 +14,7 @@ from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetrieve
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
 import os
 import requests
-from neo4j_graphrag.embeddings.ollama import OllamaEmbeddings
+from sentence_transformers import SentenceTransformer
 
 
 load_dotenv()
@@ -30,18 +30,26 @@ OLLAMA_LLM_MODEL = "llama3.2:latest"
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
-# Defaults for local Ollama
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+# SentenceTransformers model (same as ingestion)
+EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
 groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
-embedder = OllamaEmbeddings(
-    model="nomic-embed-text",   # or "all-minilm" if installed
-)
+# Use SentenceTransformers for local embeddings (no Ollama dependency)
+_sentence_transformer = SentenceTransformer(EMBED_MODEL)
+
+class LocalEmbedder:
+    """Wrapper for SentenceTransformers to match the embedder interface."""
+    def __init__(self, model):
+        self.model = model
+    
+    def embed_query(self, text: str) -> list:
+        return self.model.encode(text).tolist()
+
+embedder = LocalEmbedder(_sentence_transformer)
 
 
 ollama_llm = OllamaLLM(
@@ -51,21 +59,9 @@ ollama_llm = OllamaLLM(
 
 def embed_text(text: str) -> list[float]:
     """
-    Generate vector embeddings using Ollama locally.
+    Generate vector embeddings using SentenceTransformers (local, no Ollama).
     """
-    try:
-        res = requests.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": EMBED_MODEL, "input": text},
-            timeout=60,
-        )
-        res.raise_for_status()
-        data = res.json()
-
-        return data["embedding"]
-
-    except Exception as e:
-        raise RuntimeError(f"Error generating embeddings from Ollama: {e}")
+    return embedder.embed_query(text)
 
 
 from neo4j_graphrag.generation.prompts import RagTemplate

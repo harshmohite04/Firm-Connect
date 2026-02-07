@@ -12,7 +12,7 @@ from typing import Optional
 def validate_case_id(case_id: str) -> str:
     """
     Validate case ID to prevent NoSQL injection.
-    Case IDs should be UUIDs (with or without hyphens).
+    Case IDs can be UUIDs (with or without hyphens) or MongoDB ObjectIds.
     
     Args:
         case_id: The case ID to validate
@@ -23,8 +23,8 @@ def validate_case_id(case_id: str) -> str:
     Raises:
         HTTPException: 400 if case ID format is invalid
     """
-    # Allow UUID format with hyphens (standard) or without
-    if not re.match(r'^[a-f0-9\-]{32,36}$', case_id.lower()):
+    # Allow UUID format (32-36 chars with optional hyphens) or MongoDB ObjectId (24 hex chars)
+    if not re.match(r'^[a-f0-9\-]{24,36}$', case_id.lower()):
         raise HTTPException(
             status_code=400,
             detail="Invalid case ID format"

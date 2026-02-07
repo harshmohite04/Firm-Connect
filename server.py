@@ -187,20 +187,20 @@ import uuid
 @app.post("/chat/session", response_model=SessionResponse)
 @limiter.limit("30/minute")
 async def create_session(
-    request_obj: Request,
-    request: CreateSessionRequest,
+    request: Request,
+    body: CreateSessionRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     try:
         # Validate input
-        validate_case_id(request.caseId)
+        validate_case_id(body.caseId)
         
         session_id = str(uuid.uuid4())
         new_session = {
             "session_id": session_id,
-            "case_id": request.caseId,
+            "case_id": body.caseId,
             "user_id": get_user_id(current_user),  # Track ownership
-            "title": request.title,
+            "title": body.title,
             "created_at": datetime.utcnow(),
             "expires_at": datetime.utcnow() + timedelta(hours=24),
             "messages": []
@@ -316,35 +316,35 @@ async def get_chat_history(
 @app.post("/chat", response_model=ChatResponse)
 @limiter.limit("30/minute")  # Limit AI requests
 async def chat(
-    request_obj: Request,
-    request: ChatRequest,
+    request: Request,
+    body: ChatRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     try:
         # Validate inputs
-        validate_case_id(request.caseId)
-        if request.sessionId:
-            validate_session_id(request.sessionId)
-        validate_string_length(request.message, "Message", min_length=1, max_length=5000)
+        validate_case_id(body.caseId)
+        if body.sessionId:
+            validate_session_id(body.sessionId)
+        validate_string_length(body.message, "Message", min_length=1, max_length=5000)
         
         session_doc = None
         user_id = get_user_id(current_user)
         
         # 1. Fetch history from MongoDB
-        if request.sessionId:
-            session_doc = chat_collection.find_one({"session_id": request.sessionId})
+        if body.sessionId:
+            session_doc = chat_collection.find_one({"session_id": body.sessionId})
             
             # Verify ownership
             if session_doc and session_doc.get("user_id") != user_id:
                 log_security_event("UNAUTHORIZED_CHAT_ACCESS", {
                     "user_id": user_id,
-                    "session_id": request.sessionId
+                    "session_id": body.sessionId
                 })
                 raise HTTPException(status_code=403, detail="Access denied")
         else:
             # Legacy fallback
             session_doc = chat_collection.find_one({
-                "case_id": request.caseId, 
+                "case_id": body.caseId, 
                 "session_id": {"$exists": False}
             })
         
@@ -355,10 +355,10 @@ async def chat(
 
         # 2. Get Answer from RAG
         result = ask(
-            query=request.message,
-            case_id=request.caseId,
+            query=body.message,
+            case_id=body.caseId,
             history=recent_history,
-            top_k=request.top_k
+            top_k=body.top_k
         )
 
         # Extract context items from result
@@ -389,7 +389,7 @@ async def chat(
                 )
 
         # 3. Save to History
-        new_user_msg = {"role": "user", "content": request.message}
+        new_user_msg = {"role": "user", "content": body.message}
         
         # Convert contexts to dicts for MongoDB
         contexts_dicts = [ctx.model_dump() for ctx in contexts] if contexts else []
@@ -400,16 +400,16 @@ async def chat(
         }
 
         # Update MongoDB (upsert)
-        if request.sessionId:
+        if body.sessionId:
             chat_collection.update_one(
-                {"session_id": request.sessionId},
+                {"session_id": body.sessionId},
                 {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
                 upsert=False  # Session must exist for security
             )
         else:
              # Legacy
              chat_collection.update_one(
-                {"case_id": request.caseId, "session_id": {"$exists": False}},
+                {"case_id": body.caseId, "session_id": {"$exists": False}},
                 {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
                 upsert=True
             )
@@ -437,6 +437,9 @@ async def ingest_file(
     caseId: str = Form(...),
     current_user: Dict = Depends(get_current_user)
 ):
+    import zipfile
+    import tempfile
+    
     try:
         # Validate inputs
         validate_case_id(caseId)
@@ -451,57 +454,143 @@ async def ingest_file(
                 detail=f"File too large. Maximum size: {MAX_FILE_SIZE // (1024*1024)}MB"
             )
         
-        # Reset file pointer
-        await file.seek(0)
-        
         user_id = get_user_id(current_user)
         
-        # Set status to Processing
-        document_status_collection.update_one(
-            {"case_id": caseId, "filename": safe_filename},
-            {
-                "$set": {
-                    "status": "Processing",
-                    "filename": safe_filename,
-                    "case_id": caseId,
-                    "user_id": user_id,  # Track uploader
-                    "last_updated": datetime.utcnow()
-                }
-            },
-            upsert=True
-        )
-
-        # Save file locally with sanitized name
-        file_location = f"documents/{safe_filename}"
-        with open(file_location, "wb+") as file_object:
-            shutil.copyfileobj(file.file, file_object)
+        # Check if it's a zip file
+        if safe_filename.lower().endswith('.zip'):
+            logger.info(f"Processing zip file: {safe_filename}")
             
-        # Read content using loader
-        from ingestion.loader import parse_file
-        text = parse_file(file_location)
-
-        if not text.strip():
-            raise HTTPException(
-                status_code=400, 
-                detail="Could not extract text from file or file is empty."
+            # Extract zip and process each file
+            ingested_files = []
+            failed_files = []
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                zip_path = os.path.join(temp_dir, safe_filename)
+                with open(zip_path, 'wb') as f:
+                    f.write(file_content)
+                
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    zip_ref.extractall(temp_dir)
+                
+                # Process each extracted file
+                for root, dirs, files in os.walk(temp_dir):
+                    for extracted_file in files:
+                        if extracted_file == safe_filename:  # Skip the zip itself
+                            continue
+                        if extracted_file.startswith('.') or extracted_file.startswith('__'):
+                            continue  # Skip hidden files and __MACOSX
+                            
+                        extracted_path = os.path.join(root, extracted_file)
+                        extracted_safe_name = sanitize_filename(extracted_file)
+                        
+                        try:
+                            # Set status to Processing
+                            document_status_collection.update_one(
+                                {"case_id": caseId, "filename": extracted_safe_name},
+                                {
+                                    "$set": {
+                                        "status": "Processing",
+                                        "filename": extracted_safe_name,
+                                        "case_id": caseId,
+                                        "user_id": user_id,
+                                        "last_updated": datetime.utcnow()
+                                    }
+                                },
+                                upsert=True
+                            )
+                            
+                            # Copy to documents folder
+                            dest_path = f"documents/{extracted_safe_name}"
+                            shutil.copy2(extracted_path, dest_path)
+                            
+                            # Parse and ingest
+                            from ingestion.loader import parse_file
+                            text = parse_file(dest_path)
+                            
+                            if text.strip():
+                                ingest_document(text, source_name=extracted_safe_name, case_id=caseId)
+                                
+                                # Set status to Ready
+                                document_status_collection.update_one(
+                                    {"case_id": caseId, "filename": extracted_safe_name},
+                                    {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+                                )
+                                ingested_files.append(extracted_safe_name)
+                                logger.info(f"Ingested from zip: {extracted_safe_name}")
+                            else:
+                                document_status_collection.update_one(
+                                    {"case_id": caseId, "filename": extracted_safe_name},
+                                    {"$set": {"status": "Failed", "error": "Empty file", "last_updated": datetime.utcnow()}}
+                                )
+                                failed_files.append(extracted_safe_name)
+                                
+                        except Exception as e:
+                            logger.error(f"Failed to ingest {extracted_file}: {e}")
+                            document_status_collection.update_one(
+                                {"case_id": caseId, "filename": extracted_safe_name},
+                                {"$set": {"status": "Failed", "error": str(e)[:100], "last_updated": datetime.utcnow()}}
+                            )
+                            failed_files.append(extracted_safe_name)
+            
+            return {
+                "status": "success",
+                "message": f"Zip extracted and processed",
+                "ingested_files": ingested_files,
+                "failed_files": failed_files,
+                "caseId": caseId
+            }
+        
+        # Regular file processing (non-zip)
+        else:
+            # Reset file pointer
+            await file.seek(0)
+            
+            # Set status to Processing
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": safe_filename},
+                {
+                    "$set": {
+                        "status": "Processing",
+                        "filename": safe_filename,
+                        "case_id": caseId,
+                        "user_id": user_id,
+                        "last_updated": datetime.utcnow()
+                    }
+                },
+                upsert=True
             )
 
-        # Ingest
-        ingest_document(text, source_name=safe_filename, case_id=caseId)
-        
-        # Set status to Ready
-        document_status_collection.update_one(
-            {"case_id": caseId, "filename": safe_filename},
-            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
-        )
-        
-        logger.info(f"File ingested: {safe_filename} for case {caseId} by user {user_id}")
-        
-        return {
-            "status": "success", 
-            "filename": safe_filename, 
-            "caseId": caseId
-        }
+            # Save file locally with sanitized name
+            file_location = f"documents/{safe_filename}"
+            with open(file_location, "wb+") as file_object:
+                file_object.write(file_content)
+                
+            # Read content using loader
+            from ingestion.loader import parse_file
+            text = parse_file(file_location)
+
+            if not text.strip():
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Could not extract text from file or file is empty."
+                )
+
+            # Ingest
+            ingest_document(text, source_name=safe_filename, case_id=caseId)
+            
+            # Set status to Ready
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": safe_filename},
+                {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+            )
+            
+            logger.info(f"File ingested: {safe_filename} for case {caseId} by user {user_id}")
+            
+            return {
+                "status": "success", 
+                "filename": safe_filename, 
+                "caseId": caseId
+            }
 
     except HTTPException:
         raise
@@ -605,15 +694,15 @@ async def delete_document_endpoint(
 @app.post("/generate-document")
 @limiter.limit("20/minute")
 async def generate_document_endpoint(
-    request_obj: Request,
-    request: GenerateDocumentRequest,
+    request: Request,
+    body: GenerateDocumentRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     try:
-        validate_case_id(request.caseId)
-        validate_string_length(request.instructions, "Instructions", min_length=10, max_length=5000)
+        validate_case_id(body.caseId)
+        validate_string_length(body.instructions, "Instructions", min_length=10, max_length=5000)
         
-        content = generator.generate(request.caseId, request.instructions)
+        content = generator.generate(body.caseId, body.instructions)
         return {"content": content}
     except HTTPException:
         raise
@@ -624,15 +713,15 @@ async def generate_document_endpoint(
 @app.post("/save-document")
 @limiter.limit("20/minute")
 async def save_document_endpoint(
-    request_obj: Request,
-    request: SaveDocumentRequest,
+    request: Request,
+    body: SaveDocumentRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     try:
         # Validate inputs
-        validate_case_id(request.caseId)
-        safe_filename = sanitize_filename(request.filename)
-        validate_string_length(request.content, "Content", min_length=1, max_length=500000)
+        validate_case_id(body.caseId)
+        safe_filename = sanitize_filename(body.filename)
+        validate_string_length(body.content, "Content", min_length=1, max_length=500000)
         
         # Ensure filename has extension
         if not safe_filename.endswith(".txt") and not safe_filename.endswith(".md"):
@@ -643,16 +732,16 @@ async def save_document_endpoint(
         
         # Save to disk
         with open(file_location, "w", encoding="utf-8") as f:
-            f.write(request.content)
+            f.write(body.content)
             
         # Set status to Processing
         document_status_collection.update_one(
-            {"case_id": request.caseId, "filename": safe_filename},
+            {"case_id": body.caseId, "filename": safe_filename},
             {
                 "$set": {
                     "status": "Processing",
                     "filename": safe_filename,
-                    "case_id": request.caseId,
+                    "case_id": body.caseId,
                     "user_id": user_id,
                     "last_updated": datetime.utcnow()
                 }
@@ -660,15 +749,15 @@ async def save_document_endpoint(
             upsert=True
         )
 
-        ingest_document(request.content, source_name=safe_filename, case_id=request.caseId)
+        ingest_document(body.content, source_name=safe_filename, case_id=body.caseId)
         
         # Set status to Ready
         document_status_collection.update_one(
-            {"case_id": request.caseId, "filename": safe_filename},
+            {"case_id": body.caseId, "filename": safe_filename},
             {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
         )
 
-        logger.info(f"Document saved: {safe_filename} for case {request.caseId} by user {user_id}")
+        logger.info(f"Document saved: {safe_filename} for case {body.caseId} by user {user_id}")
 
         return {"status": "success", "filename": safe_filename}
 
@@ -678,7 +767,7 @@ async def save_document_endpoint(
         logger.error(f"Save document error: {e}", exc_info=True)
         if 'safe_filename' in locals():
             document_status_collection.update_one(
-                {"case_id": request.caseId, "filename": safe_filename},
+                {"case_id": body.caseId, "filename": safe_filename},
                 {"$set": {"status": "Failed", "error": "Processing failed", "last_updated": datetime.utcnow()}}
             )
         raise HTTPException(status_code=500, detail="Failed to save document")
@@ -695,23 +784,23 @@ async def health(request: Request):
 @app.post("/draft/session", response_model=DraftSessionResponse)
 @limiter.limit("30/minute")
 async def create_draft_session(
-    request_obj: Request,
-    request: CreateDraftSessionRequest,
+    request: Request,
+    body: CreateDraftSessionRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     """Create a new conversational draft session"""
     try:
         # SECURITY: Validate input
-        validate_case_id(request.caseId)
+        validate_case_id(body.caseId)
         
         user_id = get_user_id(current_user)
         session_id = str(uuid.uuid4())
         new_session = {
             "session_id": session_id,
-            "case_id": request.caseId,
+            "case_id": body.caseId,
             "user_id": user_id,  # SECURITY: Track ownership
-            "title": request.title,
-            "template": request.template,
+            "title": body.title,
+            "template": body.template,
             "created_at": datetime.utcnow(),
             "messages": [],
             "current_document": ""
@@ -808,21 +897,21 @@ async def get_draft_session(
 @app.post("/draft/chat", response_model=ConversationalDraftResponse)
 @limiter.limit("20/minute")  # Limit AI generation requests
 async def conversational_draft(
-    request_obj: Request,
-    request: ConversationalDraftRequest,
+    request: Request,
+    body: ConversationalDraftRequest,
     current_user: Dict = Depends(get_current_user)
 ):
     """Process conversational message and update document"""
     try:
         # SECURITY: Validate inputs
-        validate_case_id(request.caseId)
-        validate_session_id(request.sessionId)
-        validate_string_length(request.message, "Message", min_length=1, max_length=5000)
+        validate_case_id(body.caseId)
+        validate_session_id(body.sessionId)
+        validate_string_length(body.message, "Message", min_length=1, max_length=5000)
         
         user_id = get_user_id(current_user)
         
         # Fetch session
-        session_doc = draft_sessions_collection.find_one({"session_id": request.sessionId})
+        session_doc = draft_sessions_collection.find_one({"session_id": body.sessionId})
         if not session_doc:
             raise HTTPException(status_code=404, detail="Draft session not found")
         
@@ -830,7 +919,7 @@ async def conversational_draft(
         if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
             log_security_event("UNAUTHORIZED_DRAFT_CHAT", {
                 "user_id": user_id,
-                "session_id": request.sessionId
+                "session_id": body.sessionId
             })
             raise HTTPException(status_code=403, detail="Access denied")
         
@@ -840,19 +929,19 @@ async def conversational_draft(
         
         # Generate AI response and updated document
         result = generator.generate_conversational(
-            case_id=request.caseId,
-            message=request.message,
-            current_document=request.currentDocument,
+            case_id=body.caseId,
+            message=body.message,
+            current_document=body.currentDocument,
             history=history[-6:],  # Last 6 messages for context
             template=template
         )
         
         # Save to history
-        new_user_msg = {"role": "user", "content": request.message}
+        new_user_msg = {"role": "user", "content": body.message}
         new_ai_msg = {"role": "assistant", "content": result["ai_message"]}
         
         draft_sessions_collection.update_one(
-            {"session_id": request.sessionId},
+            {"session_id": body.sessionId},
             {
                 "$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}},
                 "$set": {"current_document": result["document_content"]}

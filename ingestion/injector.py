@@ -6,7 +6,7 @@ from neo4j import GraphDatabase
 from qdrant_client import QdrantClient, models
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from neo4j_graphrag.embeddings.ollama import OllamaEmbeddings
+from sentence_transformers import SentenceTransformer
 
 # ------------------ LOAD ENV ------------------
 load_dotenv()
@@ -20,17 +20,25 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = "chunks"
 
-# Same model as in your ask() file
-EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+# SentenceTransformers model (runs locally, no Ollama needed)
+EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
 
 # ------------------ CLIENTS ------------------
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
-# Use SAME embedder as in GraphRAG retriever
-embedder = OllamaEmbeddings(
-    model=EMBED_MODEL,  # "nomic-embed-text"
-)
+# Use SentenceTransformers for local embeddings (no Ollama dependency)
+_sentence_transformer = SentenceTransformer(EMBED_MODEL)
+
+class LocalEmbedder:
+    """Wrapper for SentenceTransformers to match the embedder interface."""
+    def __init__(self, model):
+        self.model = model
+    
+    def embed_query(self, text: str) -> list:
+        return self.model.encode(text).tolist()
+
+embedder = LocalEmbedder(_sentence_transformer)
 
 
 # ------------------ NEO4J HELPERS ------------------

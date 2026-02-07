@@ -4,7 +4,7 @@ Verifies JWT tokens issued by the Node.js backend.
 """
 
 from fastapi import HTTPException, Security, Request
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import os
 from typing import Optional, Dict
@@ -18,7 +18,7 @@ if not JWT_SECRET:
     raise RuntimeError("CRITICAL: JWT_SECRET environment variable not set. Cannot start server.")
 
 
-async def verify_token(credentials: HTTPAuthCredentials = Security(security)) -> Dict:
+async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> Dict:
     """
     Verify JWT token and return decoded payload.
     
@@ -69,7 +69,7 @@ async def verify_token(credentials: HTTPAuthCredentials = Security(security)) ->
         )
 
 
-async def get_current_user(credentials: HTTPAuthCredentials = Security(security)) -> Dict:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)) -> Dict:
     """
     Get current authenticated user from JWT token.
     Alias for verify_token for semantic clarity.
