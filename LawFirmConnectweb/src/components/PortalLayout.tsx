@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
+import { messageService } from '../services/messageService';
+import { io, Socket } from 'socket.io-client';
 
 // Icons
 const HomeIcon = () => (
@@ -114,6 +116,56 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const notificationRef = useRef<HTMLDivElement>(null);
 
     const unreadCount = notifications.filter(n => !n.read).length;
+
+    // Unread messages count for Messages tab
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+    const socketRef = useRef<Socket | null>(null);
+
+    // Socket.IO for real-time unread count updates
+    useEffect(() => {
+        // Initial fetch
+        const fetchUnreadCount = async () => {
+            try {
+                const data = await messageService.getUnreadCount();
+                setUnreadMessagesCount(data.count || 0);
+            } catch (error) {
+                console.error('Failed to fetch unread messages count', error);
+            }
+        };
+        fetchUnreadCount();
+
+        // Get user ID for socket room
+        const storedUser = localStorage.getItem('user');
+        if (!storedUser) return;
+        const parsedUser = JSON.parse(storedUser);
+        const currentUserId = parsedUser._id || parsedUser.id;
+
+        // Connect to socket
+        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        socketRef.current = io(BACKEND_URL, {
+            transports: ['websocket', 'polling']
+        });
+
+        socketRef.current.emit('join', currentUserId);
+
+        // When new message arrives for me, increment count
+        socketRef.current.on('newMessage', (msg: any) => {
+            if (msg.recipient === currentUserId) {
+                setUnreadMessagesCount(prev => prev + 1);
+            }
+        });
+
+        // When I read messages, refetch the count
+        socketRef.current.on('messagesRead', () => {
+            fetchUnreadCount();
+        });
+
+        return () => {
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
+        };
+    }, []);
 
     React.useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -273,6 +325,11 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         <div className="flex items-center gap-3">
                             <MessageIcon /> Messages
                         </div>
+                        {unreadMessagesCount > 0 && (
+                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                                {unreadMessagesCount}
+                            </span>
+                        )}
                     </Link>
                 </nav>
 

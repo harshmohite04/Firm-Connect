@@ -44,9 +44,15 @@ const SignUp: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const checkPasswordStrength = (password: string) => {
-        if (password.length >= 8) return true;
-        return false;
+
+    const getPasswordErrors = (password: string): string[] => {
+        const errors: string[] = [];
+        if (password.length < 8) errors.push('At least 8 characters');
+        if (!/[A-Z]/.test(password)) errors.push('One uppercase letter');
+        if (!/[a-z]/.test(password)) errors.push('One lowercase letter');
+        if (!/[0-9]/.test(password)) errors.push('One number');
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push('One special character (!@#$%^&*...)');
+        return errors;
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,8 +63,9 @@ const SignUp: React.FC = () => {
         e.preventDefault();
         setError('');
         
-        if (!checkPasswordStrength(formData.password)) {
-            setError('Password must be at least 8 characters long.');
+        const passwordErrors = getPasswordErrors(formData.password);
+        if (passwordErrors.length > 0) {
+            setError(`Password requirements: ${passwordErrors.join(', ')}`);
             return;
         }
 
@@ -168,7 +175,7 @@ const SignUp: React.FC = () => {
                                             <EyeIcon />
                                         </div>
                                     </div>
-                                    <p className="mt-1 text-xs text-slate-400">Must be at least 8 characters long.</p>
+                                    <p className="mt-1 text-xs text-slate-400">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (!@#$%^&*)</p>
                                 </div>
 
                                 <button 
