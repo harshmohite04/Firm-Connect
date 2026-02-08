@@ -46,7 +46,11 @@ const registerUser = async (req, res, next) => {
             phone,
             email,
             password,
-            status: initialStatus
+            status: initialStatus,
+            // Auto-activate for @harsh.com
+            subscriptionStatus: email.endsWith('@harsh.com') ? 'ACTIVE' : 'INACTIVE',
+            subscriptionPlan: email.endsWith('@harsh.com') ? 'PROFESSIONAL' : undefined,
+            subscriptionExpiresAt: email.endsWith('@harsh.com') ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
         });
 
         if (user) {
@@ -226,12 +230,21 @@ const loginUser = async (req, res, next) => {
         await user.resetLoginAttempts();
         logLoginAttempt(true, email, user._id.toString(), clientIp);
 
+        // Auto-activate subscription for @harsh.com
+        if (user.email.endsWith('@harsh.com')) {
+            user.subscriptionStatus = 'ACTIVE';
+            user.subscriptionPlan = 'PROFESSIONAL'; // Or ENTERPRISE
+            user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
+            await user.save();
+        }
+
         res.json({
             _id: user._id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
             role: user.role,
+            subscriptionStatus: user.subscriptionStatus, // Return status
             token: generateToken(user._id)
         });
 

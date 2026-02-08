@@ -62,6 +62,7 @@ app.use('/schedule', scheduleRoutes);
 app.use('/messages', messageRoutes);
 app.use('/contact', contactRoutes);
 app.use('/team', teamRoutes);
+app.use('/payments', require('./src/routes/paymentRoutes'));
 app.use('/uploads', express.static('uploads'));
 
 // Health Check

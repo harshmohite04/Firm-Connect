@@ -50,4 +50,24 @@ const admin = (req, res, next) => {
     }
 };
 
-module.exports = { protect, admin };
+
+// Access Control Middleware (Paid or @harsh.com)
+const checkAccess = (req, res, next) => {
+    // 1. Bypass for Admin Domain
+    if (req.user.email.endsWith('@harsh.com')) {
+        return next();
+    }
+
+    // 2. Check Subscription Status
+    if (req.user.subscriptionStatus === 'ACTIVE' && req.user.subscriptionExpiresAt > Date.now()) {
+        return next();
+    }
+
+    // 3. Deny Access
+    res.status(403).json({ 
+        message: 'Subscription required. Please upgrade your plan.',
+        requiresSubscription: true 
+    });
+};
+
+module.exports = { protect, admin, checkAccess };

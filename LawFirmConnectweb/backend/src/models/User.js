@@ -23,6 +23,19 @@ const userSchema = new mongoose.Schema(
     // Account lockout fields
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date, default: null },
+
+    // Subscription Fields
+    subscriptionStatus: { 
+      type: String, 
+      enum: ['ACTIVE', 'INACTIVE'], 
+      default: 'INACTIVE' 
+    },
+    subscriptionPlan: { 
+      type: String, 
+      enum: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+      default: null
+    },
+    subscriptionExpiresAt: { type: Date, default: null },
   },
   {
     timestamps: true,

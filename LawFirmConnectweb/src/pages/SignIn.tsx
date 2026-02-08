@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 
 
@@ -44,6 +44,10 @@ const SignIn: React.FC = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const location = useLocation();
+    // Get the previous path (if any) or default to /portal
+    const from = location.state?.from?.pathname || '/portal';
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -51,7 +55,8 @@ const SignIn: React.FC = () => {
 
         try {
             await authService.login(formData.email, formData.password);
-            navigate('/portal');
+            // Redirect to previous page or portal
+            navigate(from, { replace: true });
         } catch (err: any) {
             setError(err.response?.data?.message || 'Invalid email or password');
         } finally {
