@@ -39,3 +39,24 @@ exports.deleteEvent = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+exports.updateEvent = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) return res.status(404).json({ message: 'Event not found' });
+        
+        if (event.user.toString() !== req.user._id.toString()) {
+            return res.status(401).json({ message: 'Not authorized' });
+        }
+
+        const updatedEvent = await Event.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+        res.json(updatedEvent);
+    } catch (error) {
+        console.error('Update event error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

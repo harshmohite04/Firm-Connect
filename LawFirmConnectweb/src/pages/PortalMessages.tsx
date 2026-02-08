@@ -204,20 +204,25 @@ const PortalMessages: React.FC = () => {
 
     const fetchMessagesAndContacts = async () => {
         try {
-            const contacts = await contactService.getContacts();
-            console.log('fetched contacts:', contacts);
+            // Use the new conversations API that returns last message + unread count
+            const conversationsData = await messageService.getConversations();
+            console.log('fetched conversations:', conversationsData);
             
-            const mappedConversations: Conversation[] = contacts.map((contact: any) => ({
-                contactId: contact._id,
-                name: `${contact.firstName} ${contact.lastName}`,
+            const mappedConversations: Conversation[] = conversationsData.map((convo: any) => ({
+                contactId: convo.contactId,
+                name: convo.name,
                 avatar: undefined,
-                lastMessage: null, 
-                unreadCount: 0
+                lastMessage: convo.lastMessage ? {
+                    content: convo.lastMessage.content,
+                    timestamp: new Date(convo.lastMessage.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    senderId: convo.lastMessage.senderId
+                } : null,
+                unreadCount: convo.unreadCount || 0
             }));
 
             setConversations(mappedConversations);
         } catch (error) {
-            console.error("Failed to fetch contact list", error);
+            console.error("Failed to fetch conversations", error);
         }
     };
 
@@ -225,6 +230,13 @@ const PortalMessages: React.FC = () => {
         console.log('selecting contact:', contactId);
         setSelectedContactId(contactId);
         setActiveMessages([]); 
+        
+        // Reset unread count locally for immediate UI update
+        setConversations(prev => prev.map(convo => 
+            convo.contactId === contactId 
+                ? { ...convo, unreadCount: 0 } 
+                : convo
+        ));
         
         try {
             await messageService.markAsRead(contactId);
@@ -430,35 +442,65 @@ const PortalMessages: React.FC = () => {
                                     <div className="p-4 text-center text-slate-500 text-sm">No chats yet.</div>
                                 )}
 
-                                {conversations.map((convo) => (
-                                    <div 
-                                        key={convo.contactId}
-                                        onClick={() => handleSelectContact(convo.contactId)}
-                                        className={`p-4 cursor-pointer hover:bg-slate-50 transition-colors ${selectedContactId === convo.contactId ? 'bg-blue-50/50 relative' : ''}`}
-                                    >
-                                        {selectedContactId === convo.contactId && <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600"></div>}
-                                        
-                                        <div className="flex justify-between items-start mb-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="relative">
-                                                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500">
-                                                        {convo.name.substring(0,2).toUpperCase()}
+                                {conversations.map((convo) => {
+                                    const hasUnread = (convo.unreadCount || 0) > 0;
+                                    const isSelected = selectedContactId === convo.contactId;
+                                    
+                                    return (
+                                        <div 
+                                            key={convo.contactId}
+                                            onClick={() => handleSelectContact(convo.contactId)}
+                                            className={`p-4 cursor-pointer transition-colors relative ${
+                                                isSelected 
+                                                    ? 'bg-blue-50/70' 
+                                                    : hasUnread 
+                                                        ? 'bg-blue-50/30 hover:bg-blue-50/50' 
+                                                        : 'hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            {/* Left accent border for selected or unread */}
+                                            {(isSelected || hasUnread) && (
+                                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${isSelected ? 'bg-blue-600' : 'bg-blue-400'}`}></div>
+                                            )}
+                                            
+                                            <div className="flex justify-between items-start mb-1">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="relative">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                                            hasUnread ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'
+                                                        }`}>
+                                                            {convo.name.substring(0,2).toUpperCase()}
+                                                        </div>
+                                                        {/* Online indicator dot */}
+                                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full"></div>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className={`text-sm ${hasUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                                                            {convo.name}
+                                                        </h4>
+                                                        {!hasUnread && (
+                                                            <p className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit">Active</p>
+                                                        )}
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <h4 className="text-sm font-bold text-slate-900">{convo.name}</h4>
-                                                    <p className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit">Active</p>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className={`text-xs ${hasUnread ? 'font-bold text-blue-600' : 'font-medium text-slate-400'}`}>
+                                                        {convo.lastMessage ? convo.lastMessage.timestamp : ''}
+                                                    </span>
+                                                    {/* Unread badge */}
+                                                    {hasUnread && (
+                                                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full">
+                                                            {convo.unreadCount}
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <span className="text-xs font-bold text-blue-600">
-                                                {convo.lastMessage ? convo.lastMessage.timestamp : ''}
-                                            </span>
+                                            <p className={`text-sm line-clamp-1 pl-12 ${hasUnread ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>
+                                                {convo.lastMessage ? convo.lastMessage.content : 'No messages yet'}
+                                            </p>
                                         </div>
-                                        <p className="text-sm text-slate-600 line-clamp-2 pl-12">
-                                            {convo.lastMessage ? convo.lastMessage.content : 'No messages'}
-                                        </p>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="divide-y divide-slate-100">

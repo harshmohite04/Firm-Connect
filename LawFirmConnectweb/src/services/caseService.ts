@@ -167,12 +167,34 @@ const updateCaseSettings = async (id: string, updates: any): Promise<Case> => {
 
 const RAG_API_URL = "http://localhost:8000";
 
+// Helper to get auth headers for Python backend
+const getAuthHeaders = () => {
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user.token) {
+        return { Authorization: `Bearer ${user.token}` };
+      }
+    } catch (e) {
+      console.error("Error parsing user from localStorage", e);
+    }
+  }
+  return {};
+};
+
 const runInvestigation = async (
   caseId: string,
 ): Promise<{ final_report: string }> => {
-  const response = await axios.post(`${RAG_API_URL}/investigation/run`, {
-    caseId,
-  });
+  const response = await axios.post(
+    `${RAG_API_URL}/investigation/run`,
+    {
+      caseId,
+    },
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -190,10 +212,16 @@ const generateDocument = async (
 
   // server.py has: @app.post("/generate-document")
 
-  const response = await axios.post("http://localhost:8000/generate-document", {
-    caseId,
-    instructions,
-  });
+  const response = await axios.post(
+    "http://localhost:8000/generate-document",
+    {
+      caseId,
+      instructions,
+    },
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   return response.data.content;
 };
 
@@ -202,11 +230,17 @@ const saveGeneratedDocument = async (
   filename: string,
   content: string,
 ): Promise<any> => {
-  const response = await axios.post("http://localhost:8000/save-document", {
-    caseId,
-    filename,
-    content,
-  });
+  const response = await axios.post(
+    "http://localhost:8000/save-document",
+    {
+      caseId,
+      filename,
+      content,
+    },
+    {
+      headers: getAuthHeaders(),
+    },
+  );
   return response.data;
 };
 
@@ -257,22 +291,34 @@ const caseService = {
     template: string,
     title: string,
   ) => {
-    const response = await axios.post(`${RAG_API_URL}/draft/session`, {
-      caseId,
-      template,
-      title,
-    });
+    const response = await axios.post(
+      `${RAG_API_URL}/draft/session`,
+      {
+        caseId,
+        template,
+        title,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
     return response.data;
   },
 
   getDraftSessions: async (caseId: string) => {
-    const response = await axios.get(`${RAG_API_URL}/draft/sessions/${caseId}`);
+    const response = await axios.get(
+      `${RAG_API_URL}/draft/sessions/${caseId}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
     return response.data;
   },
 
   getDraftSession: async (sessionId: string) => {
     const response = await axios.get(
       `${RAG_API_URL}/draft/session/${sessionId}`,
+      { headers: getAuthHeaders() },
     );
     return response.data;
   },
@@ -284,18 +330,26 @@ const caseService = {
     currentDocument: string,
     template?: string,
   ) => {
-    const response = await axios.post(`${RAG_API_URL}/draft/chat`, {
-      caseId,
-      sessionId,
-      message,
-      currentDocument,
-      template,
-    });
+    const response = await axios.post(
+      `${RAG_API_URL}/draft/chat`,
+      {
+        caseId,
+        sessionId,
+        message,
+        currentDocument,
+        template,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
     return response.data;
   },
 
   getTemplates: async () => {
-    const response = await axios.get(`${RAG_API_URL}/draft/templates`);
+    const response = await axios.get(`${RAG_API_URL}/draft/templates`, {
+      headers: getAuthHeaders(),
+    });
     return response.data;
   },
 };

@@ -104,18 +104,12 @@ const PortalCaseDetails: React.FC = () => {
                     alt="AI"
                     className={`w-5 h-5 ${isActive ? "" : "grayscale opacity-50"}`}
                   />
-                  AI
+                  Ask AI
                 </>
               )}
             </NavLink>
             <NavLink to="draft" className={getNavLinkClass}>
               Drafting
-            </NavLink>
-            <NavLink to="billing" className={getNavLinkClass}>
-              Billing
-            </NavLink>
-            <NavLink to="settings" className={getNavLinkClass}>
-              Settings
             </NavLink>
             <NavLink 
                 to="investigator" 
@@ -125,6 +119,12 @@ const PortalCaseDetails: React.FC = () => {
             >
                {/* Use the new Purple color for Investigator */}
                Investigator Agent
+            </NavLink>
+            <NavLink to="billing" className={getNavLinkClass}>
+              Billing
+            </NavLink>
+            <NavLink to="settings" className={getNavLinkClass}>
+              Settings
             </NavLink>
           </div>
         </div>

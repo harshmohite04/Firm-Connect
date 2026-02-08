@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import AboutUs from './pages/AboutUs';
@@ -25,9 +25,11 @@ import CaseChat from './pages/case-details/CaseChat';
 import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
-
 import CaseDraft from './pages/case-details/CaseDraft';
-import { Navigate } from 'react-router-dom';
+
+// Payment & Subscription Imports
+import Pricing from './pages/Pricing';
+import SubscriptionGuard from './components/SubscriptionGuard';
 
 // ScrollToTop component to handle scroll position on route change
 const ScrollToTop = () => {
@@ -42,8 +44,8 @@ const ScrollToTop = () => {
 
 const App: React.FC = () => {
   const { pathname } = useLocation();
-  // Hide Navbar and Footer on Sign In and Portal pages
-  const isAuthPage = pathname === '/signin' || pathname === '/signup' || pathname.startsWith('/portal');
+  // Hide Navbar and Footer on Sign In, Portal pages, and Pricing page
+  const isAuthPage = pathname === '/signin' || pathname === '/signup' || pathname.startsWith('/portal') || pathname === '/pricing';
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 leading-normal selection:bg-blue-100 selection:text-blue-900 flex flex-col">
@@ -56,10 +58,29 @@ const App: React.FC = () => {
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
-            <Route path="/portal" element={<UserPortal />} />
-            <Route path="/portal/cases" element={<PortalCases />} />
-            <Route path="/portal/start-case" element={<StartCase />} />
-            <Route path="/portal/cases/:id" element={<PortalCaseDetails />}>
+            <Route path="/pricing" element={<Pricing />} />
+            
+            {/* Protected Portal Routes */}
+            <Route path="/portal" element={
+                <SubscriptionGuard>
+                    <UserPortal />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/cases" element={
+                <SubscriptionGuard>
+                    <PortalCases />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/start-case" element={
+                <SubscriptionGuard>
+                    <StartCase />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/cases/:id" element={
+                <SubscriptionGuard>
+                    <PortalCaseDetails />
+                </SubscriptionGuard>
+            }>
                 <Route index element={<Navigate to="activity" replace />} />
                 <Route path="activity" element={<CaseActivity />} />
                 <Route path="documents" element={<CaseDocuments />} />
@@ -67,13 +88,29 @@ const App: React.FC = () => {
                 <Route path="investigator" element={<InvestigatorAgent />} />
                 <Route path="draft" element={<CaseDraft />} />
                 <Route path="billing" element={<CaseBilling />} />
-
                 <Route path="settings" element={<CaseSettings />} />
             </Route>
-            <Route path="/portal/billing" element={<PortalBilling />} />
-            <Route path="/portal/calendar" element={<PortalCalendar />} />
-            <Route path="/portal/messages" element={<PortalMessages />} />
-            <Route path="/portal/profile" element={<PortalProfile />}>
+
+            <Route path="/portal/billing" element={
+                <SubscriptionGuard>
+                    <PortalBilling />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/calendar" element={
+                <SubscriptionGuard>
+                    <PortalCalendar />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/messages" element={
+                <SubscriptionGuard>
+                    <PortalMessages />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/profile" element={
+                <SubscriptionGuard>
+                    <PortalProfile />
+                </SubscriptionGuard>
+            }>
                 <Route index element={<Navigate to="info" replace />} />
                 <Route path="info" element={<ProfileInfo />} />
                 <Route path="security" element={<ProfileSecurity />} />

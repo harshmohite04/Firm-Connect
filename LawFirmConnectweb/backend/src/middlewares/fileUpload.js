@@ -43,22 +43,39 @@ if (useS3) {
 }
 
 function checkFileType(file, cb) {
-    const filetypes = /jpg|jpeg|png|pdf|doc|docx|txt/; 
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype) || file.mimetype === 'text/plain';
+    // SECURITY: Validate both extension AND MIME type properly
+    const allowedExtensions = /jpg|jpeg|png|pdf|doc|docx|txt|zip/;
+    const allowedMimeTypes = [
+        'image/jpeg',
+        'image/png', 
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'application/zip',
+        'application/x-zip-compressed'
+    ];
+    
+    const extname = allowedExtensions.test(
+        require('path').extname(file.originalname).toLowerCase().replace('.', '')
+    );
+    const validMime = allowedMimeTypes.includes(file.mimetype);
 
-    if (extname && mimetype) {
+    if (extname && validMime) {
         return cb(null, true);
     } else {
-        cb('Images and Documents only!');
+        cb(new Error('Invalid file type. Allowed: jpg, jpeg, png, pdf, doc, docx, txt, zip'));
     }
 }
 
 const upload = multer({
     storage,
+    limits: { 
+        fileSize: 50 * 1024 * 1024  // 50MB limit
+    },
     fileFilter: function (req, file, cb) {
-        // Allow all file types
-        cb(null, true);
+        // Actually use the file type validation
+        checkFileType(file, cb);
     },
 });
 

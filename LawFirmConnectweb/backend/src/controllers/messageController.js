@@ -92,3 +92,61 @@ exports.getUnreadCount = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+
+// Get conversations with last message and unread count
+exports.getConversations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const User = require('../models/User');
+
+        // Get current user with their contacts populated
+        const user = await User.findById(userId).populate('contacts', 'firstName lastName _id');
+        if (!user || !user.contacts) {
+            return res.json([]);
+        }
+
+        const conversationsData = await Promise.all(user.contacts.map(async (contact) => {
+            const contactUserId = contact._id;
+
+            // Get last message between the two users
+            const lastMessage = await Message.findOne({
+                $or: [
+                    { sender: userId, recipient: contactUserId },
+                    { sender: contactUserId, recipient: userId }
+                ]
+            }).sort({ createdAt: -1 }).limit(1);
+
+            // Get unread count (messages FROM this contact TO me that are unread)
+            const unreadCount = await Message.countDocuments({
+                sender: contactUserId,
+                recipient: userId,
+                read: false
+            });
+
+            return {
+                contactId: contactUserId.toString(),
+                name: `${contact.firstName} ${contact.lastName || ''}`.trim(),
+                lastMessage: lastMessage ? {
+                    content: lastMessage.content,
+                    timestamp: lastMessage.createdAt,
+                    senderId: lastMessage.sender.toString()
+                } : null,
+                unreadCount
+            };
+        }));
+
+        // Sort by last message timestamp (most recent first)
+        const sortedConversations = conversationsData
+            .sort((a, b) => {
+                if (!a.lastMessage && !b.lastMessage) return 0;
+                if (!a.lastMessage) return 1;
+                if (!b.lastMessage) return -1;
+                return new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime();
+            });
+
+        res.json(sortedConversations);
+    } catch (error) {
+        console.error('Get conversations error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};

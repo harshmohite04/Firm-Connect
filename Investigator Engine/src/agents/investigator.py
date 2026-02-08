@@ -26,7 +26,10 @@ def primary_investigator(state: InvestigatorState) -> Dict[str, Any]:
     if state.get("challenges"):
         feedback_context = "PREVIOUS CHALLENGES (You must address these):\n"
         for challenge in state["challenges"]:
-            feedback_context += f"- {challenge['description']} (Severity: {challenge['severity']})\n"
+            # Handle varying key names from LLM output
+            desc = challenge.get('description') or challenge.get('challenge') or challenge.get('issue') or str(challenge)
+            severity = challenge.get('severity') or challenge.get('level') or challenge.get('priority') or 'MEDIUM'
+            feedback_context += f"- {desc} (Severity: {severity})\n"
             
     facts_text = ""
     for fact in state["facts"]:
