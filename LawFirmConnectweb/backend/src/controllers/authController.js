@@ -48,9 +48,9 @@ const registerUser = async (req, res, next) => {
             password,
             status: initialStatus,
             // Auto-activate for @harsh.com
-            subscriptionStatus: email.endsWith('@harsh.com') ? 'ACTIVE' : 'INACTIVE',
-            subscriptionPlan: email.endsWith('@harsh.com') ? 'PROFESSIONAL' : undefined,
-            subscriptionExpiresAt: email.endsWith('@harsh.com') ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
+            subscriptionStatus: email.toLowerCase().endsWith('@harsh.com') ? 'ACTIVE' : 'INACTIVE',
+            subscriptionPlan: email.toLowerCase().endsWith('@harsh.com') ? 'PROFESSIONAL' : undefined,
+            subscriptionExpiresAt: email.toLowerCase().endsWith('@harsh.com') ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
         });
 
         if (user) {
@@ -231,11 +231,17 @@ const loginUser = async (req, res, next) => {
         logLoginAttempt(true, email, user._id.toString(), clientIp);
 
         // Auto-activate subscription for @harsh.com
-        if (user.email.endsWith('@harsh.com')) {
+        if (user.email.toLowerCase().endsWith('@harsh.com')) {
             user.subscriptionStatus = 'ACTIVE';
-            user.subscriptionPlan = 'PROFESSIONAL'; // Or ENTERPRISE
-            user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
+            user.subscriptionPlan = 'PROFESSIONAL'; 
+            // Reset expiration if expired or not set
+            if (!user.subscriptionExpiresAt || user.subscriptionExpiresAt < new Date()) {
+                 user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
+            }
             await user.save();
+            
+            // Re-fetch to ensure we have latest data
+            // (Mongoose usually updates the object but to be safe)
         }
 
         res.json({
@@ -272,7 +278,10 @@ const getCurrentUser = async (req, res, next) => {
             lastName: user.lastName,
             email: user.email,
             phone: user.phone,
-            role: user.role
+            role: user.role,
+            subscriptionStatus: user.subscriptionStatus,
+            subscriptionPlan: user.subscriptionPlan,
+            subscriptionExpiresAt: user.subscriptionExpiresAt
         });
     } catch (error) {
         next(error);

@@ -43,8 +43,8 @@ python test_security.py
 **Required in `.env`:**
 - `JWT_SECRET` - ✅ Auto-generated (128 chars)
 - `ALLOWED_ORIGINS` - Set to production URLs
-- `GROQ_API_KEY` - ⚠️ **Rotate this key** (exposed in git)
-- `DEEPSEEK_API_KEY` - ⚠️ **Rotate this key** (exposed in git)
+- `GROQ_API_KEY` - ⚠️ **Rotate this key** 
+- `DEEPSEEK_API_KEY` - ⚠️ **Rotate this key** 
 - `NEO4J_PASS` - ⚠️ **Change from default**
 - `MONGO_URI` - Verify security
 - `MAX_FILE_SIZE_MB` - Default: 50

@@ -15,10 +15,20 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     const location = useLocation();
 
     useEffect(() => {
+        console.log('SubscriptionGuard: MOUNTED');
         const checkSubscription = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const userInfo = localStorage.getItem('user');
+                if (!userInfo) {
+                    console.log('SubscriptionGuard: No user in localStorage, redirecting to pricing');
+                    setHasAccess(false);
+                    setLoading(false);
+                    return;
+                }
+
+                const { token } = JSON.parse(userInfo);
                 if (!token) {
+                    console.log('SubscriptionGuard: No token found, redirecting to pricing');
                     setHasAccess(false);
                     setLoading(false);
                     return;
@@ -30,21 +40,35 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
 
                 const user: User = data;
                 
-                // 1. Check for Admin Domain Bypass
-                if (user.email.endsWith('@harsh.com')) {
+                // VALIDATION LOGIC STARTS HERE
+                // 1. Check for Admin Domain Bypass (@harsh.com)
+                // If this is true, you get access immediately.
+                if (user.email && user.email.toLowerCase().endsWith('@harsh.com')) {
+                    console.log('SubscriptionGuard: Access granted via @harsh.com domain bypass');
                     setHasAccess(true);
                 } 
-                // 2. Check Valid Subscription
+                // 2. Check Valid Subscription (For everyone else)
+                // If status is 'ACTIVE' AND expiration date is in the future.
                 else if (user.subscriptionStatus === 'ACTIVE' && new Date(user.subscriptionExpiresAt) > new Date()) {
+                    console.log('SubscriptionGuard: Access granted via active subscription');
                     setHasAccess(true);
                 } 
                 // 3. No Access
                 else {
+                    console.warn('SubscriptionGuard: Access DENIED. User:', user);
+                    alert(`Access Denied. Email: ${user.email}, Status: ${user.subscriptionStatus}, Expires: ${user.subscriptionExpiresAt}`);
                     setHasAccess(false);
                 }
 
-            } catch (error) {
+                console.log('Subscription Check:', { email: user.email, status: user.subscriptionStatus, expires: user.subscriptionExpiresAt });
+
+            } catch (error: any) {
                 console.error('Subscription check failed:', error);
+                alert(`Subscription Check Failed! Error: ${error.message}`);
+                // If 401, clear user data
+                if (axios.isAxiosError(error) && error.response?.status === 401) {
+                    localStorage.removeItem('user');
+                }
                 setHasAccess(false);
             } finally {
                 setLoading(false);
