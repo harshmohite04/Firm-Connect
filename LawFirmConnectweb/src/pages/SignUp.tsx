@@ -31,8 +31,7 @@ const ShieldIcon = () => (
 const SignUp: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
-    // const [step, setStep] = useState<'register' | 'verify'>('register');
-    const step = 'register'; // Hardcoded for now
+    
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -40,7 +39,7 @@ const SignUp: React.FC = () => {
         phone: '',
         password: ''
     });
-    // const [otp, setOtp] = useState('');
+    
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -81,8 +80,6 @@ const SignUp: React.FC = () => {
         }
     };
 
-    // const handleVerify = ... (removed)
-
     return (
         <div className="min-h-screen bg-slate-100 flex items-center justify-center p-14">
             <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden grid lg:grid-cols-2 min-h-[600px]">
@@ -99,13 +96,10 @@ const SignUp: React.FC = () => {
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">
                         <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
-                            {step === 'register' ? 'Create Client Account' : 'Verify Your Email'}
+                            Create Client Account
                         </h1>
                         <p className="text-slate-500 text-sm leading-relaxed mb-8">
-                             {step === 'register' 
-                                ? 'Join our secure portal to manage your legal cases and communications seamlessly.'
-                                : `We have sent a verification code to ${formData.email}. Please enter it below.`
-                             }
+                             Join our secure portal to manage your legal cases and communications seamlessly.
                         </p>
 
                         {error && (
@@ -114,89 +108,87 @@ const SignUp: React.FC = () => {
                             </div>
                         )}
 
-                        {step === 'register' && (
-                            <form className="space-y-4" onSubmit={handleRegister}>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">First Name</label>
-                                        <input 
-                                            id="firstName" name="firstName" type="text" required 
-                                            value={formData.firstName} onChange={handleInputChange}
-                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                            placeholder="John"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="lastName" className="block text-xs font-bold text-slate-900 mb-1.5">Last Name</label>
-                                        <input 
-                                            id="lastName" name="lastName" type="text" required 
-                                            value={formData.lastName} onChange={handleInputChange}
-                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                            placeholder="Doe"
-                                        />
-                                    </div>
-                                </div>
-
+                        <form className="space-y-4" onSubmit={handleRegister}>
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">Email Address</label>
+                                    <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">First Name</label>
                                     <input 
-                                        id="email" name="email" type="email" required 
-                                        value={formData.email} onChange={handleInputChange}
+                                        id="firstName" name="firstName" type="text" required 
+                                        value={formData.firstName} onChange={handleInputChange}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="name@example.com"
+                                        placeholder="John"
                                     />
                                 </div>
-
                                 <div>
-                                    <label htmlFor="phone" className="block text-xs font-bold text-slate-900 mb-1.5">Phone Number</label>
+                                    <label htmlFor="lastName" className="block text-xs font-bold text-slate-900 mb-1.5">Last Name</label>
                                     <input 
-                                        id="phone" name="phone" type="tel" required 
-                                        value={formData.phone} onChange={handleInputChange}
+                                        id="lastName" name="lastName" type="text" required 
+                                        value={formData.lastName} onChange={handleInputChange}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="+1 (555) 000-0000"
+                                        placeholder="Doe"
                                     />
                                 </div>
+                            </div>
 
-                                <div>
-                                    <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">Password</label>
-                                    <div className="relative">
-                                        <input 
-                                            id="password" name="password" 
-                                            type={showPassword ? "text" : "password"} 
-                                            required 
-                                            value={formData.password} onChange={handleInputChange}
-                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
-                                            placeholder="Create a strong password"
-                                        />
-                                        <div 
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                                            onClick={() => setShowPassword(!showPassword)}
-                                        >
-                                            <EyeIcon />
-                                        </div>
+                            <div>
+                                <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">Email Address</label>
+                                <input 
+                                    id="email" name="email" type="email" required 
+                                    value={formData.email} onChange={handleInputChange}
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="name@example.com"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="phone" className="block text-xs font-bold text-slate-900 mb-1.5">Phone Number</label>
+                                <input 
+                                    id="phone" name="phone" type="tel" required 
+                                    value={formData.phone} onChange={handleInputChange}
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    placeholder="+1 (555) 000-0000"
+                                />
+                            </div>
+
+                            <div>
+                                <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">Password</label>
+                                <div className="relative">
+                                    <input 
+                                        id="password" name="password" 
+                                        type={showPassword ? "text" : "password"} 
+                                        required 
+                                        value={formData.password} onChange={handleInputChange}
+                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
+                                        placeholder="Create a strong password"
+                                    />
+                                    <div 
+                                        className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        <EyeIcon />
                                     </div>
-                                    <p className="mt-1 text-xs text-slate-400">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (!@#$%^&*)</p>
                                 </div>
+                                <p className="mt-1 text-xs text-slate-400">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (!@#$%^&*)</p>
+                            </div>
 
-                                <button 
-                                    type="submit" 
-                                    disabled={isLoading}
-                                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
-                                >
-                                    {isLoading ? 'Processing...' : (
-                                        <>
-                                            <LockIcon /> Create Account
-                                        </>
-                                    )}
-                                </button>
-                                
-                                <div className="text-center mt-6">
-                                    <p className="text-sm text-slate-500">
-                                        Already have an account? <a href="/signin" className="font-bold text-blue-600 hover:text-blue-700">Log in</a>
-                                    </p>
-                                </div>
-                            </form>
-                        )}
+                            <button 
+                                type="submit" 
+                                disabled={isLoading}
+                                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? 'Processing...' : (
+                                    <>
+                                        <LockIcon /> Create Account
+                                    </>
+                                )}
+                            </button>
+                            
+                            <div className="text-center mt-6">
+                                <p className="text-sm text-slate-500">
+                                    Already have an account? <a href="/signin" className="font-bold text-blue-600 hover:text-blue-700">Log in</a>
+                                </p>
+                            </div>
+                        </form>
 
                         <hr className="my-8 border-slate-100" />
                         

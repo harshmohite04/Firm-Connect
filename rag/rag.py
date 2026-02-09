@@ -8,7 +8,7 @@ from groq import Groq
 # from utils.embeddings import embed_text
 from neo4j_graphrag.generation import GraphRAG
 # from neo4j_graphrag.llm import LLM
-from neo4j_graphrag.llm import OllamaLLM
+from neo4j_graphrag.llm import OllamaLLM, OpenAILLM
 # from neo4j_graphrag.integrations.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
@@ -27,6 +27,8 @@ NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USER = os.getenv("NEO4J_USER")
 NEO4J_PASS = os.getenv("NEO4J_PASS")
 OLLAMA_LLM_MODEL = "llama3.2:latest"
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
@@ -52,9 +54,18 @@ class LocalEmbedder:
 embedder = LocalEmbedder(_sentence_transformer)
 
 
-ollama_llm = OllamaLLM(
-    model_name=OLLAMA_LLM_MODEL,
-    model_params={"temperature": 0.2},
+# ollama_llm = OllamaLLM(
+#     model_name=OLLAMA_LLM_MODEL,
+#     model_params={"temperature": 0.2},
+# )
+
+llm = OpenAILLM(
+    model_name=DEEPSEEK_MODEL,
+    model_params={
+        "temperature": 0.1
+    },
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
 )
 
 def embed_text(text: str) -> list[float]:
@@ -69,15 +80,15 @@ custom_prompt = RagTemplate(
     system_instructions=(
         
         """
-        You are a hospital operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
+        You are a legal assistant and law firm operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
         
         RULES:
-        1. If context describes "Sunrise Multi-Specialty Hospital" but question asks about "Horizon Valley" → use Sunrise data as the template hospital
-        2. NEVER say "I don't know" or "no information" if context has relevant data
-        3. For workflows: use department-specific sections, NOT generic daily schedules
-        4. For data fields/tables: extract exact field names from context tables
-        5. List ALL items mentioned (departments, ICUs, etc.) - don't summarize
-        6. Structure answers clearly with bullet points/tables when listing
+        1. If context describes "Law Firm Connect" or specific cases, use that data.
+        2. NEVER say "I don't know" or "no information" if context has relevant data.
+        3. For workflows: use case-specific details and legal procedures.
+        4. For data fields/tables: extract exact field names from context tables.
+        5. List ALL items mentioned (judges, lawyers, documents, etc.) - don't summarize.
+        6. Structure answers clearly with bullet points/tables when listing.
         
         CONTEXT FORMAT: Each chunk has score (higher = more relevant). Use highest scoring chunks first.
         
@@ -185,7 +196,7 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
 
     rag = GraphRAG(
         retriever=retriever,
-        llm=ollama_llm,
+        llm=llm,
         prompt_template=custom_prompt
     )
 
