@@ -8,7 +8,7 @@ const { validationResult } = require('express-validator');
 const { logLoginAttempt, logAccountLockout, logRegistration, getClientIp } = require('../utils/auditLogger');
 
 // Environment-based toggle for email verification
-const REQUIRE_EMAIL_VERIFICATION = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+// const REQUIRE_EMAIL_VERIFICATION = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
 
 // @desc    Register a new user
 // @route   POST /auth/register
@@ -38,7 +38,7 @@ const registerUser = async (req, res, next) => {
         }
 
         // Set status based on verification requirement
-        const initialStatus = REQUIRE_EMAIL_VERIFICATION ? 'PENDING' : 'VERIFIED';
+        const initialStatus = 'VERIFIED';
 
         const user = await User.create({
             firstName,
@@ -57,106 +57,19 @@ const registerUser = async (req, res, next) => {
             // Log successful registration
             logRegistration(email, user._id.toString(), clientIp);
 
-            // OTP Logic - only if verification is required
-            if (REQUIRE_EMAIL_VERIFICATION) {
-                // Generate OTP
-                const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-                const hashedOtp = await bcrypt.hash(otpCode, 10);
-
-                await OTP.create({
-                    email,
-                    otp: hashedOtp,
-                    expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
-                });
-
-                // Send OTP Email
-                try {
-                    await sendEmail({
-                        email: user.email,
-                        subject: 'LawFirmConnect - Verify your email',
-                        message: `Your verification code is: ${otpCode}. It expires in 10 minutes.`
-                    });
-                } catch (emailError) {
-                    console.error("Email send failed", emailError);
-                }
-
-                res.status(201).json({
-                    _id: user._id,
-                    firstName: user.firstName,
-                    email: user.email,
-                    role: user.role,
-                    requiresVerification: true,
-                    msg: 'User registered. Please check your email for verification code.'
-                });
-            } else {
-                // Auto-verified for development
-                res.status(201).json({
-                    _id: user._id,
-                    firstName: user.firstName,
-                    email: user.email,
-                    role: user.role,
-                    token: generateToken(user._id),
-                    msg: 'User registered successfully.'
-                });
-            }
+            // Auto-verified for development
+            res.status(201).json({
+                _id: user._id,
+                firstName: user.firstName,
+                email: user.email,
+                role: user.role,
+                token: generateToken(user._id),
+                msg: 'User registered successfully.'
+            });
         } else {
             res.status(400);
             throw new Error('Invalid user data');
         }
-    } catch (error) {
-        next(error);
-    }
-};
-
-// @desc    Verify Email with OTP
-// @route   POST /auth/verify-email
-// @access  Public
-const verifyEmail = async (req, res, next) => {
-    try {
-        const { email, otp } = req.body;
-
-        const user = await User.findOne({ email });
-        if (!user) {
-            res.status(404);
-            throw new Error('User not found');
-        }
-
-        if (user.status === 'VERIFIED') {
-            res.status(200).json({ msg: 'Email already verified. Please login.' });
-            return;
-        }
-
-        // Find latest OTP for email
-        const validOtp = await OTP.findOne({ email }).sort({ createdAt: -1 });
-
-        if (!validOtp) {
-            res.status(400);
-            throw new Error('OTP not found or expired. Please request a new one.');
-        }
-
-        if (validOtp.expiresAt < Date.now()) {
-            res.status(400);
-            throw new Error('OTP expired.');
-        }
-
-        const isMatch = await bcrypt.compare(otp, validOtp.otp);
-
-        if (!isMatch) {
-            res.status(400);
-            throw new Error('Invalid OTP');
-        }
-
-        user.status = 'VERIFIED';
-        await user.save();
-
-        // Optional: Delete used OTPs for this email to be clean
-        await OTP.deleteMany({ email });
-
-        res.status(200).json({ 
-            msg: 'Email verified successfully',
-            token: generateToken(user._id)
-        });
-
     } catch (error) {
         next(error);
     }
@@ -217,13 +130,6 @@ const loginUser = async (req, res, next) => {
             logLoginAttempt(false, email, user._id.toString(), clientIp, 'Invalid password');
             res.status(401);
             throw new Error('Invalid email or password');
-        }
-
-        // Check if account is verified
-        if (user.status !== 'VERIFIED') {
-            logLoginAttempt(false, email, user._id.toString(), clientIp, 'Account not verified');
-            res.status(401);
-            throw new Error('Account not verified. Please verify your email.');
         }
 
         // Successful login - reset failed attempts
@@ -290,7 +196,6 @@ const getCurrentUser = async (req, res, next) => {
 
 module.exports = {
     registerUser,
-    verifyEmail,
     loginUser,
     getCurrentUser
 };
