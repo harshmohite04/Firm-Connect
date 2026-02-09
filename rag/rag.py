@@ -8,7 +8,7 @@ from groq import Groq
 # from utils.embeddings import embed_text
 from neo4j_graphrag.generation import GraphRAG
 # from neo4j_graphrag.llm import LLM
-from neo4j_graphrag.llm import OllamaLLM
+from neo4j_graphrag.llm import OllamaLLM, OpenAILLM
 # from neo4j_graphrag.integrations.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
@@ -27,6 +27,8 @@ NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USER = os.getenv("NEO4J_USER")
 NEO4J_PASS = os.getenv("NEO4J_PASS")
 OLLAMA_LLM_MODEL = "llama3.2:latest"
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
@@ -52,9 +54,18 @@ class LocalEmbedder:
 embedder = LocalEmbedder(_sentence_transformer)
 
 
-ollama_llm = OllamaLLM(
-    model_name=OLLAMA_LLM_MODEL,
-    model_params={"temperature": 0.2},
+# ollama_llm = OllamaLLM(
+#     model_name=OLLAMA_LLM_MODEL,
+#     model_params={"temperature": 0.2},
+# )
+
+llm = OpenAILLM(
+    model_name=DEEPSEEK_MODEL,
+    model_params={
+        "temperature": 0.1
+    },
+    api_key=DEEPSEEK_API_KEY,
+    base_url="https://api.deepseek.com"
 )
 
 def embed_text(text: str) -> list[float]:
@@ -185,7 +196,7 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
 
     rag = GraphRAG(
         retriever=retriever,
-        llm=ollama_llm,
+        llm=llm,
         prompt_template=custom_prompt
     )
 
