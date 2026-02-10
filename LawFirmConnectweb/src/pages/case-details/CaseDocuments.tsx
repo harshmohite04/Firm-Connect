@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService from '../../services/caseService';
 import ragService from '../../services/ragService';
+import ConfirmationModal from '../../components/ConfirmationModal';
 // Icons
 const SearchIcon = () => (
     <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -79,6 +81,8 @@ const CaseDocuments: React.FC = () => {
     // Viewer State
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
     const [aiStatuses, setAiStatuses] = useState<Record<string, string>>({});
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
 
     useEffect(() => {
         if (id) {
@@ -159,29 +163,40 @@ const CaseDocuments: React.FC = () => {
             const results = await caseService.getCaseDocuments(id);
             setCaseData((prev: any) => ({ ...prev, documents: results }));
             
-            alert("All documents uploaded successfully!");
+            toast.success("All documents uploaded successfully!");
             fetchAIStatuses();
             setIsUploadModalOpen(false);
             setPendingFiles([]);
         } catch (error) {
             console.error("Upload failed", error);
-            alert("Some uploads failed. Please check the list and try again.");
+            toast.error("Some uploads failed. Please check the list and try again.");
         } finally {
             setUploading(false);
         }
     };
 
-    const handleDeleteDocument = async (docId: string) => {
-        if (!id || !window.confirm("Are you sure you want to delete this document?")) return;
+    const confirmDeleteDocument = async () => {
+        if (!id || !documentToDelete) return;
+
         try {
-            await caseService.deleteDocument(id, docId);
+            await caseService.deleteDocument(id, documentToDelete);
             // Optimistic update or re-fetch
-            const updatedDocs = caseData.documents.filter((d: any) => d._id !== docId);
+            const updatedDocs = caseData.documents.filter((d: any) => d._id !== documentToDelete);
             setCaseData({ ...caseData, documents: updatedDocs });
+            toast.success("Document deleted successfully");
+            setIsDeleteModalOpen(false);
+            setDocumentToDelete(null);
         } catch (error) {
             console.error("Delete failed", error);
-            alert("Failed to delete document.");
+            toast.error("Failed to delete document.");
+            setIsDeleteModalOpen(false);
+            setDocumentToDelete(null);
         }
+    };
+
+    const handleDeleteClick = (docId: string) => {
+        setDocumentToDelete(docId);
+        setIsDeleteModalOpen(true);
     };
 
     // Document Filtering and Sorting (Adapting to backend fields)
@@ -282,7 +297,7 @@ const CaseDocuments: React.FC = () => {
                                         </div>
                                         <div className="flex gap-1">
                                             <button className="text-slate-400 hover:text-blue-600 p-1"><DownloadIcon /></button>
-                                            <button onClick={() => handleDeleteDocument(doc._id)} className="text-slate-400 hover:text-red-600 p-1"><TrashIcon /></button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(doc._id); }} className="text-slate-400 hover:text-red-600 p-1"><TrashIcon /></button>
                                         </div>
                                     </div>
                                     <div className="mb-2">
@@ -389,7 +404,7 @@ const CaseDocuments: React.FC = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{new Date(doc.uploadedAt).toLocaleDateString()}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : 'N/A'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc._id); }} className="text-slate-400 hover:text-red-600 p-2 transition-colors" title="Delete">
+                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(doc._id); }} className="text-slate-400 hover:text-red-600 p-2 transition-colors" title="Delete">
                                                     <TrashIcon />
                                                 </button>
                                             </td>
@@ -615,6 +630,15 @@ const CaseDocuments: React.FC = () => {
                     </div>
                 </div>
             )}
+            
+            <ConfirmationModal 
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={confirmDeleteDocument}
+                title="Delete Document"
+                message="Are you sure you want to delete this document? This action cannot be undone."
+                confirmText="Delete"
+            />
         </div>
     );
 };

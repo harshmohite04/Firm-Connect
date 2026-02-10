@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 
@@ -71,7 +72,7 @@ const SignUp: React.FC = () => {
         setIsLoading(true);
         try {
             await authService.register(formData);
-            alert('Account created successfully! Please log in.');
+            toast.success('Account created successfully! Please log in.');
             navigate('/signin');
         } catch (err: any) {
              setError(err.response?.data?.message || 'Registration failed. Please try again.');

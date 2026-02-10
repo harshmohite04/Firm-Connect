@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import PortalLayout from '../components/PortalLayout';
+import ConfirmationModal from '../components/ConfirmationModal';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
 
 // Icons
@@ -33,6 +34,24 @@ const PortalProfile: React.FC = () => {
         role: ''
     });
 
+    const [confirmation, setConfirmation] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        confirmText: string;
+        isDanger?: boolean;
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => {},
+        confirmText: "Confirm",
+        isDanger: false
+    });
+
+    const closeConfirmation = () => setConfirmation(prev => ({ ...prev, isOpen: false }));
+
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -40,12 +59,22 @@ const PortalProfile: React.FC = () => {
         }
     }, []);
 
-    const handleLogout = () => {
-        if (window.confirm('Are you sure you want to log out?')) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            navigate('/signin');
-        }
+    const handleLogoutClick = () => {
+        setConfirmation({
+            isOpen: true,
+            title: "Sign Out",
+            message: "Are you sure you want to log out?",
+            confirmText: "Sign Out",
+            onConfirm: confirmLogout,
+            isDanger: false
+        });
+    };
+
+    const confirmLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/signin');
+        closeConfirmation();
     };
 
     const isActive = (path: string) => {
@@ -87,7 +116,7 @@ const PortalProfile: React.FC = () => {
                         </div>
 
                         <button 
-                            onClick={handleLogout}
+                            onClick={handleLogoutClick}
                             className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-colors shadow-sm"
                         >
                             <LogoutIcon /> Sign Out
@@ -100,6 +129,16 @@ const PortalProfile: React.FC = () => {
                     </div>
                 </div>
             </div>
+            
+            <ConfirmationModal
+                isOpen={confirmation.isOpen}
+                onClose={closeConfirmation}
+                onConfirm={confirmation.onConfirm}
+                title={confirmation.title}
+                message={confirmation.message}
+                confirmText={confirmation.confirmText}
+                isDanger={confirmation.isDanger}
+            />
         </PortalLayout>
     );
 };

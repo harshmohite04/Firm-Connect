@@ -12,6 +12,7 @@ interface User {
 const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [hasAccess, setHasAccess] = useState(false);
+    const [accessError, setAccessError] = useState<string | null>(null);
     const location = useLocation();
 
     useEffect(() => {
@@ -56,7 +57,8 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                 // 3. No Access
                 else {
                     console.warn('SubscriptionGuard: Access DENIED. User:', user);
-                    alert(`Access Denied. Email: ${user.email}, Status: ${user.subscriptionStatus}, Expires: ${user.subscriptionExpiresAt}`);
+                    const errorMsg = `Access Denied. Email: ${user.email}, Status: ${user.subscriptionStatus}, Expires: ${user.subscriptionExpiresAt}`;
+                    setAccessError(errorMsg);
                     setHasAccess(false);
                 }
 
@@ -64,7 +66,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
 
             } catch (error: any) {
                 console.error('Subscription check failed:', error);
-                alert(`Subscription Check Failed! Error: ${error.message}`);
+                setAccessError(`Subscription Check Failed! Error: ${error.message}`);
                 // If 401, clear user data
                 if (axios.isAxiosError(error) && error.response?.status === 401) {
                     localStorage.removeItem('user');
@@ -83,7 +85,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     if (!hasAccess) {
-        return <Navigate to="/pricing" state={{ from: location }} replace />;
+        return <Navigate to="/pricing" state={{ from: location, error: accessError }} replace />;
     }
 
     return <>{children}</>;

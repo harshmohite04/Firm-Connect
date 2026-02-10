@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService, { type ActivityLog } from '../../services/caseService';
 
@@ -118,7 +119,7 @@ const CaseActivity: React.FC = () => {
             });
         } catch (error) {
             console.error("Failed to add activity", error);
-            alert("Failed to add activity");
+            toast.error("Failed to add activity");
         }
     };
 

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CheckCircle, Zap, Shield, Users } from 'lucide-react';
+import { CheckCircle } from 'lucide-react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 declare global {
     interface Window {
@@ -13,7 +13,15 @@ declare global {
 
 const Pricing: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (location.state?.error) {
+            setError(location.state.error);
+        }
+    }, [location.state]);
 
     // Hardcoded for now, should come from API/Env
     const plans = [
@@ -48,6 +56,7 @@ const Pricing: React.FC = () => {
     const handleSubscribe = async (plan: any) => {
         try {
             setLoading(true);
+            setError(null);
             
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
@@ -67,7 +76,7 @@ const Pricing: React.FC = () => {
             );
 
             if (!orderData.success) {
-                alert('Failed to initiate payment');
+                setError('Failed to initiate payment');
                 setLoading(false);
                 return;
             }
@@ -95,14 +104,14 @@ const Pricing: React.FC = () => {
                         );
 
                         if (verifyRes.data.success) {
-                            alert('Payment Successful! Subscription Active.');
+                            // Payment Successful
                             navigate('/portal');
                         } else {
-                            alert('Payment Verification Failed');
+                            setError('Payment Verification Failed');
                         }
                     } catch (error) {
                         console.error(error);
-                        alert('Payment Verification Error');
+                        setError('Payment Verification Error');
                     }
                 },
                 prefill: {
@@ -120,7 +129,7 @@ const Pricing: React.FC = () => {
 
         } catch (error) {
             console.error('Payment Error:', error);
-            alert('Something went wrong');
+            setError('Something went wrong during payment initialization');
         } finally {
             setLoading(false);
         }
@@ -131,6 +140,39 @@ const Pricing: React.FC = () => {
             <Navbar />
             
             <div className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+                {error && (
+                     <div className="max-w-7xl mx-auto mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3 flex-1">
+                                <p className="text-sm font-medium text-red-800">
+                                    Access Denied
+                                </p>
+                                <p className="mt-1 text-sm text-red-700">
+                                    {error}
+                                </p>
+                            </div>
+                            <div className="ml-auto pl-3">
+                                <div className="-mx-1.5 -my-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setError(null)}
+                                        className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                                    >
+                                        <span className="sr-only">Dismiss</span>
+                                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="max-w-7xl mx-auto text-center">
                     <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
                         Simple, Transparent Pricing
