@@ -301,7 +301,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         </svg>
                     </div>
                     <div>
-                        <h1 className="font-bold text-slate-900 leading-none">Legal Partners LLP</h1>
+                        <h1 className="font-bold text-slate-900 leading-none">LawfirmAI</h1>
                         <span className="text-xs text-blue-600 font-medium">Client Portal</span>
                     </div>
                 </div>

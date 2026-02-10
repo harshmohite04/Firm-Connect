@@ -92,7 +92,7 @@ const SignUp: React.FC = () => {
                         <div className="bg-blue-50 p-1.5 rounded-lg">
                            <LogoIcon />
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-slate-900">Lex & Partners</span>
+                        <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">

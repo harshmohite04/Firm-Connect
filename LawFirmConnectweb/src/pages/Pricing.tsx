@@ -86,7 +86,7 @@ const Pricing: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID, 
                 amount: orderData.order.amount,
                 currency: "INR",
-                name: "Law Firm Connect",
+                name: "LawfirmAI",
                 description: `Subscription for ${plan.name} Plan`,
                 order_id: orderData.order.id,
                 handler: async function (response: any) {

@@ -126,7 +126,7 @@ const AboutUs: React.FC = () => {
                                          <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">1998</div>
                                          <h3 className="text-xl font-bold text-slate-900 mb-2">Firm Founded</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
-                                             Founded by Eleanor Rigby and John Smith with a focus on civil rights and personal injury, starting in a small downtown office.
+                                             Founded by Harsh Mohite with a focus on AI-driven legal solutions, starting in a small downtown office.
                                          </p>
                                      </div>
 
@@ -175,17 +175,14 @@ const AboutUs: React.FC = () => {
              {/* Team Section */}
              <section className="py-20 bg-slate-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-3xl font-bold text-slate-900 mb-4">Meet Our Attorneys</h2>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-4">Meet Our Founders</h2>
                     <p className="text-slate-600 max-w-2xl mx-auto mb-16">
                         Our team brings decades of combined experience across various practice areas. We are passionate about the law and compassionate towards our clients.
                     </p>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid md:grid-cols-1 max-w-sm mx-auto gap-8">
                          {[
-                             { name: 'James Sterling', role: 'Managing Partner', img: 'https://randomuser.me/api/portraits/men/32.jpg' },
-                             { name: 'Sarah Jenkins', role: 'Senior Associate', img: 'https://randomuser.me/api/portraits/women/44.jpg' },
-                             { name: 'Michael Ross', role: 'Associate', img: 'https://randomuser.me/api/portraits/men/86.jpg' },
-                             { name: 'Emily Chen', role: 'Junior Associate', img: 'https://randomuser.me/api/portraits/women/65.jpg' },
+                             { name: 'Harsh Mohite', role: 'Founder', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=2000' },
                          ].map((member, idx) => (
                              <div key={idx} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all text-left group">
                                  <div className="h-64 overflow-hidden">

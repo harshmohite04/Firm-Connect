@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
                              <div className="bg-blue-600 p-1.5 rounded">
                                  <LogoIcon />
                              </div>
-                             <span className="font-bold text-lg">Lex & Partners</span>
+                             <span className="font-bold text-lg">LawfirmAI</span>
                          </div>
                          <p className="text-slate-400 leading-relaxed max-w-xs mb-6">
                              Dedicated to providing exceptional legal representation with a personal touch. Your justice is our priority.
@@ -65,16 +65,14 @@ const Footer: React.FC = () => {
                             </li>
                             <li className="flex gap-3">
                                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                 <span>contact@lexpartners.com</span>
+                                 <span>contact@lawfirmai.com</span>
                             </li>
                          </ul>
                      </div>
                 </div>
 
                 <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div className="text-slate-500">
-                        &copy; 2024 Lex & Partners. All rights reserved.
-                    </div>
+                        &copy; 2024 LawfirmAI. All rights reserved.
                     <div className="flex gap-6 text-slate-500 text-xs">
                         <a href="#" className="hover:text-slate-300">Privacy Policy</a>
                         <a href="#" className="hover:text-slate-300">Terms of Service</a>
