@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import AboutUs from './pages/AboutUs';
@@ -127,6 +128,7 @@ const AppWrapper: React.FC = () => {
    return (
     <BrowserRouter>
         <ScrollToTop />
+        <Toaster position="top-right" />
         <App />
     </BrowserRouter>
    )

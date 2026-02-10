@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
             <div className="bg-blue-50 p-2 rounded-lg">
                <LogoIcon />
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">Lex & Partners</span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
           </Link>
 
           {/* Desktop Menu */}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import PortalLayout from '../components/PortalLayout';
 import scheduleService from '../services/scheduleService';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // Icons
 const PlusIcon = () => (
@@ -73,6 +75,7 @@ const PortalCalendar: React.FC = () => {
     const [showSidePanel, setShowSidePanel] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Form State
     const [eventTitle, setEventTitle] = useState('');
@@ -215,30 +218,38 @@ const PortalCalendar: React.FC = () => {
 
             if (selectedEvent && !isCreating) {
                 await scheduleService.updateEvent(selectedEvent.id, eventData);
+                toast.success("Event updated successfully");
             } else {
                 await scheduleService.createEvent(eventData);
+                toast.success("Event created successfully");
             }
 
             await fetchEvents();
             closeSidePanel();
         } catch (error) {
             console.error("Failed to save event", error);
-            alert("Failed to save event");
+            toast.error("Failed to save event");
         }
     };
 
-    const handleDeleteEvent = async () => {
+    const confirmDeleteEvent = async () => {
         if (!selectedEvent) return;
-        if (!confirm('Are you sure you want to delete this event?')) return;
 
         try {
             await scheduleService.deleteEvent(selectedEvent.id);
+            toast.success("Event deleted successfully");
             await fetchEvents();
             closeSidePanel();
+            setIsDeleteModalOpen(false);
         } catch (error) {
             console.error("Failed to delete event", error);
-            alert("Failed to delete event");
+            toast.error("Failed to delete event");
+            setIsDeleteModalOpen(false);
         }
+    };
+
+    const handleDeleteClick = () => {
+        setIsDeleteModalOpen(true);
     };
 
     // Helper functions
@@ -591,7 +602,7 @@ const PortalCalendar: React.FC = () => {
                             {!isCreating && selectedEvent && (
                                 <button
                                     type="button"
-                                    onClick={handleDeleteEvent}
+                                    onClick={handleDeleteClick}
                                     className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
                                 >
                                     <TrashIcon /> Delete
@@ -624,6 +635,17 @@ const PortalCalendar: React.FC = () => {
                         onClick={closeSidePanel}
                     />
                 )}
+                
+                {/* Confirmation Modal */}
+                <ConfirmationModal 
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onConfirm={confirmDeleteEvent}
+                    title="Delete Event"
+                    message="Are you sure you want to delete this event? This action cannot be undone."
+                    confirmText="Delete"
+                    isDanger={true}
+                />
             </div>
         </PortalLayout>
     );

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import caseService from '../services/caseService';
@@ -179,7 +180,7 @@ const StartCase: React.FC = () => {
         } catch (error: any) {
             console.error("Failed to create case", error);
             const errorMessage = error.response?.data?.message || error.message || "Unknown error";
-            alert(`Failed to create case: ${errorMessage}`);
+            toast.error(`Failed to create case: ${errorMessage}`);
         } finally {
             setLoading(false);
         }

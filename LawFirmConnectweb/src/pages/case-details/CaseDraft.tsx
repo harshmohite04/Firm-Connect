@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import caseService from '../../services/caseService';
 
@@ -119,14 +120,14 @@ const CaseDraft: React.FC = () => {
 
         if (isCustomDocument) {
             if (!customDocumentName.trim()) {
-                alert('Please enter a document name');
+                toast.error('Please enter a document name');
                 return;
             }
             templateId = 'blank';
             title = customDocumentName;
         } else {
             if (!selectedTemplate) {
-                alert('Please select a document type');
+                toast.error('Please select a document type');
                 return;
             }
             const template = templates.find(t => t.id === selectedTemplate);
@@ -169,7 +170,7 @@ const CaseDraft: React.FC = () => {
             loadDraftSessions();
         } catch (error) {
             console.error('Failed to create draft session', error);
-            alert('Failed to start draft session');
+            toast.error('Failed to start draft session');
         }
     };
 
@@ -195,7 +196,7 @@ const CaseDraft: React.FC = () => {
             }
         } catch (error) {
             console.error('Failed to load session', error);
-            alert('Failed to load draft session');
+            toast.error('Failed to load draft session');
         }
     };
 
@@ -249,18 +250,18 @@ const CaseDraft: React.FC = () => {
 
     const handleSave = async () => {
         if (!filename.trim()) {
-            alert('Please enter a filename');
+            toast.error('Please enter a filename');
             return;
         }
         setIsSaving(true);
         try {
             await caseService.saveGeneratedDocument(caseData._id, filename, documentContent);
             setShowSaveModal(false);
-            alert('Document saved and ingested successfully!');
+            toast.success('Document saved and ingested successfully!');
             navigate('../documents');
         } catch (error) {
             console.error('Save failed', error);
-            alert('Failed to save document.');
+            toast.error('Failed to save document.');
         } finally {
             setIsSaving(false);
         }

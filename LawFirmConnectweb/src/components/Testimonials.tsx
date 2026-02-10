@@ -9,7 +9,7 @@ const StarIcon = () => (
 const Testimonials: React.FC = () => {
     const testimonials = [
         {
-            text: "The team at Lex & Partners handled my corporate merger with incredible attention to detail. I felt supported every step of the way.",
+            text: "The team at LawfirmAI handled my corporate merger with incredible attention to detail. I felt supported every step of the way.",
             author: "Michael Turner",
             role: "CEO, TechStarter",
             image: "https://randomuser.me/api/portraits/men/32.jpg"

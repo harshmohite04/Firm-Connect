@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
+import toast from 'react-hot-toast';
 import caseService, { type Case } from "../../services/caseService";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 interface OutletContextType {
   caseData: Case;
@@ -31,6 +33,25 @@ const CaseSettings: React.FC = () => {
     const [newMemberEmail, setNewMemberEmail] = useState("");
     const [newMemberRole, setNewMemberRole] = useState("Member");
     const [addingMember, setAddingMember] = useState(false);
+
+    // Confirmation Modal State
+    const [confirmation, setConfirmation] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        onConfirm: () => void;
+        confirmText: string;
+        isDanger?: boolean;
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => {},
+        confirmText: "Confirm",
+        isDanger: false
+    });
+
+    const closeConfirmation = () => setConfirmation(prev => ({ ...prev, isOpen: false }));
 
     useEffect(() => {
         if (caseData) {
@@ -71,10 +92,10 @@ const CaseSettings: React.FC = () => {
                 status: formState.status
             });
             setCaseData(updatedCase); 
-            alert("Settings saved successfully!");
+            toast.success("Settings saved successfully!");
         } catch (error) {
             console.error(error);
-            alert("Failed to save settings.");
+            toast.error("Failed to save settings.");
         } finally {
             setSaving(false);
         }
@@ -92,8 +113,8 @@ const CaseSettings: React.FC = () => {
             setCaseData(updatedCase);
         } catch (error) {
             console.error(error);
-            alert("Failed to update notification settings");
-            setNotifications(notifications); 
+            toast.error("Failed to update notification settings");
+            setNotifications(notifications);  
         }
     };
 
@@ -112,48 +133,70 @@ const CaseSettings: React.FC = () => {
             
             setNewMemberEmail("");
             setShowAddMember(false);
-            alert("Team member added successfully!");
+            toast.success("Team member added successfully!");
         } catch (error: any) {
             console.error(error);
             if (error.response && error.response.status === 404) {
-                 alert("User not found. Please ensure the email is registered on the portal.");
+                 toast.error("User not found. Please ensure the email is registered on the portal.");
             } else if (error.response && error.response.status === 400) {
-                 alert(error.response.data.message || "Cannot add this user.");
+                 toast.error(error.response.data.message || "Cannot add this user.");
             } else {
-                 alert("Failed to add team member.");
+                 toast.error("Failed to add team member.");
             }
         } finally {
             setAddingMember(false);
         }
     };
 
-    const handleRemoveMember = async (userId: string) => {
+    const handleRemoveMemberClick = (userId: string) => {
+        setConfirmation({
+            isOpen: true,
+            title: "Remove Team Member",
+            message: "Are you sure you want to remove this team member?",
+            confirmText: "Remove",
+            onConfirm: () => confirmRemoveMember(userId),
+            isDanger: true
+        });
+    };
+
+    const confirmRemoveMember = async (userId: string) => {
         if (!id) return;
-        if (confirm("Are you sure you want to remove this team member?")) {
-            try {
-                await caseService.removeTeamMember(id, userId);
-                 // Refresh case data
-                 const updatedCase = await caseService.getCaseById(id);
-                 setCaseData(updatedCase);
-                 alert("Team member removed.");
-            } catch (error) {
-                console.error(error);
-                alert("Failed to remove team member.");
-            }
+        try {
+            await caseService.removeTeamMember(id, userId);
+                // Refresh case data
+                const updatedCase = await caseService.getCaseById(id);
+                setCaseData(updatedCase);
+                toast.success("Team member removed.");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to remove team member.");
+        } finally {
+            closeConfirmation();
         }
     };
 
-    const handleDeleteCase = async () => {
+    const handleDeleteCaseClick = () => {
+        setConfirmation({
+            isOpen: true,
+            title: "Delete Case",
+            message: "Are you sure you want to delete this case? This action cannot be undone.",
+            confirmText: "Delete Case",
+            onConfirm: confirmDeleteCase,
+            isDanger: true
+        });
+    };
+
+    const confirmDeleteCase = async () => {
         if (!id) return;
-        if (confirm("Are you sure you want to delete this case? This action cannot be undone.")) {
-             try {
-                 await caseService.deleteCase(id);
-                 alert("Case deleted successfully.");
-                 navigate('/portal/cases');
-             } catch (error) {
-                 console.error(error);
-                 alert("Failed to delete case.");
-             }
+        try {
+            await caseService.deleteCase(id);
+            toast.success("Case deleted successfully.");
+            navigate('/portal/cases');
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to delete case.");
+        } finally {
+            closeConfirmation();
         }
     };
 
@@ -343,7 +386,7 @@ const CaseSettings: React.FC = () => {
                     </div>
                     <button
                     className="text-slate-400 hover:text-red-600 text-sm font-medium transition-colors opacity-0 group-hover:opacity-100"
-                    onClick={() => handleRemoveMember(member.userId)} // userId is the reference ID
+                    onClick={() => handleRemoveMemberClick(member.userId)} // userId is the reference ID
                     >
                     Remove
                     </button>
@@ -364,12 +407,22 @@ const CaseSettings: React.FC = () => {
           </div>
           <button
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded-lg shadow-sm transition-colors text-sm whitespace-nowrap"
-            onClick={handleDeleteCase}
+            onClick={handleDeleteCaseClick}
           >
             Delete Case
           </button>
         </div>
       </div>
+
+      <ConfirmationModal
+        isOpen={confirmation.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmation.onConfirm}
+        title={confirmation.title}
+        message={confirmation.message}
+        confirmText={confirmation.confirmText}
+        isDanger={confirmation.isDanger}
+      />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import toast from 'react-hot-toast';
 import PortalLayout from '../components/PortalLayout';
 import { dummyBilling, dummyCases } from '../data/dummyData';
 
@@ -57,11 +58,6 @@ const PrintIcon = () => (
 const SendIcon = () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-    </svg>
-)
-const ChevronDownIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
     </svg>
 )
 const XIcon = () => (
@@ -142,7 +138,7 @@ const PortalBilling: React.FC = () => {
     });
 
     const handleQuickPay = (invoiceId: string) => {
-        alert(`Redirecting to Razorpay for invoice ${invoiceId}...`);
+        toast.success(`Redirecting to Razorpay for invoice ${invoiceId}...`);
     };
 
     return (

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService, { type BillingRecord } from '../../services/caseService';
 const PDFIcon = () => (
@@ -79,7 +80,7 @@ const CaseBilling: React.FC = () => {
 
             await caseService.addCaseBilling(id, formData);
             
-            alert('Expense Added Successfully');
+            toast.success('Expense Added Successfully');
             setShowExpenseModal(false);
             setExpenseForm({
                 category: 'Court Fees',
@@ -91,7 +92,7 @@ const CaseBilling: React.FC = () => {
             loadBilling(); 
         } catch (error) {
             console.error(error);
-            alert('Failed to add expense');
+            toast.error('Failed to add expense');
         } finally {
             setSubmitting(false);
         }

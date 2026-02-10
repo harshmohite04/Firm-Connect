@@ -52,7 +52,7 @@ const WhyChooseUs: React.FC = () => {
                     {/* Content Side */}
                     <div className="order-1 lg:order-2">
                         <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                            Why Choose Lex & Partners?
+                            Why Choose LawfirmAI?
                         </h2>
                         <p className="text-lg text-slate-600 mb-10 leading-relaxed">
                             We bring a unique combination of deep legal expertise and a personal commitment to every client's well-being.
