@@ -1,5 +1,5 @@
 import React from 'react';
-
+import Logo from '../assets/logo.svg';
 const LogoIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-white" stroke="currentColor" strokeWidth="2">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -15,7 +15,8 @@ const Footer: React.FC = () => {
                      <div className="col-span-2 lg:col-span-2">
                          <div className="flex items-center gap-2 mb-6 text-white">
                              <div className="bg-blue-600 p-1.5 rounded">
-                                 <LogoIcon />
+                                 {/* <LogoIcon /> */}
+                                <img src={Logo} alt="" /> 
                              </div>
                              <span className="font-bold text-lg">LawfirmAI</span>
                          </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
-
+import Logo from '../assets/logo.svg';
 
 const LogoIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
@@ -89,8 +89,9 @@ const SignUp: React.FC = () => {
                 <div className="flex flex-col p-8 sm:p-12 lg:p-16 overflow-y-auto">
                     {/* Branding */}
                     <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => navigate('/')}>
-                        <div className="bg-blue-50 p-1.5 rounded-lg">
-                           <LogoIcon />
+                        <div className="rounded-lg">
+                           {/* <LogoIcon /> */}
+                           <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
                         </div>
                         <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                     </div>

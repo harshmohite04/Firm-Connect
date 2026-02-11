@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-
+import Logo from '../assets/logo.svg';
 // Simple SVG Icons
 const LogoIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
@@ -16,8 +16,9 @@ const Navbar: React.FC = () => {
           
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 flex items-center gap-3 cursor-pointer">
-            <div className="bg-blue-50 p-2 rounded-lg">
-               <LogoIcon />
+            <div className="rounded-lg">
+               {/* <LogoIcon /> */}
+               <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
             </div>
             <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
           </Link>
