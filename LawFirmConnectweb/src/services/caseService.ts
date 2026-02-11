@@ -8,6 +8,7 @@ export interface Case {
   _id: string;
   title: string;
   description: string;
+  caseNumber?: string;
   status: "Open" | "In Progress" | "Closed" | "Paused";
   legalMatter: string;
   assignedLawyers: any[]; // or User[]
@@ -80,12 +81,16 @@ const createCase = async (caseData: any): Promise<Case> => {
   }
 
   // Use raw axios to ensure clean state
-  const response = await axios.post("http://localhost:5000/cases", caseData, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      // Do NOT set Content-Type; let browser handle it for FormData
+  const response = await axios.post(
+    `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/cases`,
+    caseData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        // Do NOT set Content-Type; let browser handle it for FormData
+      },
     },
-  });
+  );
   return response.data;
 };
 
@@ -165,7 +170,7 @@ const updateCaseSettings = async (id: string, updates: any): Promise<Case> => {
 // checking ragService.ts, it uses direct axios call to 8000 for AI stuff.
 // So we should do the same here.
 
-const RAG_API_URL = "http://localhost:8000";
+const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
 // Helper to get auth headers for Python backend
 const getAuthHeaders = () => {
@@ -213,7 +218,7 @@ const generateDocument = async (
   // server.py has: @app.post("/generate-document")
 
   const response = await axios.post(
-    "http://localhost:8000/generate-document",
+    `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/generate-document`,
     {
       caseId,
       instructions,
@@ -231,7 +236,7 @@ const saveGeneratedDocument = async (
   content: string,
 ): Promise<any> => {
   const response = await axios.post(
-    "http://localhost:8000/save-document",
+    `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/save-document`,
     {
       caseId,
       filename,

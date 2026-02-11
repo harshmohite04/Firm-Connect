@@ -141,7 +141,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         const currentUserId = parsedUser._id || parsedUser.id;
 
         // Connect to socket
-        const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+        const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
         socketRef.current = io(BACKEND_URL, {
             transports: ['websocket', 'polling']
         });

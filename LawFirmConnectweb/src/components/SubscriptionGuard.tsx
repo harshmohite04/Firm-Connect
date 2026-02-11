@@ -35,7 +35,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                     return;
                 }
 
-                const { data } = await axios.get('http://localhost:5000/auth/me', {
+                const { data } = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 

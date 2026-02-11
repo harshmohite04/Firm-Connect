@@ -70,7 +70,7 @@ const Pricing: React.FC = () => {
 
             // 1. Create Order
             const { data: orderData } = await axios.post(
-                'http://localhost:5000/payments/create-order',
+                `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/create-order`,
                 { planId: plan.id, amount: plan.price },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -93,7 +93,7 @@ const Pricing: React.FC = () => {
                     try {
                         // 3. Verify Payment
                         const verifyRes = await axios.post(
-                            'http://localhost:5000/payments/verify',
+                            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/verify`,
                             {
                                 razorpay_order_id: response.razorpay_order_id,
                                 razorpay_payment_id: response.razorpay_payment_id,

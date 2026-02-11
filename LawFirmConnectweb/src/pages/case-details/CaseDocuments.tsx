@@ -558,7 +558,7 @@ const CaseDocuments: React.FC = () => {
                             </div>
                             <div className="flex items-center gap-2">
                                 <a 
-                                    href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `http://localhost:5000${selectedDocument.filePath}`} 
+                                    href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedDocument.filePath}`} 
                                     download={selectedDocument.fileName}
                                     target="_blank"
                                     rel="noreferrer"
@@ -579,7 +579,7 @@ const CaseDocuments: React.FC = () => {
                             {(() => {
                                 const url = selectedDocument.filePath.startsWith('http') 
                                     ? selectedDocument.filePath 
-                                    : `http://localhost:5000${selectedDocument.filePath}`;
+                                    : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedDocument.filePath}`;
                                 
                                 const ext = selectedDocument.fileName.split('.').pop().toLowerCase();
                                 
