@@ -5,16 +5,12 @@ from neo4j import GraphDatabase
 from qdrant_client import QdrantClient, models
 from groq import Groq
 
-# from utils.embeddings import embed_text
 from neo4j_graphrag.generation import GraphRAG
-# from neo4j_graphrag.llm import LLM
-from neo4j_graphrag.llm import OllamaLLM, OpenAILLM
-# from neo4j_graphrag.integrations.qdrant import QdrantNeo4jRetriever
+from neo4j_graphrag.llm import OpenAILLM
 from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetriever
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
-import os
-import requests
-from sentence_transformers import SentenceTransformer
+
+from utils.embeddings import embedder, embed_text
 
 
 load_dotenv()
@@ -26,38 +22,16 @@ load_dotenv()
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_USER = os.getenv("NEO4J_USER")
 NEO4J_PASS = os.getenv("NEO4J_PASS")
-OLLAMA_LLM_MODEL = "llama3.2:latest"
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
-# SentenceTransformers model (same as ingestion)
-EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
 groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
-
-# Use SentenceTransformers for local embeddings (no Ollama dependency)
-_sentence_transformer = SentenceTransformer(EMBED_MODEL)
-
-class LocalEmbedder:
-    """Wrapper for SentenceTransformers to match the embedder interface."""
-    def __init__(self, model):
-        self.model = model
-    
-    def embed_query(self, text: str) -> list:
-        return self.model.encode(text).tolist()
-
-embedder = LocalEmbedder(_sentence_transformer)
-
-
-# ollama_llm = OllamaLLM(
-#     model_name=OLLAMA_LLM_MODEL,
-#     model_params={"temperature": 0.2},
-# )
 
 llm = OpenAILLM(
     model_name=DEEPSEEK_MODEL,
@@ -68,20 +42,14 @@ llm = OpenAILLM(
     base_url="https://api.deepseek.com"
 )
 
-def embed_text(text: str) -> list[float]:
-    """
-    Generate vector embeddings using SentenceTransformers (local, no Ollama).
-    """
-    return embedder.embed_query(text)
-
 
 from neo4j_graphrag.generation.prompts import RagTemplate
 custom_prompt = RagTemplate(
     system_instructions=(
-        
+
         """
         You are a legal assistant and law firm operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
-        
+
         RULES:
         1. If context describes "Law Firm Connect" or specific cases, use that data.
         2. NEVER say "I don't know" or "no information" if context has relevant data.
@@ -89,10 +57,11 @@ custom_prompt = RagTemplate(
         4. For data fields/tables: extract exact field names from context tables.
         5. List ALL items mentioned (judges, lawyers, documents, etc.) - don't summarize.
         6. Structure answers clearly with bullet points/tables when listing.
-        
-        CONTEXT FORMAT: Each chunk has score (higher = more relevant). Use highest scoring chunks first.
-        
-        Answer format: Direct, factual, structured. No disclaimers.
+        7. CITE your sources using [N] markers that correspond to the numbered context chunks. Place citations inline at the end of the relevant sentence or claim. Example: "The court ruled in favor of the plaintiff [1]."
+
+        CONTEXT FORMAT: Each chunk is numbered [N] with its source filename. Use highest scoring chunks first.
+
+        Answer format: Direct, factual, structured with inline [N] citations. No disclaimers.
         """
     ),
 
@@ -105,7 +74,7 @@ Examples:
 Question:
 {query_text}
 
-Answer:
+Answer (include [N] citations):
 """,
 )
 
@@ -145,29 +114,45 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
             self.embedder = embedder
             
         def search(self, query_text: str, top_k: int = 5, **kwargs):
+            from neo4j_graphrag.types import RetrieverResult
+            from rag.reranker import rerank
+
             # 1. Embed
             query_vector = self.embedder.embed_query(query_text)
-            
-            # 2. Search Qdrant with Filter
-            # Using query_points as 'search' might be deprecated or missing in this client version
+
+            # 2. Search Qdrant with 3x top_k for re-ranking headroom
+            fetch_k = top_k * 3
             result = self.client.query_points(
                 collection_name=self.collection,
                 query=query_vector,
                 query_filter=self.q_filter,
-                limit=top_k,
+                limit=fetch_k,
                 with_payload=True
             )
             points = result.points
-            
-            # 3. Format Results
-            from neo4j_graphrag.types import RetrieverResult
+
+            # 3. Cross-encoder re-ranking
+            doc_texts = [p.payload.get("text", "") for p in points]
+            reranked = rerank(query_text, doc_texts, top_k=top_k)
+
+            # 4. Format re-ranked results with numbered citations
             items = []
-            for point in points:
-                # Payload contains 'text' from ingestion
+            for citation_idx, (orig_idx, rerank_score) in enumerate(reranked, 1):
+                point = points[orig_idx]
                 content = point.payload.get("text", "")
                 src = point.payload.get("source", "")
-                items.append(RetrieverResultItem(content=content, metadata={"score": point.score, "source": src}))
-                
+                page_num = point.payload.get("page_number")
+                file_type = point.payload.get("file_type")
+                # Use reranker score but keep Qdrant score as fallback
+                final_score = rerank_score if rerank_score > 0 else point.score
+                numbered_content = f"[{citation_idx}] (Source: {src}) {content}"
+                metadata = {"score": final_score, "source": src, "citation_index": citation_idx}
+                if page_num is not None:
+                    metadata["page_number"] = page_num
+                if file_type is not None:
+                    metadata["file_type"] = file_type
+                items.append(RetrieverResultItem(content=numbered_content, metadata=metadata))
+
             return RetrieverResult(items=items)
 
     retriever = CustomRetriever(
@@ -176,23 +161,6 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
         embedder=embedder,
         q_filter=qdrant_filter
     )
-
-    # We need to manually inject the filter because the current wrapper init might not expose it easily 
-    # OR assuming the library supports 'retriever_config' in search to pass generic params?
-    # Checking the library code isn't possible, but usually QdrantNeo4jRetriever in graphrag might not support explicit filters in init.
-    # However, let's try to pass it if the library supports it, or check if we can subclass/patch.
-    # WAIT, standard neo4j-graphrag Qdrant integration usually takes `client` and `collection`. 
-    # If the `search` method allows kwargs that pass down to qdrant, we use that.
-    
-    # Looking at standard implementations, retrieval usually handles filters. 
-    # If the library doesn't support it, we might need to do a raw qdrant search first.
-    # But let's assume we can pass `retriever_config` in `rag.search`. 
-    # If `QdrantNeo4jRetriever` doesn't handle filters in `search`, we are stuck.
-    
-    # RE-STRATEGY: The QdrantNeo4jRetriever usually does NOT support filters in the upstream library yet.
-    # We might need to monkey-patch or use a CustomRetriever.
-    # Let's try passing it in `retriever_config` assuming a good implementation.
-    # IF NOT: I will implement a custom retriever that respects the filter.
 
     rag = GraphRAG(
         retriever=retriever,

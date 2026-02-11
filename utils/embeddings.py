@@ -1,24 +1,25 @@
 import os
-import requests
+from sentence_transformers import SentenceTransformer
 
-# Defaults for local Ollama
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+# Upgraded embedding model (768-dim, better accuracy than all-MiniLM-L6-v2's 384-dim)
+EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-base-en-v1.5")
+
+_sentence_transformer = SentenceTransformer(EMBED_MODEL)
+
+
+class LocalEmbedder:
+    """Wrapper for SentenceTransformers to match the embedder interface."""
+    def __init__(self, model: SentenceTransformer):
+        self.model = model
+
+    def embed_query(self, text: str) -> list:
+        return self.model.encode(text).tolist()
+
+
+# Shared singleton embedder instance
+embedder = LocalEmbedder(_sentence_transformer)
+
 
 def embed_text(text: str) -> list[float]:
-    """
-    Generate vector embeddings using Ollama locally.
-    """
-    try:
-        res = requests.post(
-            f"{OLLAMA_URL}/api/embeddings",
-            json={"model": EMBED_MODEL, "input": text},
-            timeout=60,
-        )
-        res.raise_for_status()
-        data = res.json()
-
-        return data["embedding"]
-
-    except Exception as e:
-        raise RuntimeError(f"Error generating embeddings from Ollama: {e}")
+    """Generate vector embeddings using SentenceTransformers (local, no Ollama)."""
+    return embedder.embed_query(text)

@@ -32,6 +32,20 @@ def load_pdf_file(file_path: str) -> str:
         return ""
     return text
 
+
+def load_pdf_with_pages(file_path: str) -> list[dict]:
+    """Load PDF returning per-page chunks with page numbers."""
+    pages = []
+    try:
+        reader = pypdf.PdfReader(file_path)
+        for i, page in enumerate(reader.pages, 1):
+            page_text = page.extract_text()
+            if page_text and page_text.strip():
+                pages.append({"text": page_text, "page_number": i})
+    except Exception as e:
+        print(f"Error reading PDF {file_path}: {e}")
+    return pages
+
 def load_docx_file(file_path: str) -> str:
     text = ""
     try:
@@ -59,7 +73,7 @@ def load_image_file(file_path: str) -> str:
 
 def parse_file(file_path: str) -> str:
     ext = os.path.splitext(file_path)[1].lower()
-    
+
     if ext == ".txt":
         return load_text_file(file_path)
     elif ext == ".pdf":
@@ -74,3 +88,34 @@ def parse_file(file_path: str) -> str:
             return load_text_file(file_path)
         except:
             return f"Unsupported file format: {ext}"
+
+
+def get_file_type(file_path: str) -> str:
+    """Return a human-readable file type label."""
+    ext = os.path.splitext(file_path)[1].lower()
+    type_map = {
+        ".pdf": "PDF",
+        ".txt": "Text",
+        ".docx": "Word", ".doc": "Word",
+        ".jpg": "Image/OCR", ".jpeg": "Image/OCR",
+        ".png": "Image/OCR", ".bmp": "Image/OCR", ".tiff": "Image/OCR",
+    }
+    return type_map.get(ext, "Other")
+
+
+def parse_file_with_pages(file_path: str) -> list[dict]:
+    """
+    Parse a file returning a list of dicts with keys: text, page_number (optional), file_type.
+    For PDFs, returns per-page entries. For others, returns a single entry.
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    file_type = get_file_type(file_path)
+
+    if ext == ".pdf":
+        pages = load_pdf_with_pages(file_path)
+        for p in pages:
+            p["file_type"] = file_type
+        return pages if pages else [{"text": "", "file_type": file_type}]
+    else:
+        text = parse_file(file_path)
+        return [{"text": text, "file_type": file_type}]

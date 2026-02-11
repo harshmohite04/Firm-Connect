@@ -149,6 +149,47 @@ const ragService = {
       return [];
     }
   },
+
+  /**
+   * Fetch parsed text content of a document for the in-app viewer.
+   */
+  getDocumentText: async (caseId: string, filename: string) => {
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/document-text/${caseId}/${encodeURIComponent(filename)}`,
+        { headers: getAuthHeaders() },
+      );
+      return response.data; // { filename, pages: [{text, page_number?, file_type?}] }
+    } catch (error) {
+      console.error("Fetch document text failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Re-rank contexts against selected text using backend cosine similarity.
+   */
+  checkSources: async (
+    selectedText: string,
+    contexts: Array<{
+      content: string;
+      source?: string;
+      metadata?: any;
+      score?: number;
+    }>,
+  ) => {
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/check-sources`,
+        { selectedText, contexts },
+        { headers: getAuthHeaders() },
+      );
+      return response.data.contexts;
+    } catch (error) {
+      console.error("Check sources failed:", error);
+      throw error;
+    }
+  },
 };
 
 export default ragService;

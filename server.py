@@ -156,6 +156,10 @@ class ChatResponse(BaseModel):
     answer: str
     contexts: List[ContextItem]
 
+class CheckSourcesRequest(BaseModel):
+    selectedText: str
+    contexts: List[ContextItem]
+
 class Message(BaseModel):
     role: str
     content: str
@@ -196,7 +200,6 @@ class DraftSessionResponse(BaseModel):
     created_at: datetime
 
 # ---------- ROUTES ----------
-import re
 import uuid
 
 @app.post("/chat/session", response_model=SessionResponse)
@@ -376,32 +379,34 @@ async def chat(
             top_k=body.top_k
         )
 
-        # Extract context items from result
+        # Extract context items from result using metadata (set in rag.py retriever)
         contexts = []
+        score_threshold = float(os.getenv("SOURCE_SCORE_THRESHOLD", "0.3"))
         if hasattr(result, 'retriever_result') and result.retriever_result:
             for item in result.retriever_result.items:
-                content_str = item.content
-                source = None
-                text_content = content_str # Default to raw string
+                metadata = item.metadata or {}
+                source = metadata.get("source")
+                score = metadata.get("score")
+                raw_content = item.content if isinstance(item.content, str) else str(item.content)
+                # Strip the [N] (Source: ...) prefix added for LLM citation
+                import re as _re
+                text_content = _re.sub(r'^\[\d+\]\s*\(Source:\s*[^)]*\)\s*', '', raw_content)
 
-                # Try to extract source using regex
-                source_match = re.search(r"['\"]source['\"]\s*:\s*['\"]([^'\"]+)['\"]", content_str)
-                if source_match:
-                    source = source_match.group(1)
-                
-                # Try to clean text
-                text_match = re.search(r"['\"]text['\"]\s*:\s*['\"]((?:[^'\\]|\\.)*)['\"]", content_str)
-                if text_match:
-                     text_content = text_match.group(1).replace("\\n", "\n").replace("\\'", "'")
+                # Filter out low-relevance chunks
+                if score is not None and score < score_threshold:
+                    continue
 
                 contexts.append(
                     ContextItem(
                         content=text_content,
                         source=source,
-                        metadata={"original_content": content_str},
-                        score=getattr(item, 'score', None)
+                        metadata=metadata,
+                        score=score
                     )
                 )
+
+            # Sort by score descending (highest relevance first)
+            contexts.sort(key=lambda c: c.score if c.score is not None else 0, reverse=True)
 
         # 3. Save to History
         new_user_msg = {"role": "user", "content": body.message}
@@ -442,6 +447,47 @@ async def chat(
             status_code=500,
             detail="Failed to process chat request"
         )
+
+
+@app.post("/check-sources")
+@limiter.limit("60/minute")
+async def check_sources(
+    request: Request,
+    body: CheckSourcesRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Re-rank contexts against selected text using cosine similarity."""
+    try:
+        validate_string_length(body.selectedText, "Selected text", min_length=1, max_length=5000)
+
+        from utils.embeddings import embed_text
+        import numpy as np
+
+        selected_vec = np.array(embed_text(body.selectedText))
+
+        scored = []
+        for ctx in body.contexts:
+            ctx_vec = np.array(embed_text(ctx.content))
+            # Cosine similarity
+            cos_sim = float(np.dot(selected_vec, ctx_vec) / (np.linalg.norm(selected_vec) * np.linalg.norm(ctx_vec) + 1e-10))
+            scored.append(ContextItem(
+                content=ctx.content,
+                source=ctx.source,
+                metadata=ctx.metadata,
+                score=round(cos_sim, 4)
+            ))
+
+        # Sort by similarity descending, filter very low matches
+        scored.sort(key=lambda c: c.score if c.score is not None else 0, reverse=True)
+        scored = [c for c in scored if (c.score or 0) > 0.2]
+
+        return {"contexts": [c.model_dump() for c in scored]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Check sources error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to check sources")
 
 
 @app.post("/ingest")
@@ -518,12 +564,13 @@ async def ingest_file(
                             dest_path = f"documents/{extracted_safe_name}"
                             shutil.copy2(extracted_path, dest_path)
                             
-                            # Parse and ingest
-                            from ingestion.loader import parse_file
-                            text = parse_file(dest_path)
-                            
+                            # Parse and ingest with page metadata
+                            from ingestion.loader import parse_file_with_pages
+                            page_data = parse_file_with_pages(dest_path)
+                            text = "\n".join(p.get("text", "") for p in page_data)
+
                             if text.strip():
-                                ingest_document(text, source_name=extracted_safe_name, case_id=caseId)
+                                ingest_document(text, source_name=extracted_safe_name, case_id=caseId, page_metadata=page_data)
                                 
                                 # Set status to Ready
                                 document_status_collection.update_one(
@@ -580,18 +627,19 @@ async def ingest_file(
             with open(file_location, "wb+") as file_object:
                 file_object.write(file_content)
                 
-            # Read content using loader
-            from ingestion.loader import parse_file
-            text = parse_file(file_location)
+            # Read content using page-aware loader
+            from ingestion.loader import parse_file_with_pages
+            page_data = parse_file_with_pages(file_location)
+            text = "\n".join(p.get("text", "") for p in page_data)
 
             if not text.strip():
                 raise HTTPException(
-                    status_code=400, 
+                    status_code=400,
                     detail="Could not extract text from file or file is empty."
                 )
 
-            # Ingest
-            ingest_document(text, source_name=safe_filename, case_id=caseId)
+            # Ingest with page metadata
+            ingest_document(text, source_name=safe_filename, case_id=caseId, page_metadata=page_data)
             
             # Set status to Ready
             document_status_collection.update_one(
@@ -1087,6 +1135,47 @@ async def run_investigation(request: InvestigatorRequest):
 # ---------- SECURITY NOTE ----------
 # Static file serving has been REMOVED for security.
 # All document access must go through authenticated endpoints.
+
+# Return parsed text content of a document (for in-app document viewer)
+@app.get("/document-text/{caseId}/{filename}")
+@limiter.limit("60/minute")
+async def get_document_text(
+    request: Request,
+    caseId: str,
+    filename: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Return the parsed text content of a document for the in-app viewer."""
+    try:
+        validate_case_id(caseId)
+        safe_filename = sanitize_filename(filename)
+
+        doc_status = document_status_collection.find_one({
+            "case_id": caseId,
+            "filename": safe_filename,
+            "status": "Ready"
+        })
+
+        if not doc_status:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        file_path = f"documents/{safe_filename}"
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on server")
+
+        from ingestion.loader import parse_file_with_pages
+        pages = parse_file_with_pages(file_path)
+
+        return {
+            "filename": safe_filename,
+            "pages": pages
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document text error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to read document")
+
 
 # Secure document download endpoint
 @app.get("/download/{caseId}/{filename}")
