@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
 import { messageService } from '../services/messageService';
 import { io, Socket } from 'socket.io-client';
-
+import Logo from "../assets/logo.svg"
 // Icons
 const HomeIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -295,11 +295,12 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             <aside className="w-64 bg-white border-r border-slate-200 fixed inset-y-0 left-0 flex flex-col z-10 transition-transform">
                 {/* Logo */}
                 <div className="h-20 flex items-center px-6 gap-3 cursor-pointer" onClick={() => window.location.href = '/'}>
-                    <div className="bg-amber-900/10 p-2 rounded-lg">
+                    {/* <div className="bg-amber-900/10 p-2 rounded-lg">
                         <svg className="w-6 h-6 text-amber-900" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M12 2L1 21h22L12 2zm0 3.516L20.297 19H3.703L12 5.516z M11 16h2v2h-2v-2zm0-6h2v4h-2v-4z" />
                         </svg>
-                    </div>
+                    </div> */}
+                    <img src={Logo} alt="" style={{width:"5rem" , height:"5rem"}}/>
                     <div>
                         <h1 className="font-bold text-slate-900 leading-none">LawfirmAI</h1>
                         <span className="text-xs text-blue-600 font-medium">Client Portal</span>
