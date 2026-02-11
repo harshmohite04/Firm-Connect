@@ -6,7 +6,7 @@ from neo4j import GraphDatabase
 from qdrant_client import QdrantClient, models
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from sentence_transformers import SentenceTransformer
+from utils.embeddings import embedder
 
 # ------------------ LOAD ENV ------------------
 load_dotenv()
@@ -20,25 +20,9 @@ QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_COLLECTION = "chunks"
 
-# SentenceTransformers model (runs locally, no Ollama needed)
-EMBED_MODEL = os.getenv("EMBED_MODEL", "all-MiniLM-L6-v2")
-
 # ------------------ CLIENTS ------------------
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
-
-# Use SentenceTransformers for local embeddings (no Ollama dependency)
-_sentence_transformer = SentenceTransformer(EMBED_MODEL)
-
-class LocalEmbedder:
-    """Wrapper for SentenceTransformers to match the embedder interface."""
-    def __init__(self, model):
-        self.model = model
-    
-    def embed_query(self, text: str) -> list:
-        return self.model.encode(text).tolist()
-
-embedder = LocalEmbedder(_sentence_transformer)
 
 
 # ------------------ NEO4J HELPERS ------------------
@@ -129,40 +113,85 @@ def qdrant_upsert(client: QdrantClient, collection: str, vectors: list[list[floa
     print("[OK] Qdrant upsert completed.")
 
 
+# Configurable chunk sizes via environment variables
+CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1500"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "300"))
+
 # ------------------ INGEST DOCUMENT ------------------
-def ingest_document(text: str, source_name: str, case_id: str):
+def ingest_document(text: str, source_name: str, case_id: str, page_metadata: list[dict] | None = None):
+    """
+    Ingest document text into Qdrant + Neo4j.
+
+    Args:
+        text: Full document text (used when page_metadata is None).
+        source_name: Filename of the source document.
+        case_id: Case ID for filtering.
+        page_metadata: Optional list of dicts with keys: text, page_number, file_type.
+                      When provided, chunks preserve page-level metadata.
+    """
     print(f"\n=== Ingesting: {source_name} for Case: {case_id} ===")
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=800,
-        chunk_overlap=150,
+        chunk_size=CHUNK_SIZE,
+        chunk_overlap=CHUNK_OVERLAP,
     )
-    chunks = splitter.split_text(text)
-    print(f"[INFO] Total chunks: {len(chunks)}")
 
     vectors: list[list[float]] = []
     payloads: list[dict] = []
 
-    for idx, chunk_text in enumerate(chunks):
-        chunk_id = str(uuid.uuid4())
+    if page_metadata:
+        # Page-aware chunking: chunk each page separately to preserve page numbers
+        chunk_idx = 0
+        for page_info in page_metadata:
+            page_text = page_info.get("text", "")
+            if not page_text.strip():
+                continue
+            page_chunks = splitter.split_text(page_text)
+            for chunk_text in page_chunks:
+                chunk_id = str(uuid.uuid4())
+                chunk_idx += 1
+                print(f"[EMBED] Chunk {chunk_idx}...")
+                embedding = embedder.embed_query(chunk_text)
 
-        print(f"[EMBED] Chunk {idx + 1}/{len(chunks)}...")
-        # Use SAME embedder as retriever
-        embedding = embedder.embed_query(chunk_text)
+                vectors.append(embedding)
+                payload = {
+                    "chunk_id": chunk_id,
+                    "text": chunk_text,
+                    "source": source_name,
+                    "case_id": case_id,
+                }
+                if "page_number" in page_info:
+                    payload["page_number"] = page_info["page_number"]
+                if "file_type" in page_info:
+                    payload["file_type"] = page_info["file_type"]
+                payloads.append(payload)
 
-        vectors.append(embedding)
-        payloads.append(
-            {
-                "chunk_id": chunk_id,   # used by QdrantNeo4jRetriever (id_property_external)
-                "text": chunk_text,
-                "source": source_name,
-                "case_id": case_id      # Metadata for filtering
-            }
-        )
+                create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
+                create_entity_relations(driver, chunk_id, chunk_text)
 
-        # Store in Neo4j
-        create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
-        create_entity_relations(driver, chunk_id, chunk_text)
+        print(f"[INFO] Total chunks (page-aware): {chunk_idx}")
+    else:
+        # Legacy path: no page metadata
+        chunks = splitter.split_text(text)
+        print(f"[INFO] Total chunks: {len(chunks)}")
+
+        for idx, chunk_text in enumerate(chunks):
+            chunk_id = str(uuid.uuid4())
+            print(f"[EMBED] Chunk {idx + 1}/{len(chunks)}...")
+            embedding = embedder.embed_query(chunk_text)
+
+            vectors.append(embedding)
+            payloads.append(
+                {
+                    "chunk_id": chunk_id,
+                    "text": chunk_text,
+                    "source": source_name,
+                    "case_id": case_id,
+                }
+            )
+
+            create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
+            create_entity_relations(driver, chunk_id, chunk_text)
 
     # Upsert into Qdrant
     qdrant_upsert(qdrant, QDRANT_COLLECTION, vectors, payloads)
