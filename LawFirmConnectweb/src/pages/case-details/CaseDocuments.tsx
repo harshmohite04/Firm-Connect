@@ -4,6 +4,8 @@ import { useOutletContext, useParams } from 'react-router-dom';
 import caseService from '../../services/caseService';
 import ragService from '../../services/ragService';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { saveAs } from 'file-saver';
+
 // Icons
 const SearchIcon = () => (
     <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -199,6 +201,82 @@ const CaseDocuments: React.FC = () => {
         setIsDeleteModalOpen(true);
     };
 
+    const handleDownload = async (doc: any) => {
+        try {
+            const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+            const path = doc.filePath.startsWith('/') ? doc.filePath : `/${doc.filePath}`;
+            const url = doc.filePath.startsWith('http') ? doc.filePath : `${apiUrl}${path}`;
+            
+            // Use file-saver to force download
+            saveAs(url, doc.fileName);
+            toast.success("Download started");
+        } catch (error) {
+            console.error("Download failed", error);
+            toast.error("Failed to download file");
+        }
+    };
+
+    // Keyboard Accessiblity (Esc to Close, Focus Trap)
+    useEffect(() => {
+        if (!selectedDocument) return;
+
+        // Save previously focused element to restore later
+        const previousActiveElement = document.activeElement as HTMLElement;
+
+        const modalElement = document.getElementById('document-viewer-modal');
+        if (modalElement) {
+            // Focus the close button or the first focusable element
+            const focusableElements = modalElement.querySelectorAll(
+                'button, [href], input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])'
+            );
+            if (focusableElements.length > 0) {
+                (focusableElements[0] as HTMLElement).focus();
+            }
+        }
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setSelectedDocument(null);
+            }
+
+            if (e.key === 'Tab') {
+                const modalElement = document.getElementById('document-viewer-modal');
+                if (!modalElement) return;
+
+                const focusableElements = modalElement.querySelectorAll(
+                    'button, [href], input, select, textarea, iframe, [tabindex]:not([tabindex="-1"])'
+                );
+                
+                if (focusableElements.length === 0) return;
+
+                const firstElement = focusableElements[0] as HTMLElement;
+                const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+                if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                        e.preventDefault();
+                        lastElement.focus();
+                    }
+                } else {
+                    if (document.activeElement === lastElement) {
+                        e.preventDefault();
+                        firstElement.focus();
+                    }
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+            // Restore focus
+            if (previousActiveElement) {
+                previousActiveElement.focus();
+            }
+        };
+    }, [selectedDocument]);
+
     // Document Filtering and Sorting (Adapting to backend fields)
     const filteredDocuments = (caseData?.documents || [])
         .filter((doc: any) => {
@@ -296,7 +374,16 @@ const CaseDocuments: React.FC = () => {
                                             {isPdf ? <PDFIcon /> : isImage ? <ImageIcon /> : <DocIcon />}
                                         </div>
                                         <div className="flex gap-1">
-                                            <button className="text-slate-400 hover:text-blue-600 p-1"><DownloadIcon /></button>
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    handleDownload(doc); 
+                                                }} 
+                                                className="text-slate-400 hover:text-blue-600 p-1"
+                                                title="Download"
+                                            >
+                                                <DownloadIcon />
+                                            </button>
                                             <button onClick={(e) => { e.stopPropagation(); handleDeleteClick(doc._id); }} className="text-slate-400 hover:text-red-600 p-1"><TrashIcon /></button>
                                         </div>
                                     </div>
@@ -547,28 +634,40 @@ const CaseDocuments: React.FC = () => {
             )}
             {/* Document Viewer Modal */}
             {selectedDocument && (
-                <div className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
+                <div 
+                    id="document-viewer-modal"
+                    className="fixed inset-0 bg-slate-900/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="modal-title"
+                >
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden relative">
                         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900">{selectedDocument.fileName}</h3>
+                                <h3 id="modal-title" className="text-lg font-bold text-slate-900">{selectedDocument.fileName}</h3>
                                 <p className="text-xs text-slate-500">
                                     {selectedDocument.category} • Uploaded by {selectedDocument.uploadedBy?.firstName || 'Unknown'}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <a 
-                                    href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedDocument.filePath}`} 
-                                    download={selectedDocument.fileName}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                <button 
+                                    onClick={() => handleDownload(selectedDocument)}
                                     className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2"
                                 >
                                     <DownloadIcon /> Download
+                                </button>
+                                <a 
+                                    href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/${selectedDocument.filePath.replace(/^\//, '')}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    Open in New Tab
                                 </a>
                                 <button 
                                     onClick={() => setSelectedDocument(null)}
                                     className="w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 transition-colors font-bold text-xl"
+                                    aria-label="Close modal"
                                 >
                                     ×
                                 </button>
@@ -577,9 +676,9 @@ const CaseDocuments: React.FC = () => {
                         
                         <div className="flex-1 bg-slate-100 p-4 flex items-center justify-center overflow-auto relative">
                             {(() => {
-                                const url = selectedDocument.filePath.startsWith('http') 
-                                    ? selectedDocument.filePath 
-                                    : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${selectedDocument.filePath}`;
+                                const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
+                                const path = selectedDocument.filePath.startsWith('/') ? selectedDocument.filePath : `/${selectedDocument.filePath}`;
+                                const url = selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${apiUrl}${path}`;
                                 
                                 const ext = selectedDocument.fileName.split('.').pop().toLowerCase();
                                 
@@ -596,7 +695,11 @@ const CaseDocuments: React.FC = () => {
                                         <img 
                                             src={url} 
                                             alt={selectedDocument.fileName} 
-                                            className="max-w-full max-h-full object-contain rounded-lg shadow-sm" 
+                                            className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                toast.error("Failed to load image preview");
+                                            }}
                                         />
                                     );
                                 } else if (['txt'].includes(ext)) {
@@ -615,13 +718,12 @@ const CaseDocuments: React.FC = () => {
                                             </div>
                                             <h4 className="text-lg font-bold text-slate-900 mb-2">Preview not available</h4>
                                             <p className="text-slate-500 mb-6">This file type cannot be previewed in the browser.</p>
-                                            <a 
-                                                href={url}
-                                                download 
+                                            <button 
+                                                onClick={() => handleDownload(selectedDocument)}
                                                 className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
                                             >
                                                 <DownloadIcon /> Download File
-                                            </a>
+                                            </button>
                                         </div>
                                     );
                                 }

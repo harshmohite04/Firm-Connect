@@ -29,6 +29,7 @@ app.use(
 );
 
 // Enhanced Helmet configuration with Content Security Policy
+// Enhanced Helmet configuration with Content Security Policy
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -36,20 +37,23 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],  // Adjust for your frontend needs
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: ["'self'", process.env.RAG_API_URL || "http://localhost:8000", "https://api.deepseek.com"],
-      frameSrc: ["'none'"],
+      frameSrc: ["'self'"],
       objectSrc: ["'none'"],
-      upgradeInsecureRequests: []
+      upgradeInsecureRequests: [],
+      frameAncestors: ["'self'", "http://localhost:5173"] // Allow frontend to embed
     }
   },
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource fetching
   crossOriginEmbedderPolicy: false, // May need to disable for some integrations
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   hsts: {
     maxAge: 31536000, // 1 year
     includeSubDomains: true,
     preload: true
-  }
+  },
+  xFrameOptions: false // Disable X-Frame-Options header to allow embedding
 }));
 app.use(morgan('dev'));
 app.use(express.json());
@@ -63,7 +67,7 @@ app.use('/messages', messageRoutes);
 app.use('/contact', contactRoutes);
 app.use('/team', teamRoutes);
 app.use('/payments', require('./src/routes/paymentRoutes'));
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health Check
 app.get('/', (req, res) => {

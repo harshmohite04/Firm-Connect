@@ -27,6 +27,7 @@ import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
 import CaseDraft from './pages/case-details/CaseDraft';
+import NotFound from './pages/NotFound';
 
 // Payment & Subscription Imports
 import Pricing from './pages/Pricing';
@@ -117,6 +118,7 @@ const App: React.FC = () => {
                 <Route path="security" element={<ProfileSecurity />} />
                 <Route path="notifications" element={<ProfileNotifications />} />
             </Route>
+        <Route path="*" element={<NotFound />} />
         </Routes>
        </main>
        {!isAuthPage && <Footer />}
