@@ -333,7 +333,7 @@ const CaseChat: React.FC = () => {
                                                         ctx.source ? (
                                                             <a 
                                                                 key={idx} 
-                                                                href={`http://localhost:8000/files/${ctx.source}`} 
+                                                                href={`${import.meta.env.VITE_RAG_API_URL || 'http://localhost:8000'}/files/${ctx.source}`} 
                                                                 target="_blank" 
                                                                 rel="noopener noreferrer"
                                                                 className={`
@@ -467,7 +467,7 @@ const CaseChat: React.FC = () => {
                                     {ctx.source && (
                                         <div className="mt-3 pl-7">
                                             <a 
-                                                href={`http://localhost:8000/files/${ctx.source}`} 
+                                                href={`${import.meta.env.VITE_RAG_API_URL || 'http://localhost:8000'}/files/${ctx.source}`} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
