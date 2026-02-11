@@ -12,6 +12,7 @@ import PortalCaseDetails from './pages/PortalCaseDetails';
 import PortalCases from './pages/PortalCases';
 import PortalMessages from './pages/PortalMessages';
 import PracticeAreas from './pages/PracticeAreas';
+import PracticeAreaDetail from './pages/PracticeAreaDetail';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import StartCase from './pages/StartCase';
@@ -58,6 +59,7 @@ const App: React.FC = () => {
             <Route path="/practice-areas" element={<PracticeAreas />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/practice-areas/:id" element={<PracticeAreaDetail />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/pricing" element={<Pricing />} />

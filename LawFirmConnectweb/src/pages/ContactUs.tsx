@@ -121,7 +121,7 @@ const ContactUs: React.FC = () => {
                                      <div className="pt-1"><LocationIcon /></div>
                                      <div>
                                          <div className="font-bold text-slate-900 text-sm">Visit Us</div>
-                                         <div className="text-slate-500 text-sm">123 Legal Avenue, Suite 400<br/>New York, NY 10001</div>
+                                         <div className="text-slate-500 text-sm">Pune, Maharashtra, India</div>
                                      </div>
                                  </div>
 
@@ -129,7 +129,7 @@ const ContactUs: React.FC = () => {
                                      <div className="pt-1"><PhoneIcon /></div>
                                      <div>
                                          <div className="font-bold text-slate-900 text-sm">Call Us</div>
-                                         <div className="text-slate-500 text-sm">+1 (555) 012-3456</div>
+                                         <div className="text-slate-500 text-sm">+91 93568 36581</div>
                                      </div>
                                  </div>
 
