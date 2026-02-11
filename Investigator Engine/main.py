@@ -95,8 +95,6 @@ def create_graph():
     workflow.add_edge("final_judge", END)
     
     return workflow.compile()
-    
-    return workflow.compile()
 
 # --- Execution ---
 
@@ -166,7 +164,9 @@ if __name__ == "__main__":
         "entities": [],
         "facts": [],
         "timeline": [],
-        "revision_count": 0
+        "revision_count": 0,
+        "errors": [],
+        "focus_questions": [],
     }
     
     final_state = app.invoke(initial_state)

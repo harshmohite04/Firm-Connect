@@ -105,6 +105,7 @@ db = mongo_client["lawfirm"]
 chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]
+investigation_reports_collection = db["investigation_reports"]
 
 # ---------- CORS Configuration ----------
 from fastapi.middleware.cors import CORSMiddleware
@@ -132,9 +133,11 @@ class ChatRequest(BaseModel):
 
 class InvestigatorRequest(BaseModel):
     caseId: str
+    focusQuestions: Optional[List[str]] = None
 
 class InvestigatorResponse(BaseModel):
     final_report: str
+    reportId: Optional[str] = None
 
 
 class CreateSessionRequest(BaseModel):
@@ -1066,7 +1069,12 @@ async def get_templates(request: Request):
     return templates
 
 @app.post("/investigation/run", response_model=InvestigatorResponse)
-async def run_investigation(request: InvestigatorRequest):
+@limiter.limit("5/minute")
+async def run_investigation(
+    request: Request,
+    body: InvestigatorRequest,
+    current_user: Dict = Depends(get_current_user)
+):
     if not create_graph:
         raise HTTPException(status_code=500, detail="Investigator Engine not loaded properly.")
 
@@ -1078,7 +1086,8 @@ async def run_investigation(request: InvestigatorRequest):
         # Reading from disk is safer for full context.
         
         # Get list of ready documents
-        docs_status = list(document_status_collection.find({"case_id": request.caseId, "status": "Ready"}))
+        validate_case_id(body.caseId)
+        docs_status = list(document_status_collection.find({"case_id": body.caseId, "status": "Ready"}))
         
         doc_list = []
         for doc in docs_status:
@@ -1100,9 +1109,7 @@ async def run_investigation(request: InvestigatorRequest):
                     print(f"Error reading {filename}: {e}")
         
         if not doc_list:
-             # Fallback to mock if no docs (or raise error)
-             # raise HTTPException(status_code=404, detail="No documents found for this case.")
-             pass
+            raise HTTPException(status_code=404, detail="No documents found for this case. Please upload and process documents before running investigation.")
 
         # 2. Initialize State
         initial_state = {
@@ -1111,25 +1118,205 @@ async def run_investigation(request: InvestigatorRequest):
             "facts": [],
             "timeline": [],
             "revision_count": 0,
-            # Add any other required keys from InvestigatorState
+            "errors": [],
+            "focus_questions": body.focusQuestions or [],
         }
 
-        # 3. Invoke Graph
-        # We need to run this async or in a separate thread because it might block
-        # For now, running synchronously (beware of timeout)
+        # 3. Invoke Graph (async to avoid blocking the event loop)
+        import asyncio
         workflow = create_graph()
-        final_state = workflow.invoke(initial_state)
+        final_state = await asyncio.to_thread(workflow.invoke, initial_state)
         
         report = final_state.get("final_report", "Analysis completed but no report was generated.")
 
-        return InvestigatorResponse(final_report=report)
+        # Save report to MongoDB
+        report_doc = {
+            "case_id": body.caseId,
+            "user_id": current_user.get("user_id", "unknown"),
+            "final_report": report,
+            "focus_questions": body.focusQuestions or [],
+            "metadata": {
+                "fact_count": len(final_state.get("facts", [])),
+                "revision_count": final_state.get("revision_count", 0),
+                "conflict_count": len(final_state.get("conflicts", [])),
+                "document_count": len(doc_list),
+                "errors": final_state.get("errors", []),
+            },
+            "created_at": datetime.utcnow(),
+        }
+        insert_result = investigation_reports_collection.insert_one(report_doc)
+        report_id = str(insert_result.inserted_id)
 
+        return InvestigatorResponse(final_report=report, reportId=report_id)
+
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Investigation failed: {str(e)}")
 
 
+# --- SSE Streaming Investigation Endpoint ---
+
+from fastapi.responses import StreamingResponse
+import json as json_module
+import asyncio
+
+# Node name to user-friendly step labels
+_STEP_LABELS = {
+    "document_analyst": "Analyzing documents...",
+    "entity_extractor": "Extracting facts & entities...",
+    "auditor": "Auditing timeline...",
+    "primary_investigator": "Building case narrative...",
+    "cross_examiner": "Cross-examining narrative...",
+    "conflict_resolver": "Resolving conflicts...",
+    "evidence_validator": "Validating evidence...",
+    "gap_detector": "Detecting evidence gaps...",
+    "legal_researcher": "Researching legal issues...",
+    "debate_hub": "Synchronizing analysis...",
+    "risk_assessor": "Assessing risks...",
+    "final_judge": "Generating final report...",
+}
+
+_STEP_ORDER = list(_STEP_LABELS.keys())
+
+def _fetch_docs_for_case(case_id: str) -> list:
+    """Helper to fetch documents for a case (shared by both endpoints)."""
+    from ingestion.loader import parse_file
+    docs_status = list(document_status_collection.find({"case_id": case_id, "status": "Ready"}))
+    doc_list = []
+    for doc in docs_status:
+        filename = doc["filename"]
+        file_path = f"documents/{filename}"
+        if os.path.exists(file_path):
+            try:
+                content = parse_file(file_path)
+                if content.strip():
+                    doc_list.append({
+                        "id": filename,
+                        "content": content,
+                        "metadata": {"source": filename}
+                    })
+            except Exception as e:
+                print(f"Error reading {filename}: {e}")
+    return doc_list
+
+
+@app.post("/investigation/run-stream")
+@limiter.limit("5/minute")
+async def run_investigation_stream(
+    request: Request,
+    body: InvestigatorRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """SSE endpoint for investigation with real-time progress updates."""
+    if not create_graph:
+        raise HTTPException(status_code=500, detail="Investigator Engine not loaded properly.")
+
+    validate_case_id(body.caseId)
+    doc_list = _fetch_docs_for_case(body.caseId)
+
+    if not doc_list:
+        raise HTTPException(status_code=404, detail="No documents found for this case.")
+
+    initial_state = {
+        "documents": doc_list,
+        "entities": [],
+        "facts": [],
+        "timeline": [],
+        "revision_count": 0,
+        "errors": [],
+        "focus_questions": body.focusQuestions or [],
+    }
+
+    async def event_generator():
+        try:
+            workflow = create_graph()
+            total_steps = len(_STEP_ORDER)
+
+            def run_stream():
+                return list(workflow.stream(initial_state))
+
+            # Run the blocking stream in a thread
+            stream_results = await asyncio.to_thread(run_stream)
+
+            completed_steps = 0
+            final_state = initial_state.copy()
+
+            for chunk in stream_results:
+                # Each chunk is a dict {node_name: node_output}
+                for node_name, node_output in chunk.items():
+                    final_state.update(node_output)
+                    completed_steps += 1
+                    step_index = _STEP_ORDER.index(node_name) if node_name in _STEP_ORDER else completed_steps
+                    progress = min(int((step_index + 1) / total_steps * 100), 99)
+                    label = _STEP_LABELS.get(node_name, f"Processing {node_name}...")
+
+                    yield f"data: {json_module.dumps({'type': 'progress', 'step': node_name, 'label': label, 'progress': progress})}\n\n"
+
+            # Get final report
+            report = final_state.get("final_report", "Analysis completed but no report was generated.")
+
+            # Save to MongoDB
+            report_doc = {
+                "case_id": body.caseId,
+                "user_id": current_user.get("user_id", "unknown"),
+                "final_report": report,
+                "focus_questions": body.focusQuestions or [],
+                "metadata": {
+                    "fact_count": len(final_state.get("facts", [])),
+                    "revision_count": final_state.get("revision_count", 0),
+                    "conflict_count": len(final_state.get("conflicts", [])),
+                    "document_count": len(doc_list),
+                    "errors": final_state.get("errors", []),
+                },
+                "created_at": datetime.utcnow(),
+            }
+            insert_result = investigation_reports_collection.insert_one(report_doc)
+            report_id = str(insert_result.inserted_id)
+
+            yield f"data: {json_module.dumps({'type': 'complete', 'progress': 100, 'final_report': report, 'reportId': report_id})}\n\n"
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            yield f"data: {json_module.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
+
+
+# --- Investigation Report History ---
+
+@app.get("/investigation/reports/{caseId}")
+@limiter.limit("30/minute")
+async def get_investigation_reports(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Fetch past investigation reports for a case."""
+    validate_case_id(caseId)
+    reports = list(
+        investigation_reports_collection.find(
+            {"case_id": caseId},
+            {"final_report": 1, "metadata": 1, "created_at": 1, "focus_questions": 1}
+        ).sort("created_at", -1).limit(20)
+    )
+    # Convert ObjectId to string
+    for r in reports:
+        r["_id"] = str(r["_id"])
+        if r.get("created_at"):
+            r["created_at"] = r["created_at"].isoformat()
+    return reports
 
 
 # ---------- SECURITY NOTE ----------

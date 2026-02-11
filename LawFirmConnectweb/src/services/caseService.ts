@@ -188,14 +188,115 @@ const getAuthHeaders = () => {
   return {};
 };
 
+export interface InvestigationReport {
+  _id: string;
+  final_report: string;
+  focus_questions?: string[];
+  metadata?: {
+    fact_count: number;
+    revision_count: number;
+    conflict_count: number;
+    document_count: number;
+    errors?: { agent: string; error: string }[];
+  };
+  created_at: string;
+}
+
+export interface InvestigationProgressEvent {
+  type: "progress" | "complete" | "error";
+  step?: string;
+  label?: string;
+  progress?: number;
+  final_report?: string;
+  reportId?: string;
+  detail?: string;
+}
+
 const runInvestigation = async (
   caseId: string,
-): Promise<{ final_report: string }> => {
+  focusQuestions?: string[],
+): Promise<{ final_report: string; reportId?: string }> => {
   const response = await axios.post(
     `${RAG_API_URL}/investigation/run`,
     {
       caseId,
+      focusQuestions: focusQuestions || [],
     },
+    {
+      headers: getAuthHeaders(),
+    },
+  );
+  return response.data;
+};
+
+const runInvestigationStream = (
+  caseId: string,
+  focusQuestions: string[],
+  onProgress: (event: InvestigationProgressEvent) => void,
+  onError: (error: string) => void,
+): AbortController => {
+  const controller = new AbortController();
+  const headers = getAuthHeaders();
+
+  fetch(`${RAG_API_URL}/investigation/run-stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...headers,
+    },
+    body: JSON.stringify({ caseId, focusQuestions }),
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        onError(errData.detail || `HTTP ${response.status}`);
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        onError("No response body");
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const dataLine = line.replace(/^data: /, "").trim();
+          if (!dataLine) continue;
+          try {
+            const event: InvestigationProgressEvent = JSON.parse(dataLine);
+            onProgress(event);
+          } catch {
+            // skip malformed SSE data
+          }
+        }
+      }
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") {
+        onError(err.message || "Stream connection failed");
+      }
+    });
+
+  return controller;
+};
+
+const getInvestigationReports = async (
+  caseId: string,
+): Promise<InvestigationReport[]> => {
+  const response = await axios.get(
+    `${RAG_API_URL}/investigation/reports/${caseId}`,
     {
       headers: getAuthHeaders(),
     },
@@ -270,6 +371,8 @@ const caseService = {
   saveGeneratedDocument,
 
   runInvestigation,
+  runInvestigationStream,
+  getInvestigationReports,
 
   // -- Team Management --
   validateTeamMember: async (id: string, email: string) => {
