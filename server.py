@@ -4,8 +4,21 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict
 import shutil
+
+# --- Environment Setup (Must be first) ---
 import os
 from dotenv import load_dotenv
+
+# First load the central switcher
+load_dotenv(".env")
+app_env = os.getenv("APPLICATION_ENV", "development")
+
+# Then load the specific environment variables
+env_file = f".env.{app_env}"
+load_dotenv(env_file, override=True)
+
+print(f"Loaded environment: {app_env} from {env_file}")
+
 from datetime import datetime, timedelta
 from pymongo import MongoClient
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -34,7 +47,9 @@ from utils.error_handler import (
 
 generator = DocumentGenerator()
 
-load_dotenv()
+
+
+
 
 # --- Investigator Engine Import Setup ---
 import sys

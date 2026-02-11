@@ -74,7 +74,6 @@ const PortalCalendar: React.FC = () => {
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
     const [showSidePanel, setShowSidePanel] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     // Form State
@@ -111,7 +110,6 @@ const PortalCalendar: React.FC = () => {
 
     const fetchEvents = async () => {
         try {
-            setLoading(true);
             const data = await scheduleService.getEvents();
             const adapted = data.map(evt => ({
                 id: evt._id,
@@ -130,8 +128,6 @@ const PortalCalendar: React.FC = () => {
             setBookings(adapted);
         } catch (e) {
             console.error("Failed to fetch events", e);
-        } finally {
-            setLoading(false);
         }
     };
 

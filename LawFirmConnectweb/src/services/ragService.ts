@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const RAG_API_URL = "http://localhost:8000";
+const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
 // Helper to get auth headers
 const getAuthHeaders = () => {

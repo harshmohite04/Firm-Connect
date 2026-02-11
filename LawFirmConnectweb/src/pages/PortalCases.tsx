@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';
@@ -48,7 +48,6 @@ const ClockIcon = () => (
 );
 
 const PortalCases: React.FC = () => {
-    const navigate = useNavigate();
     const [cases, setCases] = React.useState<Case[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [filter, setFilter] = React.useState('All');
