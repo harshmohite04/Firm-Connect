@@ -34,6 +34,11 @@ import NotFound from './pages/NotFound';
 import Pricing from './pages/Pricing';
 import SubscriptionGuard from './components/SubscriptionGuard';
 
+// Firm Management Imports
+import FirmConnect from './pages/FirmConnect';
+import OrganizationPage from './pages/Organization';
+import InviteAccept from './pages/InviteAccept';
+
 // ScrollToTop component to handle scroll position on route change
 const ScrollToTop = () => {
     const { pathname } = useLocation();
@@ -48,7 +53,7 @@ const ScrollToTop = () => {
 const App: React.FC = () => {
   const { pathname } = useLocation();
   // Hide Navbar and Footer on Sign In, Portal pages, and Pricing page
-  const isAuthPage = pathname === '/signin' || pathname === '/signup' || pathname.startsWith('/portal') || pathname === '/pricing';
+  const isAuthPage = pathname === '/signin' || pathname === '/signup' || pathname.startsWith('/portal') || pathname === '/pricing' || pathname.startsWith('/invite');
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900 leading-normal selection:bg-blue-100 selection:text-blue-900 flex flex-col">
@@ -120,6 +125,23 @@ const App: React.FC = () => {
                 <Route path="security" element={<ProfileSecurity />} />
                 <Route path="notifications" element={<ProfileNotifications />} />
             </Route>
+
+            {/* Firm Management Routes */}
+            <Route path="/portal/firm-connect" element={
+                <SubscriptionGuard>
+                    <FirmConnect />
+                </SubscriptionGuard>
+            } />
+            <Route path="/portal/organization" element={
+                <SubscriptionGuard>
+                    <OrganizationPage />
+                </SubscriptionGuard>
+            } />
+
+            {/* Invitation Routes (semi-public) */}
+            <Route path="/invite/:token/accept" element={<InviteAccept />} />
+            <Route path="/invite/:token/reject" element={<InviteAccept />} />
+
         <Route path="*" element={<NotFound />} />
         </Routes>
        </main>

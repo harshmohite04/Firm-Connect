@@ -24,16 +24,16 @@ const getCases = async (req, res, next) => {
         let query = {
              recordStatus: 1,
              $or: [
-                 { clientId: req.user._id },
+                 { createdBy: req.user._id },
                  { assignedLawyers: req.user._id },
                  { leadAttorneyId: req.user._id },
                  { 'teamMembers.userId': req.user._id }
              ]
         };
 
-        // Optional: Keep Admin override if needed, otherwise Admin also only sees their own.
-        if (req.user.role === 'ADMIN') {
-             query = { recordStatus: 1 };
+        // Admin sees all cases in their organization
+        if (req.user.role === 'ADMIN' && req.user.organizationId) {
+             query = { recordStatus: 1, organizationId: req.user.organizationId };
         }
 
 
@@ -104,9 +104,10 @@ const createCase = async (req, res, next) => {
                 title,
                 description,
                 legalMatter, 
-                clientId: req.user._id,
+                createdBy: req.user._id,
+                organizationId: req.user.organizationId || null,
                 assignedLawyers: lawyers,
-                leadAttorneyId: req.user._id, // Assign creator as lead attorney
+                leadAttorneyId: req.user._id,
                 status: 'Open',
                 documents,
                 recordStatus: 1,

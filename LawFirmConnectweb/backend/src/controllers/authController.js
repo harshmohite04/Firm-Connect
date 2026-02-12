@@ -57,12 +57,12 @@ const registerUser = async (req, res, next) => {
             // Log successful registration
             logRegistration(email, user._id.toString(), clientIp);
 
-            // Auto-verified for development
             res.status(201).json({
                 _id: user._id,
                 firstName: user.firstName,
                 email: user.email,
                 role: user.role,
+                organizationId: user.organizationId,
                 token: generateToken(user._id),
                 msg: 'User registered successfully.'
             });
@@ -156,7 +156,8 @@ const loginUser = async (req, res, next) => {
             lastName: user.lastName,
             email: user.email,
             role: user.role,
-            subscriptionStatus: user.subscriptionStatus, // Return status
+            organizationId: user.organizationId,
+            subscriptionStatus: user.subscriptionStatus,
             token: generateToken(user._id)
         });
 
@@ -185,6 +186,7 @@ const getCurrentUser = async (req, res, next) => {
             email: user.email,
             phone: user.phone,
             role: user.role,
+            organizationId: user.organizationId,
             subscriptionStatus: user.subscriptionStatus,
             subscriptionPlan: user.subscriptionPlan,
             subscriptionExpiresAt: user.subscriptionExpiresAt

@@ -63,73 +63,64 @@ const Pricing: React.FC = () => {
             const token = user?.token;
 
             if (!token) {
-                // Redirect to login with return path
                 navigate('/signin', { state: { from: { pathname: '/pricing' } } });
                 return;
             }
 
-            // 1. Create Order
+            // ===== TEST MODE: Skip Razorpay, directly activate =====
+            const { data } = await axios.post(
+                `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/test-activate`,
+                { planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (data.success) {
+                // Update localStorage with new role & orgId
+                user.role = data.user.role;
+                user.organizationId = data.user.organizationId;
+                user.subscriptionStatus = data.user.subscriptionStatus;
+                localStorage.setItem('user', JSON.stringify(user));
+
+                navigate('/portal');
+            } else {
+                setError('Activation failed');
+            }
+            // ===== END TEST MODE =====
+
+            /* ===== ORIGINAL RAZORPAY FLOW (commented out) =====
             const { data: orderData } = await axios.post(
                 `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/create-order`,
                 { planId: plan.id, amount: plan.price },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
+            if (!orderData.success) { setError('Failed to initiate payment'); setLoading(false); return; }
 
-            if (!orderData.success) {
-                setError('Failed to initiate payment');
-                setLoading(false);
-                return;
-            }
-
-            // 2. Open Razorpay Modal
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID, 
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.order.amount,
                 currency: "INR",
                 name: "LawfirmAI",
                 description: `Subscription for ${plan.name} Plan`,
                 order_id: orderData.order.id,
                 handler: async function (response: any) {
-                    try {
-                        // 3. Verify Payment
-                        const verifyRes = await axios.post(
-                            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/verify`,
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                planId: plan.id
-                            },
-                            { headers: { Authorization: `Bearer ${token}` } }
-                        );
-
-                        if (verifyRes.data.success) {
-                            // Payment Successful
-                            navigate('/portal');
-                        } else {
-                            setError('Payment Verification Failed');
-                        }
-                    } catch (error) {
-                        console.error(error);
-                        setError('Payment Verification Error');
-                    }
+                    const verifyRes = await axios.post(
+                        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/verify`,
+                        { ...response, planId: plan.id },
+                        { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (verifyRes.data.success) navigate('/portal');
+                    else setError('Payment Verification Failed');
                 },
-                prefill: {
-                    name: "User Name", // Should fetch from user profile
-                    email: "user@example.com",
-                    contact: "9999999999"
-                },
-                theme: {
-                    color: "#4F46E5"
-                }
+                prefill: { name: "User Name", email: "user@example.com", contact: "9999999999" },
+                theme: { color: "#4F46E5" }
             };
-
             const rzp1 = new window.Razorpay(options);
             rzp1.open();
+            ===== END ORIGINAL RAZORPAY FLOW ===== */
 
         } catch (error) {
-            console.error('Payment Error:', error);
-            setError('Something went wrong during payment initialization');
+            console.error('Activation Error:', error);
+            setError('Something went wrong during activation');
         } finally {
             setLoading(false);
         }

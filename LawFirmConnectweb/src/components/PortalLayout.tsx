@@ -303,7 +303,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     <img src={Logo} alt="" style={{width:"5rem" , height:"5rem"}}/>
                     <div>
                         <h1 className="font-bold text-slate-900 leading-none">LawfirmAI</h1>
-                        <span className="text-xs text-blue-600 font-medium">Client Portal</span>
+                        <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
                     </div>
                 </div>
 
@@ -332,6 +332,25 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                             </span>
                         )}
                     </Link>
+
+                    {/* Firm Management Section */}
+                    <div className="pt-4 mt-4 border-t border-slate-100">
+                        <div className="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Firm</div>
+                        <Link to="/portal/firm-connect" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/firm-connect') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Firm Connect
+                        </Link>
+                        {user?.role === 'ADMIN' && (
+                            <Link to="/portal/organization" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/organization') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Organization
+                            </Link>
+                        )}
+                    </div>
                 </nav>
 
                 {/* User Profile */}
@@ -342,7 +361,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         </div>
                         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate('/portal/profile')}>
                             <p className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 transition-colors">{user ? `${user.firstName} ${user.lastName}` : 'Loading...'}</p>
-                            <p className="text-xs text-slate-500 truncate">{user?.role === 'lawyer' ? 'Attorney' : 'Client'}</p>
+                            <p className="text-xs text-slate-500 truncate">{user?.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
                         </div>
 
                     </div>

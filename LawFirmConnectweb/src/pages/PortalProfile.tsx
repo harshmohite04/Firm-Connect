@@ -92,7 +92,7 @@ const PortalProfile: React.FC = () => {
                     </div>
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900">{user.firstName} {user.lastName}</h1>
-                        <p className="text-slate-500 font-medium capitalize">{user.role === 'lawyer' ? 'Attorney' : user.role || 'Client'}</p>
+                        <p className="text-slate-500 font-medium capitalize">{user.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
                     </div>
                 </div>
 

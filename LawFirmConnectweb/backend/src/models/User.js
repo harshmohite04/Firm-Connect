@@ -10,15 +10,15 @@ const userSchema = new mongoose.Schema(
     firstName: { type: String, required: true },
     lastName: { type: String, required: false }, // Optional at reg?
     email: { type: String, required: true, unique: true },
-    phone: { type: String, required: true, unique: true },
+    phone: { type: String, required: false, unique: false },
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["ATTORNEY", "CLIENT", "ADMIN", "PARALEGAL"],
-      default: "CLIENT",
+      enum: ["ADMIN", "ATTORNEY"],
+      default: "ATTORNEY",
     },
     status: { type: String, enum: ["PENDING", "VERIFIED"], default: "PENDING" },
-    isAdmin: { type: Boolean, default: false },
+    organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
     contacts: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     // Account lockout fields
     failedLoginAttempts: { type: Number, default: 0 },
