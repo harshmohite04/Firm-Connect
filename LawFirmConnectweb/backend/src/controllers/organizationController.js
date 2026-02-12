@@ -126,7 +126,8 @@ const inviteMember = async (req, res, next) => {
                 lastName: 'Member',
                 email: email.toLowerCase(),
                 password: generatedPassword,
-                role: 'ATTORNEY'
+                role: 'ATTORNEY',
+                status: 'VERIFIED' // Auto-verified since admin is adding them
             });
         }
 
@@ -135,12 +136,22 @@ const inviteMember = async (req, res, next) => {
         userToInvite.role = 'ATTORNEY';
         await userToInvite.save();
 
-        org.members.push({
-            userId: userToInvite._id,
-            role: 'ATTORNEY',
-            status: 'ACTIVE',
-            joinedAt: new Date()
-        });
+        // Check if this user was previously removed — reactivate instead of adding duplicate
+        const existingEntry = org.members.find(
+            m => m.userId && m.userId.toString() === userToInvite._id.toString()
+        );
+        if (existingEntry) {
+            existingEntry.status = 'ACTIVE';
+            existingEntry.removedAt = null;
+            existingEntry.joinedAt = new Date();
+        } else {
+            org.members.push({
+                userId: userToInvite._id,
+                role: 'ATTORNEY',
+                status: 'ACTIVE',
+                joinedAt: new Date()
+            });
+        }
         await org.save();
 
         // Log credentials to console for testing
@@ -462,6 +473,84 @@ const reassignCases = async (req, res, next) => {
     }
 };
 
+// @desc    Update (increase) seat count for the organization
+// @route   PATCH /organization/seats
+// @access  Private (Admin only)
+const updateSeats = async (req, res, next) => {
+    try {
+        const { additionalSeats, paymentId } = req.body;
+        const admin = await User.findById(req.user._id);
+
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can update seats');
+        }
+
+        if (!admin.organizationId) {
+            res.status(400);
+            throw new Error('No organization found');
+        }
+
+        const count = parseInt(additionalSeats, 10);
+        if (!count || count < 1 || count > 50) {
+            res.status(400);
+            throw new Error('Additional seats must be between 1 and 50');
+        }
+
+        const org = await Organization.findById(admin.organizationId);
+        if (!org) {
+            res.status(404);
+            throw new Error('Organization not found');
+        }
+
+        const newMax = org.maxSeats + count;
+        if (newMax > 50) {
+            res.status(400);
+            throw new Error(`Cannot exceed 50 seats. Current: ${org.maxSeats}, max you can add: ${50 - org.maxSeats}`);
+        }
+
+        // ===== PAYMENT VERIFICATION — Enable when Razorpay is active =====
+        // Per-seat pricing (monthly):
+        //   STARTER plan:       ₹299/seat/month
+        //   PROFESSIONAL plan:  ₹499/seat/month
+        //
+        // const pricePerSeat = org.plan === 'STARTER' ? 29900 : 49900; // paise
+        // const expectedAmount = pricePerSeat * count;
+        //
+        // if (!paymentId) {
+        //     res.status(400);
+        //     throw new Error('Payment is required to add seats');
+        // }
+        //
+        // // Verify Razorpay payment
+        // const payment = await razorpay.payments.fetch(paymentId);
+        // if (payment.status !== 'captured' || payment.amount < expectedAmount) {
+        //     res.status(400);
+        //     throw new Error('Payment verification failed');
+        // }
+        // ===== END PAYMENT VERIFICATION =====
+
+        // [TEST MODE] — directly increase seats without payment
+        console.log(`[SEATS][TEST] Skipping payment — in production, ₹${org.plan === 'STARTER' ? 299 : 499}/seat/month * ${count} seats required`);
+
+        org.maxSeats = newMax;
+        await org.save();
+
+        console.log(`[SEATS] ${admin.email} increased seats to ${newMax} for org ${org.name}`);
+
+        res.json({
+            success: true,
+            message: `Seats increased to ${newMax}`,
+            maxSeats: newMax,
+            // Include pricing info for frontend display
+            pricePerSeat: org.plan === 'STARTER' ? 299 : 499,
+            totalCharge: (org.plan === 'STARTER' ? 299 : 499) * count
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getOrganization,
     getMembers,
@@ -470,5 +559,6 @@ module.exports = {
     acceptInvitation,
     rejectInvitation,
     removeMember,
-    reassignCases
+    reassignCases,
+    updateSeats
 };

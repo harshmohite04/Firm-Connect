@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import organizationService from '../services/organizationService';
 import type { Organization, OrganizationMember, Invitation } from '../services/organizationService';
 import toast from 'react-hot-toast';
-import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2 } from 'lucide-react';
+import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2, MoreVertical, Eye } from 'lucide-react';
 
 const FirmConnect: React.FC = () => {
     const [org, setOrg] = useState<Organization | null>(null);
@@ -15,6 +16,23 @@ const FirmConnect: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [inviting, setInviting] = useState(false);
     const [userRole, setUserRole] = useState('');
+    const [showSeatUpgrade, setShowSeatUpgrade] = useState(false);
+    const [seatCount, setSeatCount] = useState(1);
+    const [updatingSeats, setUpdatingSeats] = useState(false);
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const navigate = useNavigate();
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setActiveMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -78,6 +96,21 @@ const FirmConnect: React.FC = () => {
         }
     };
 
+    const handleAddSeats = async () => {
+        try {
+            setUpdatingSeats(true);
+            const result = await organizationService.updateSeats(seatCount);
+            toast.success(result.message);
+            setShowSeatUpgrade(false);
+            setSeatCount(1);
+            fetchData();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to update seats');
+        } finally {
+            setUpdatingSeats(false);
+        }
+    };
+
     if (loading) {
         return (
             <PortalLayout>
@@ -136,8 +169,61 @@ const FirmConnect: React.FC = () => {
                     </div>
                     {usedSeats >= totalSeats && (
                         <p className="text-red-500 text-sm mt-2">
-                            All seats are filled. Upgrade your plan to add more members.
+                            All seats are filled. Add more seats to invite new members.
                         </p>
+                    )}
+                    {userRole === 'ADMIN' && (
+                        <div className="mt-4">
+                            {!showSeatUpgrade ? (
+                                <button
+                                    onClick={() => setShowSeatUpgrade(true)}
+                                    className="px-4 py-2 text-sm font-semibold text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors"
+                                >
+                                    + Add Seats
+                                </button>
+                            ) : (
+                                <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 space-y-3">
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <label className="text-sm font-medium text-slate-700">Seats to add:</label>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            max={50 - totalSeats}
+                                            value={seatCount}
+                                            onChange={(e) => setSeatCount(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center font-semibold"
+                                        />
+                                        <span className="text-sm text-slate-500">
+                                            New total: {totalSeats + seatCount} seats
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm text-slate-600">
+                                            <span className="font-semibold text-slate-800">
+                                                ₹{org.plan === 'STARTER' ? 299 : 499}/seat/month
+                                            </span>
+                                            {' · '}Total: <span className="font-bold text-indigo-700">₹{(org.plan === 'STARTER' ? 299 : 499) * seatCount}/month</span>
+                                            <span className="ml-2 text-xs text-amber-600 font-medium">(Test mode — no charge)</span>
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={handleAddSeats}
+                                                disabled={updatingSeats}
+                                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 transition-colors"
+                                            >
+                                                {updatingSeats ? 'Processing...' : 'Confirm'}
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowSeatUpgrade(false); setSeatCount(1); }}
+                                                className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
 
@@ -233,13 +319,38 @@ const FirmConnect: React.FC = () => {
                                         <CheckCircle className="h-3 w-3" /> Active
                                     </span>
                                     {userRole === 'ADMIN' && member.role !== 'ADMIN' && (
-                                        <button
-                                            onClick={() => handleRemoveMember(member.userId._id, `${member.userId.firstName} ${member.userId.lastName}`)}
-                                            className="ml-2 p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                            title="Remove member"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
+                                        <div className="relative" ref={activeMenu === member.userId._id ? menuRef : null}>
+                                            <button
+                                                onClick={() => setActiveMenu(activeMenu === member.userId._id ? null : member.userId._id)}
+                                                className="ml-2 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+                                                title="Actions"
+                                            >
+                                                <MoreVertical className="h-4 w-4" />
+                                            </button>
+                                            {activeMenu === member.userId._id && (
+                                                <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50">
+                                                    <button
+                                                        onClick={() => {
+                                                            setActiveMenu(null);
+                                                            const name = `${member.userId.firstName} ${member.userId.lastName}`;
+                                                            navigate(`/portal/cases?userId=${member.userId._id}&name=${encodeURIComponent(name)}`);
+                                                        }}
+                                                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-indigo-500" /> View Cases
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setActiveMenu(null);
+                                                            handleRemoveMember(member.userId._id, `${member.userId.firstName} ${member.userId.lastName}`);
+                                                        }}
+                                                        className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" /> Remove
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>

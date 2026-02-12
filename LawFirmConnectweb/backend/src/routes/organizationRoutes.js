@@ -8,7 +8,8 @@ const {
     acceptInvitation,
     rejectInvitation,
     removeMember,
-    reassignCases
+    reassignCases,
+    updateSeats
 } = require('../controllers/organizationController');
 const { protect } = require('../middlewares/authMiddleware');
 
@@ -27,5 +28,8 @@ router.post('/invitations/:token/reject', rejectInvitation);
 
 // Case reassignment
 router.post('/reassign-cases', protect, reassignCases);
+
+// Seat management
+router.patch('/seats', protect, updateSeats);
 
 module.exports = router;

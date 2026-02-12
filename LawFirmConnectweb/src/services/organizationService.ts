@@ -114,6 +114,13 @@ const reassignCases = async (
   return response.data;
 };
 
+const updateSeats = async (
+  additionalSeats: number,
+): Promise<{ success: boolean; message: string; maxSeats: number }> => {
+  const response = await api.patch("/organization/seats", { additionalSeats });
+  return response.data;
+};
+
 const organizationService = {
   getOrganization,
   getMembers,
@@ -123,6 +130,7 @@ const organizationService = {
   rejectInvitation,
   removeMember,
   reassignCases,
+  updateSeats,
 };
 
 export default organizationService;

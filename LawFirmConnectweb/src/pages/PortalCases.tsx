@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';
@@ -52,11 +52,16 @@ const PortalCases: React.FC = () => {
     const [loading, setLoading] = React.useState(true);
     const [filter, setFilter] = React.useState('All');
     const [searchQuery, setSearchQuery] = React.useState('');
+    const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+
+    const viewUserId = searchParams.get('userId');
+    const viewUserName = searchParams.get('name');
 
     React.useEffect(() => {
         const fetchCases = async () => {
             try {
-                const data = await caseService.getCases();
+                const data = await caseService.getCases(viewUserId || undefined);
                 setCases(data);
             } catch (error) {
                 console.error("Failed to fetch cases", error);
@@ -65,7 +70,7 @@ const PortalCases: React.FC = () => {
             }
         };
         fetchCases();
-    }, []);
+    }, [viewUserId]);
 
     const activeCases = cases.filter(c => c.status !== 'Closed');
     const closedCases = cases.filter(c => c.status === 'Closed');
@@ -112,8 +117,26 @@ const PortalCases: React.FC = () => {
                 <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">My Legal Matters</h1>
-                            <p className="text-slate-500 mt-2">Overview of all your active and archived cases.</p>
+                            {viewUserId && viewUserName ? (
+                                <>
+                                    <button
+                                        onClick={() => navigate('/portal/firm-connect')}
+                                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium mb-2 transition-colors"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                        </svg>
+                                        Back to Firm Connect
+                                    </button>
+                                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">{viewUserName}'s Cases</h1>
+                                    <p className="text-slate-500 mt-2">Viewing cases assigned to {viewUserName}.</p>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">My Legal Matters</h1>
+                                    <p className="text-slate-500 mt-2">Overview of all your active and archived cases.</p>
+                                </>
+                            )}
                         </div>
                         <div className="flex gap-3">
                             <Link
@@ -122,12 +145,14 @@ const PortalCases: React.FC = () => {
                             >
                                 Dashboard
                             </Link>
-                            <Link
-                                to="/portal/start-case"
-                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
-                            >
-                                <PlusIcon /> New Case
-                            </Link>
+                            {!viewUserId && (
+                                <Link
+                                    to="/portal/start-case"
+                                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
+                                >
+                                    <PlusIcon /> New Case
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

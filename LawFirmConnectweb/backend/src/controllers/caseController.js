@@ -31,9 +31,18 @@ const getCases = async (req, res, next) => {
              ]
         };
 
-        // Admin sees all cases in their organization
-        if (req.user.role === 'ADMIN' && req.user.organizationId) {
-             query = { recordStatus: 1, organizationId: req.user.organizationId };
+        // Admin can view a specific member's cases via ?userId=
+        if (req.user.role === 'ADMIN' && req.query.userId && req.user.organizationId) {
+             query = {
+                 recordStatus: 1,
+                 organizationId: req.user.organizationId,
+                 $or: [
+                     { createdBy: req.query.userId },
+                     { assignedLawyers: req.query.userId },
+                     { leadAttorneyId: req.query.userId },
+                     { 'teamMembers.userId': req.query.userId }
+                 ]
+             };
         }
 
 
