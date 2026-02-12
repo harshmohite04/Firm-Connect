@@ -12,6 +12,7 @@ import PortalCaseDetails from './pages/PortalCaseDetails';
 import PortalCases from './pages/PortalCases';
 import PortalMessages from './pages/PortalMessages';
 import PracticeAreas from './pages/PracticeAreas';
+import PracticeAreaDetail from './pages/PracticeAreaDetail';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import StartCase from './pages/StartCase';
@@ -27,6 +28,7 @@ import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
 import CaseDraft from './pages/case-details/CaseDraft';
+import NotFound from './pages/NotFound';
 
 // Payment & Subscription Imports
 import Pricing from './pages/Pricing';
@@ -57,6 +59,7 @@ const App: React.FC = () => {
             <Route path="/practice-areas" element={<PracticeAreas />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/practice-areas/:id" element={<PracticeAreaDetail />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/pricing" element={<Pricing />} />
@@ -117,6 +120,7 @@ const App: React.FC = () => {
                 <Route path="security" element={<ProfileSecurity />} />
                 <Route path="notifications" element={<ProfileNotifications />} />
             </Route>
+        <Route path="*" element={<NotFound />} />
         </Routes>
        </main>
        {!isAuthPage && <Footer />}

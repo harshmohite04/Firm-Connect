@@ -43,12 +43,22 @@ class InvestigatorState(TypedDict):
     hypotheses: List[Dict[str, Any]]
 
     # Critique & Refinement
-    challenges: List[Challenge]
+    challenges: Annotated[List[Challenge], operator.add]
     evidence_gaps: List[Dict[str, Any]]
     validation_status: Dict[str, str]
 
+    # Legal & Risk Analysis
+    legal_issues: List[Dict[str, Any]]
+    risks: List[Dict[str, Any]]
+
+    # Error tracking (accumulated across agents)
+    errors: Annotated[List[Dict[str, str]], operator.add]
+
+    # Custom investigation focus
+    focus_questions: List[str]
+
     # Final Result
     final_report: Optional[str]
-    
+
     # Control logic
     revision_count: int

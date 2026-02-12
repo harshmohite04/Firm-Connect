@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
+import { trackEvent } from '../utils/analytics';
 
 const CheckIcon = () => (
     <svg className="w-5 h-5 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
@@ -35,12 +37,20 @@ const Hero: React.FC = () => {
                         </p>
                         
                         <div className="flex flex-col sm:flex-row gap-4 mb-10">
-                            <button className="px-7 py-3.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center">
+                            <Link 
+                                to="/contact" 
+                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'Get Legal Help' })}
+                                className="px-7 py-3.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center inline-block"
+                            >
                                 Get Legal Help
-                            </button>
-                            <button className="px-7 py-3.5 bg-white text-slate-700 border border-slate-200 font-semibold rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-center">
+                            </Link>
+                            <Link 
+                                to="/practice-areas" 
+                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'Learn More' })}
+                                className="px-7 py-3.5 bg-white text-slate-700 border border-slate-200 font-semibold rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-center inline-block"
+                            >
                                 Learn More
-                            </button>
+                            </Link>
                         </div>
 
                          <div className="flex flex-col sm:flex-row sm:items-center gap-6 text-sm font-medium text-slate-600">
