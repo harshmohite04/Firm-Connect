@@ -188,17 +188,54 @@ const getAuthHeaders = () => {
   return {};
 };
 
+export interface InvestigationFact {
+  id: string;
+  description: string;
+  entities: string[];
+  confidence: number;
+  date?: string;
+  source_quote?: string;
+  source_doc_id?: string;
+}
+
+export interface InvestigationConflict {
+  description: string;
+  conflicting_fact_ids: string[];
+  resolution_status: string;
+  resolution_note?: string;
+}
+
+export interface InvestigationStructuredData {
+  entities: string[];
+  facts: InvestigationFact[];
+  timeline: Record<string, any>[];
+  conflicts: InvestigationConflict[];
+  risks: Record<string, any>[];
+  evidence_gaps: Record<string, any>[];
+  hypotheses: Record<string, any>[];
+  legal_issues: Record<string, any>[];
+}
+
+export interface InvestigationStats {
+  fact_count: number;
+  entity_count: number;
+  conflict_count: number;
+  risk_count: number;
+  timeline_count: number;
+  evidence_gap_count: number;
+  document_count: number;
+  revision_count: number;
+  avg_confidence: number;
+  overall_risk_level: string;
+  errors?: { agent: string; error: string }[];
+}
+
 export interface InvestigationReport {
   _id: string;
   final_report: string;
   focus_questions?: string[];
-  metadata?: {
-    fact_count: number;
-    revision_count: number;
-    conflict_count: number;
-    document_count: number;
-    errors?: { agent: string; error: string }[];
-  };
+  structured_data?: InvestigationStructuredData;
+  metadata?: InvestigationStats;
   created_at: string;
 }
 
@@ -210,6 +247,8 @@ export interface InvestigationProgressEvent {
   final_report?: string;
   reportId?: string;
   detail?: string;
+  structured_data?: InvestigationStructuredData;
+  stats?: InvestigationStats;
 }
 
 const runInvestigation = async (

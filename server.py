@@ -1247,7 +1247,8 @@ async def run_investigation_stream(
             for chunk in stream_results:
                 # Each chunk is a dict {node_name: node_output}
                 for node_name, node_output in chunk.items():
-                    final_state.update(node_output)
+                    if node_output and isinstance(node_output, dict):
+                        final_state.update(node_output)
                     completed_steps += 1
                     step_index = _STEP_ORDER.index(node_name) if node_name in _STEP_ORDER else completed_steps
                     progress = min(int((step_index + 1) / total_steps * 100), 99)
@@ -1258,25 +1259,56 @@ async def run_investigation_stream(
             # Get final report
             report = final_state.get("final_report", "Analysis completed but no report was generated.")
 
+            # Extract structured data
+            facts = final_state.get("facts", [])
+            entities = list(set(final_state.get("entities", [])))
+            timeline = final_state.get("timeline", [])
+            conflicts = final_state.get("conflicts", [])
+            risks = final_state.get("risks", [])
+            evidence_gaps = final_state.get("evidence_gaps", [])
+            hypotheses = final_state.get("hypotheses", [])
+            legal_issues = final_state.get("legal_issues", [])
+            avg_confidence = round(sum(f.get("confidence", 0) for f in facts) / len(facts), 2) if facts else 0.0
+            risk_level = "CRITICAL" if len(risks) >= 5 else "HIGH" if len(risks) >= 3 else "MEDIUM" if len(risks) >= 1 else "LOW"
+
+            structured_data = {
+                "entities": entities,
+                "facts": facts,
+                "timeline": timeline,
+                "conflicts": conflicts,
+                "risks": risks,
+                "evidence_gaps": evidence_gaps,
+                "hypotheses": hypotheses,
+                "legal_issues": legal_issues,
+            }
+            metadata = {
+                "fact_count": len(facts),
+                "entity_count": len(entities),
+                "conflict_count": len(conflicts),
+                "risk_count": len(risks),
+                "timeline_count": len(timeline),
+                "evidence_gap_count": len(evidence_gaps),
+                "document_count": len(doc_list),
+                "revision_count": final_state.get("revision_count", 0),
+                "avg_confidence": avg_confidence,
+                "overall_risk_level": risk_level,
+                "errors": final_state.get("errors", []),
+            }
+
             # Save to MongoDB
             report_doc = {
                 "case_id": body.caseId,
                 "user_id": current_user.get("user_id", "unknown"),
                 "final_report": report,
                 "focus_questions": body.focusQuestions or [],
-                "metadata": {
-                    "fact_count": len(final_state.get("facts", [])),
-                    "revision_count": final_state.get("revision_count", 0),
-                    "conflict_count": len(final_state.get("conflicts", [])),
-                    "document_count": len(doc_list),
-                    "errors": final_state.get("errors", []),
-                },
+                "structured_data": structured_data,
+                "metadata": metadata,
                 "created_at": datetime.utcnow(),
             }
             insert_result = investigation_reports_collection.insert_one(report_doc)
             report_id = str(insert_result.inserted_id)
 
-            yield f"data: {json_module.dumps({'type': 'complete', 'progress': 100, 'final_report': report, 'reportId': report_id})}\n\n"
+            yield f"data: {json_module.dumps({'type': 'complete', 'progress': 100, 'final_report': report, 'reportId': report_id, 'structured_data': structured_data, 'stats': metadata})}\n\n"
 
         except Exception as e:
             import traceback
@@ -1405,7 +1437,7 @@ async def download_document(
 
 
 if __name__ == "__main__":
-    import uvicorn 
+    import uvicorn
     uvicorn.run(
         "server:app",
         host="0.0.0.0",

@@ -84,7 +84,6 @@ def primary_investigator(state: InvestigatorState) -> Dict[str, Any]:
             "timeline": result["timeline"],
             "hypotheses": result["hypotheses"],
             "revision_count": new_revision_count,
-            "challenges": [],  # Clear stale challenges before critics re-evaluate
         }
     except Exception as e:
         print(f"Error in Primary Investigator: {e}")
@@ -93,6 +92,5 @@ def primary_investigator(state: InvestigatorState) -> Dict[str, Any]:
             "timeline": state.get("timeline", []),
             "hypotheses": state.get("hypotheses", []),
             "revision_count": state.get("revision_count", 0) + 1,
-            "challenges": [],
             "errors": [{"agent": "primary_investigator", "error": str(e)}],
         }
