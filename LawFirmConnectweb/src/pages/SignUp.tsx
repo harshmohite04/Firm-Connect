@@ -33,6 +33,7 @@ const BuildingIcon = () => (
 
 const SignUp: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [passwordTouched, setPasswordTouched] = useState(false);
     const navigate = useNavigate();
     
     const [formData, setFormData] = useState({
@@ -185,6 +186,7 @@ const SignUp: React.FC = () => {
                                         type={showPassword ? "text" : "password"} 
                                         required 
                                         value={formData.password} onChange={handleInputChange}
+                                        onFocus={() => setPasswordTouched(true)}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
                                         placeholder="Create a strong password"
                                     />
@@ -195,7 +197,26 @@ const SignUp: React.FC = () => {
                                         <EyeIcon />
                                     </div>
                                 </div>
-                                <p className="mt-1 text-xs text-slate-400">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (!@#$%^&*)</p>
+                                {passwordTouched ? (
+                                    <ul className="mt-2 space-y-1 text-xs">
+                                        {[
+                                            { label: 'At least 8 characters', met: formData.password.length >= 8 },
+                                            { label: 'One uppercase letter', met: /[A-Z]/.test(formData.password) },
+                                            { label: 'One lowercase letter', met: /[a-z]/.test(formData.password) },
+                                            { label: 'One number', met: /[0-9]/.test(formData.password) },
+                                            { label: 'One special character (!@#$%^&*)', met: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password) },
+                                        ].map((rule) => (
+                                            <li key={rule.label} className={`flex items-center gap-1.5 transition-colors ${
+                                                rule.met ? 'text-emerald-600' : 'text-red-500'
+                                            }`}>
+                                                <span className="font-bold">{rule.met ? '✓' : '✗'}</span>
+                                                {rule.label}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="mt-1 text-xs text-slate-400">Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char (!@#$%^&*)</p>
+                                )}
                             </div>
 
                             <button 

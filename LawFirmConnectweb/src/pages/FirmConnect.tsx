@@ -6,6 +6,7 @@ import type { Organization, OrganizationMember, Invitation } from '../services/o
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2, MoreVertical, Eye } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 declare global {
     interface Window {
@@ -28,6 +29,8 @@ const FirmConnect: React.FC = () => {
     const [seatCount, setSeatCount] = useState(1);
     const [updatingSeats, setUpdatingSeats] = useState(false);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+    const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
@@ -93,15 +96,21 @@ const FirmConnect: React.FC = () => {
         }
     };
 
-    const handleRemoveMember = async (userId: string, memberName: string) => {
-        if (!window.confirm(`Remove ${memberName} from the organization? They will lose portal access.`)) return;
+    const handleRemoveMember = (userId: string, memberName: string) => {
+        setMemberToRemove({ id: userId, name: memberName });
+        setShowRemoveConfirm(true);
+    };
 
+    const confirmRemoveMember = async () => {
+        if (!memberToRemove) return;
         try {
-            const result = await organizationService.removeMember(userId);
+            const result = await organizationService.removeMember(memberToRemove.id);
             toast.success(result.message || 'Member removed');
             fetchData();
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to remove member');
+        } finally {
+            setMemberToRemove(null);
         }
     };
 
@@ -440,6 +449,18 @@ const FirmConnect: React.FC = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Remove Member Confirmation */}
+                <ConfirmationModal
+                    isOpen={showRemoveConfirm}
+                    onClose={() => { setShowRemoveConfirm(false); setMemberToRemove(null); }}
+                    onConfirm={confirmRemoveMember}
+                    title="Remove Member"
+                    message={`Remove ${memberToRemove?.name || 'this member'} from the organization? They will lose portal access.`}
+                    confirmText="Remove"
+                    cancelText="Cancel"
+                    type="danger"
+                />
             </div>
         </PortalLayout>
     );

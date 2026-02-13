@@ -188,8 +188,19 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 setShowNotifications(false);
             }
         };
+        // Keyboard: ESC to close search & notifications
+        const handleEscKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setShowResults(false);
+                setShowNotifications(false);
+            }
+        };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscKey);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscKey);
+        };
     }, []);
 
     // Search Logic
@@ -385,6 +396,13 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
                                         setShowResults(true);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Escape') {
+                                            setSearchQuery('');
+                                            setShowResults(false);
+                                            (e.target as HTMLInputElement).blur();
+                                        }
                                     }}
                                     onFocus={() => setShowResults(true)}
                                     placeholder="Look for people, messages, files and more"

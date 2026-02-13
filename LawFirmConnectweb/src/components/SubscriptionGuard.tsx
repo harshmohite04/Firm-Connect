@@ -90,7 +90,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     if (!hasAccess) {
-        return <Navigate to="/pricing" state={{ from: location, error: accessError }} replace />;
+        return <Navigate to="/pricing" state={{ from: location, needsSubscription: true, error: accessError }} replace />;
     }
 
     return <>{children}</>;

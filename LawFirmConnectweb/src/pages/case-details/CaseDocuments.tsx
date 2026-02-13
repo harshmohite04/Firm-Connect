@@ -252,6 +252,16 @@ const CaseDocuments: React.FC = () => {
         }
     };
 
+    // Keyboard: ESC to close upload modal
+    useEffect(() => {
+        if (!isUploadModalOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsUploadModalOpen(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isUploadModalOpen]);
+
     // Keyboard Accessiblity (Esc to Close, Focus Trap)
     useEffect(() => {
         if (!selectedDocument) return;
