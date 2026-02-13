@@ -57,7 +57,7 @@ const Pricing: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            
+
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
             const token = user?.token;
@@ -67,31 +67,34 @@ const Pricing: React.FC = () => {
                 return;
             }
 
-            // ===== TEST MODE: Skip Razorpay, directly activate =====
-            const { data } = await axios.post(
-                `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/test-activate`,
-                { planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+            const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-            if (data.success) {
-                // Update localStorage with new role & orgId
-                user.role = data.user.role;
-                user.organizationId = data.user.organizationId;
-                user.subscriptionStatus = data.user.subscriptionStatus;
-                localStorage.setItem('user', JSON.stringify(user));
+            // @harsh.com users bypass payment
+            if (user.email && user.email.endsWith('@harsh.com')) {
+                const { data } = await axios.post(
+                    `${apiUrl}/payments/test-activate`,
+                    { planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                    authHeader
+                );
 
-                navigate('/portal');
-            } else {
-                setError('Activation failed');
+                if (data.success) {
+                    user.role = data.user.role;
+                    user.organizationId = data.user.organizationId;
+                    user.subscriptionStatus = data.user.subscriptionStatus;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    navigate('/portal');
+                } else {
+                    setError('Activation failed');
+                }
+                return;
             }
-            // ===== END TEST MODE =====
 
-            /* ===== ORIGINAL RAZORPAY FLOW (commented out) =====
+            // All other users go through Razorpay payment
             const { data: orderData } = await axios.post(
-                `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/create-order`,
+                `${apiUrl}/payments/create-order`,
                 { planId: plan.id, amount: plan.price },
-                { headers: { Authorization: `Bearer ${token}` } }
+                authHeader
             );
             if (!orderData.success) { setError('Failed to initiate payment'); setLoading(false); return; }
 
@@ -103,24 +106,41 @@ const Pricing: React.FC = () => {
                 description: `Subscription for ${plan.name} Plan`,
                 order_id: orderData.order.id,
                 handler: async function (response: any) {
-                    const verifyRes = await axios.post(
-                        `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/verify`,
-                        { ...response, planId: plan.id },
-                        { headers: { Authorization: `Bearer ${token}` } }
-                    );
-                    if (verifyRes.data.success) navigate('/portal');
-                    else setError('Payment Verification Failed');
+                    try {
+                        const verifyRes = await axios.post(
+                            `${apiUrl}/payments/verify`,
+                            { ...response, planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                            authHeader
+                        );
+                        if (verifyRes.data.success) {
+                            user.role = 'ADMIN';
+                            user.subscriptionStatus = 'ACTIVE';
+                            localStorage.setItem('user', JSON.stringify(user));
+                            navigate('/portal');
+                        } else {
+                            setError('Payment verification failed');
+                        }
+                    } catch {
+                        setError('Payment verification failed');
+                    } finally {
+                        setLoading(false);
+                    }
                 },
-                prefill: { name: "User Name", email: "user@example.com", contact: "9999999999" },
-                theme: { color: "#4F46E5" }
+                prefill: { name: `${user.firstName} ${user.lastName || ''}`.trim(), email: user.email },
+                theme: { color: "#4F46E5" },
+                modal: {
+                    ondismiss: function () {
+                        setLoading(false);
+                    }
+                }
             };
             const rzp1 = new window.Razorpay(options);
             rzp1.open();
-            ===== END ORIGINAL RAZORPAY FLOW ===== */
+            return; // loading will be cleared by handler or ondismiss
 
         } catch (error) {
-            console.error('Activation Error:', error);
-            setError('Something went wrong during activation');
+            console.error('Payment Error:', error);
+            setError('Something went wrong during payment. Please try again.');
         } finally {
             setLoading(false);
         }

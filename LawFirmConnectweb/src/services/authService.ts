@@ -30,6 +30,11 @@ export interface RegisterResponse {
   msg: string;
 }
 
+export interface OrganizationSummary {
+  _id: string;
+  name: string;
+}
+
 const login = async (
   email: string,
   password: string,
@@ -40,16 +45,20 @@ const login = async (
   }
   return response.data;
 };
+
 const register = async (userData: {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
+  accountType?: "FIRM" | "ATTORNEY";
+  organizationId?: string;
 }): Promise<RegisterResponse> => {
   const response = await api.post("/auth/register", userData);
   return response.data;
 };
+
 const logout = () => {
   localStorage.removeItem("user");
 };
@@ -59,11 +68,17 @@ const getCurrentUser = async (): Promise<User> => {
   return response.data;
 };
 
+const getOrganizations = async (): Promise<OrganizationSummary[]> => {
+  const response = await api.get("/organization/public"); // Note: Ensure backend route is /organization/public
+  return response.data?.organizations || [];
+};
+
 const authService = {
   login,
   register,
   logout,
   getCurrentUser,
+  getOrganizations,
 };
 
 export default authService;

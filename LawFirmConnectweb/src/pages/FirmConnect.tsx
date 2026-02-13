@@ -4,7 +4,14 @@ import PortalLayout from '../components/PortalLayout';
 import organizationService from '../services/organizationService';
 import type { Organization, OrganizationMember, Invitation } from '../services/organizationService';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2, MoreVertical, Eye } from 'lucide-react';
+
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
 
 const FirmConnect: React.FC = () => {
     const [org, setOrg] = useState<Organization | null>(null);
@@ -16,6 +23,7 @@ const FirmConnect: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [inviting, setInviting] = useState(false);
     const [userRole, setUserRole] = useState('');
+    const [userEmail, setUserEmail] = useState('');
     const [showSeatUpgrade, setShowSeatUpgrade] = useState(false);
     const [seatCount, setSeatCount] = useState(1);
     const [updatingSeats, setUpdatingSeats] = useState(false);
@@ -44,6 +52,7 @@ const FirmConnect: React.FC = () => {
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
             setUserRole(user?.role || '');
+            setUserEmail(user?.email || '');
 
             const orgData = await organizationService.getOrganization();
             setOrg(orgData);
@@ -99,11 +108,80 @@ const FirmConnect: React.FC = () => {
     const handleAddSeats = async () => {
         try {
             setUpdatingSeats(true);
-            const result = await organizationService.updateSeats(seatCount);
-            toast.success(result.message);
-            setShowSeatUpgrade(false);
-            setSeatCount(1);
-            fetchData();
+
+            // @harsh.com users bypass payment
+            if (userEmail.endsWith('@harsh.com')) {
+                const result = await organizationService.updateSeats(seatCount);
+                toast.success(result.message);
+                setShowSeatUpgrade(false);
+                setSeatCount(1);
+                fetchData();
+                return;
+            }
+
+            // All other users go through Razorpay payment
+            const pricePerSeat = org?.plan === 'STARTER' ? 299 : 499;
+            const totalAmount = pricePerSeat * seatCount;
+
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const token = user?.token;
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+
+            // Create Razorpay order
+            const { data: orderData } = await axios.post(
+                `${apiUrl}/payments/create-order`,
+                { planId: org?.plan || 'PROFESSIONAL', amount: totalAmount },
+                authHeader
+            );
+
+            if (!orderData.success) {
+                toast.error('Failed to initiate payment');
+                setUpdatingSeats(false);
+                return;
+            }
+
+            // Open Razorpay checkout
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                amount: orderData.order.amount,
+                currency: 'INR',
+                name: 'LawfirmAI',
+                description: `Add ${seatCount} seat(s) to your plan`,
+                order_id: orderData.order.id,
+                handler: async function (response: any) {
+                    try {
+                        // Use the payment_id from Razorpay to verify on backend
+                        const result = await organizationService.updateSeats(
+                            seatCount,
+                            response.razorpay_payment_id
+                        );
+                        toast.success(result.message);
+                        setShowSeatUpgrade(false);
+                        setSeatCount(1);
+                        fetchData();
+                    } catch (err: any) {
+                        toast.error(err?.response?.data?.message || 'Seat upgrade failed after payment');
+                    } finally {
+                        setUpdatingSeats(false);
+                    }
+                },
+                prefill: {
+                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                    email: user?.email,
+                },
+                theme: { color: '#4F46E5' },
+                modal: {
+                    ondismiss: function () {
+                        setUpdatingSeats(false);
+                    },
+                },
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+            return; // loading cleared by handler or ondismiss
+
         } catch (error: any) {
             toast.error(error?.response?.data?.message || 'Failed to update seats');
         } finally {
@@ -203,7 +281,7 @@ const FirmConnect: React.FC = () => {
                                                 ₹{org.plan === 'STARTER' ? 299 : 499}/seat/month
                                             </span>
                                             {' · '}Total: <span className="font-bold text-indigo-700">₹{(org.plan === 'STARTER' ? 299 : 499) * seatCount}/month</span>
-                                            <span className="ml-2 text-xs text-amber-600 font-medium">(Test mode — no charge)</span>
+                                            {userEmail.endsWith('@harsh.com') && <span className="ml-2 text-xs text-amber-600 font-medium">(Bypass — no charge)</span>}
                                         </p>
                                         <div className="flex items-center gap-2">
                                             <button

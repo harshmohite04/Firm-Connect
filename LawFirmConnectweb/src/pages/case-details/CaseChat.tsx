@@ -83,8 +83,7 @@ const CaseChat: React.FC = () => {
     const selectionRef = useRef<HTMLElement | null>(null); // ref for blue selection highlight
     const docViewerRef = useRef<HTMLDivElement>(null);
 
-    // Highlighted citation index
-    const [highlightedCitation, setHighlightedCitation] = useState<number | null>(null);
+
 
     // Jaccard similarity
     const computeJaccard = (textA: string, textB: string): number => {
@@ -640,8 +639,6 @@ const CaseChat: React.FC = () => {
                                                                             key={i}
                                                                             className="inline-flex items-center justify-center w-5 h-5 mx-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold cursor-pointer hover:bg-blue-600 hover:text-white transition-colors align-super"
                                                                             title={citCtx ? `Source: ${citCtx.source || 'Unknown'}` : `Citation ${citNum}`}
-                                                                            onMouseEnter={() => setHighlightedCitation(citNum)}
-                                                                            onMouseLeave={() => setHighlightedCitation(null)}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 if (msg.contexts) openSourcesPanel(msg.contexts);

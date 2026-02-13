@@ -1,10 +1,13 @@
 const Organization = require('../models/Organization');
+const razorpay = require('../utils/razorpayConfig');
 const User = require('../models/User');
 const Case = require('../models/Case');
 const TeamInvitation = require('../models/TeamInvitation');
 const sendEmail = require('../utils/emailService');
 const teamInvitationTemplate = require('../utils/teamInvitationTemplate');
+const { organizationInvitationTemplate, organizationExistingUserTemplate } = require('../utils/organizationInvitationTemplate');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 
 // @desc    Get current user's organization
 // @route   GET /organization
@@ -71,37 +74,51 @@ const getMembers = async (req, res, next) => {
 // @route   POST /organization/invite
 // @access  Private (Admin only)
 const inviteMember = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { email } = req.body;
-        const admin = await User.findById(req.user._id);
+        const normalizedEmail = email.toLowerCase();
+        
+        const admin = await User.findById(req.user._id).session(session);
 
         if (admin.role !== 'ADMIN') {
+            await session.abortTransaction();
+            session.endSession(); // Ensure session is ended
             res.status(403);
             throw new Error('Only admins can invite members');
         }
 
         if (!admin.organizationId) {
+            await session.abortTransaction();
+            session.endSession();
             res.status(400);
             throw new Error('You must have an organization to invite members');
         }
 
-        const org = await Organization.findById(admin.organizationId);
+        // Fetch org with write lock (conceptually) or just check atomic constraints
+        const org = await Organization.findById(admin.organizationId).session(session);
 
         if (!org) {
+            await session.abortTransaction();
+            session.endSession();
             res.status(404);
             throw new Error('Organization not found');
         }
 
-        // Check seat availability
+        // Strict Atomic Check: Count active members
         const activeCount = org.members.filter(m => m.status === 'ACTIVE').length;
         if (activeCount >= org.maxSeats) {
+            await session.abortTransaction();
+            session.endSession();
             res.status(400);
             throw new Error(`No seats available. Your plan allows ${org.maxSeats} seats.`);
         }
 
-        // Find or create the user
-        let userToInvite = await User.findOne({ email: email.toLowerCase() });
+        let userToInvite = await User.findOne({ email: normalizedEmail }).session(session);
         let generatedPassword = null;
+        let isNewUser = false;
 
         if (userToInvite) {
             // Check if already an active member
@@ -109,42 +126,52 @@ const inviteMember = async (req, res, next) => {
                 m => m.userId && m.userId.toString() === userToInvite._id.toString() && m.status === 'ACTIVE'
             );
             if (isAlreadyMember) {
+                await session.abortTransaction();
+                session.endSession();
                 res.status(400);
                 throw new Error('User is already an active member of your organization');
             }
 
             // Check if user belongs to another org
             if (userToInvite.organizationId && userToInvite.organizationId.toString() !== org._id.toString()) {
+                await session.abortTransaction();
+                session.endSession();
                 res.status(400);
                 throw new Error('User already belongs to another organization');
             }
         } else {
-            // === AUTO-CREATE USER with generated password ===
-            generatedPassword = crypto.randomBytes(4).toString('hex'); // 8-char password
-            userToInvite = await User.create({
-                firstName: email.split('@')[0], // Use email prefix as name
+            // === AUTO-CREATE USER with STRONG generated password ===
+            isNewUser = true;
+            generatedPassword = crypto.randomBytes(12).toString('hex'); 
+            
+            userToInvite = new User({
+                firstName: email.split('@')[0], 
                 lastName: 'Member',
-                email: email.toLowerCase(),
+                email: normalizedEmail,
                 password: generatedPassword,
                 role: 'ATTORNEY',
-                status: 'VERIFIED' // Auto-verified since admin is adding them
+                status: 'VERIFIED'
             });
+            await userToInvite.save({ session });
         }
 
-        // Directly add user to organization (skip link-based flow)
+        // Update User
         userToInvite.organizationId = org._id;
         userToInvite.role = 'ATTORNEY';
-        await userToInvite.save();
+        await userToInvite.save({ session });
 
-        // Check if this user was previously removed — reactivate instead of adding duplicate
-        const existingEntry = org.members.find(
+        // Update Organization Member List
+        const existingEntryIndex = org.members.findIndex(
             m => m.userId && m.userId.toString() === userToInvite._id.toString()
         );
-        if (existingEntry) {
-            existingEntry.status = 'ACTIVE';
-            existingEntry.removedAt = null;
-            existingEntry.joinedAt = new Date();
+
+        if (existingEntryIndex !== -1) {
+            // Reactivate existing member entry
+            org.members[existingEntryIndex].status = 'ACTIVE';
+            org.members[existingEntryIndex].removedAt = null;
+            org.members[existingEntryIndex].joinedAt = new Date();
         } else {
+            // Add new member entry
             org.members.push({
                 userId: userToInvite._id,
                 role: 'ATTORNEY',
@@ -152,34 +179,57 @@ const inviteMember = async (req, res, next) => {
                 joinedAt: new Date()
             });
         }
-        await org.save();
+        
+        await org.save({ session });
 
-        // Log credentials to console for testing
-        console.log('\n========================================');
-        console.log('👤 MEMBER ADDED TO ORGANIZATION');
-        console.log(`   Email: ${email.toLowerCase()}`);
-        console.log(`   Org:   ${org.name}`);
-        if (generatedPassword) {
-            console.log(`   🔑 Password: ${generatedPassword}  (new account created)`);
-        } else {
-            console.log(`   ℹ️  Existing user — use their current password`);
+        // Commit Transaction
+        await session.commitTransaction();
+        session.endSession();
+
+        // --- EMAIL NOTIFICATION (Outside Transaction) ---
+        // We do this after commit so we don't send email if DB fails.
+        try {
+            const loginLink = process.env.FRONTEND_URL || 'http://localhost:5173/login';
+            
+            if (isNewUser) {
+                const htmlContent = organizationInvitationTemplate(org.name, `${admin.firstName} ${admin.lastName}`, generatedPassword, loginLink);
+                await sendEmail({
+                    email: normalizedEmail,
+                    subject: `Welcome to ${org.name} on LawFirmConnect`,
+                    html: htmlContent,
+                    message: `You have been added to ${org.name}. Your password is: ${generatedPassword}. Please login at ${loginLink}`
+                });
+            } else {
+                const htmlContent = organizationExistingUserTemplate(org.name, `${admin.firstName} ${admin.lastName}`, loginLink);
+                await sendEmail({
+                    email: normalizedEmail,
+                    subject: `You have been added to ${org.name}`,
+                    html: htmlContent,
+                    message: `You have been added to ${org.name}. Please login at ${loginLink}`
+                });
+            }
+        } catch (emailError) {
+            console.error('Failed to send invitation email:', emailError);
+            // We don't fail the request, just log it. The user is added anyway.
         }
-        console.log('========================================\n');
 
         res.status(201).json({
             success: true,
-            message: generatedPassword
-                ? `Account created and added to ${org.name}`
-                : `Existing user added to ${org.name}`,
+            message: isNewUser
+                ? `Account created and added to ${org.name}. Email sent.`
+                : `Existing user added to ${org.name}. Email sent.`,
             member: {
                 email: userToInvite.email,
                 firstName: userToInvite.firstName,
                 lastName: userToInvite.lastName,
-            },
-            // Only include in test mode
-            _testPassword: generatedPassword || '(existing user — use their password)'
+            }
         });
+
     } catch (error) {
+        if (session.inTransaction()) {
+             await session.abortTransaction();
+        }
+        session.endSession();
         next(error);
     }
 };
@@ -211,6 +261,9 @@ const getInvitations = async (req, res, next) => {
 // @route   POST /organization/invitations/:token/accept
 // @access  Private (must be logged in)
 const acceptInvitation = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { token } = req.params;
 
@@ -218,38 +271,54 @@ const acceptInvitation = async (req, res, next) => {
             token,
             status: 'pending',
             expiresAt: { $gt: new Date() }
-        }).populate('organizationId');
+        }).populate('organizationId').session(session);
 
         if (!invitation) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(404);
             throw new Error('Invitation not found or has expired');
         }
 
         const org = invitation.organizationId;
+        if (!org) {
+            await session.abortTransaction();
+             session.endSession();
+            res.status(404);
+            throw new Error('Organization associated with this invitation does not exist');
+        }
 
-        // Check seat availability
+        // Atomic Seat Check
         const activeCount = org.members.filter(m => m.status === 'ACTIVE').length;
         if (activeCount >= org.maxSeats) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(400);
             throw new Error('No seats available in this organization');
         }
 
         // Get the accepting user
-        const acceptingUser = await User.findById(req.user._id);
+        const acceptingUser = await User.findById(req.user._id).session(session);
 
         if (!acceptingUser) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(404);
             throw new Error('User not found');
         }
 
         // Check email matches
         if (acceptingUser.email.toLowerCase() !== invitation.invitedEmail.toLowerCase()) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(403);
             throw new Error('This invitation was sent to a different email address');
         }
 
         // Check if user already belongs to an org
         if (acceptingUser.organizationId) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(400);
             throw new Error('You already belong to an organization. One firm per user.');
         }
@@ -258,7 +327,7 @@ const acceptInvitation = async (req, res, next) => {
         invitation.status = 'accepted';
         invitation.acceptedAt = new Date();
         invitation.invitedUserId = acceptingUser._id;
-        await invitation.save();
+        await invitation.save({ session });
 
         // Add user to org
         org.members.push({
@@ -267,12 +336,15 @@ const acceptInvitation = async (req, res, next) => {
             status: 'ACTIVE',
             joinedAt: new Date()
         });
-        await org.save();
+        await org.save({ session });
 
         // Update user
         acceptingUser.organizationId = org._id;
         acceptingUser.role = 'ATTORNEY';
-        await acceptingUser.save();
+        await acceptingUser.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
 
         res.json({
             success: true,
@@ -283,6 +355,10 @@ const acceptInvitation = async (req, res, next) => {
             }
         });
     } catch (error) {
+        if (session.inTransaction()) {
+             await session.abortTransaction();
+        }
+        session.endSession();
         next(error);
     }
 };
@@ -294,6 +370,7 @@ const rejectInvitation = async (req, res, next) => {
     try {
         const { token } = req.params;
 
+        // No need for transaction here since it's a single document update
         const invitation = await TeamInvitation.findOne({
             token,
             status: 'pending',
@@ -318,51 +395,65 @@ const rejectInvitation = async (req, res, next) => {
 // @route   DELETE /organization/members/:userId
 // @access  Private (Admin only)
 const removeMember = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { userId } = req.params;
-        const admin = await User.findById(req.user._id);
+        const admin = await User.findById(req.user._id).session(session);
 
         if (admin.role !== 'ADMIN') {
+            await session.abortTransaction();
+             session.endSession();
             res.status(403);
             throw new Error('Only admins can remove members');
         }
 
         // Cannot remove yourself
         if (userId === req.user._id.toString()) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(400);
             throw new Error('You cannot remove yourself from the organization');
         }
 
-        const org = await Organization.findById(admin.organizationId);
+        const org = await Organization.findById(admin.organizationId).session(session);
 
         if (!org) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(404);
             throw new Error('Organization not found');
         }
 
         // Find the member in the org
-        const memberEntry = org.members.find(
+        const memberIndex = org.members.findIndex(
             m => m.userId.toString() === userId && m.status === 'ACTIVE'
         );
 
-        if (!memberEntry) {
+        if (memberIndex === -1) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(404);
-            throw new Error('Member not found in organization');
+            throw new Error('Member not found in organization (or already removed)');
         }
 
         // Soft remove — set status to REMOVED, keep data intact
-        memberEntry.status = 'REMOVED';
-        memberEntry.removedAt = new Date();
-        await org.save();
+        org.members[memberIndex].status = 'REMOVED';
+        org.members[memberIndex].removedAt = new Date();
+        await org.save({ session });
 
         // Remove org reference from user (they lose portal access)
-        const removedUser = await User.findById(userId);
+        const removedUser = await User.findById(userId).session(session);
         if (removedUser) {
             removedUser.organizationId = null;
-            await removedUser.save();
+            await removedUser.save({ session });
         }
 
-        // Get cases that need reassignment
+        await session.commitTransaction();
+        session.endSession();
+
+        // Get cases that need reassignment (this can be outside transaction as it's just a read)
         const affectedCases = await Case.find({
             organizationId: org._id,
             recordStatus: 1,
@@ -379,6 +470,10 @@ const removeMember = async (req, res, next) => {
             casesNeedingReassignment: affectedCases
         });
     } catch (error) {
+        if (session.inTransaction()) {
+             await session.abortTransaction();
+        }
+        session.endSession();
         next(error);
     }
 };
@@ -387,96 +482,129 @@ const removeMember = async (req, res, next) => {
 // @route   POST /organization/reassign-cases
 // @access  Private (Admin only)
 const reassignCases = async (req, res, next) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
         const { fromUserId, toUserId, caseIds } = req.body;
-        const admin = await User.findById(req.user._id);
+        const admin = await User.findById(req.user._id).session(session);
 
         if (admin.role !== 'ADMIN') {
+            await session.abortTransaction();
+             session.endSession();
             res.status(403);
             throw new Error('Only admins can reassign cases');
         }
 
-        const org = await Organization.findById(admin.organizationId);
+        const org = await Organization.findById(admin.organizationId).session(session);
         if (!org) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(404);
             throw new Error('Organization not found');
         }
 
-        // Verify toUser is an active member (or the admin themselves)
-        const toUser = await User.findById(toUserId);
-        if (!toUser) {
-            res.status(404);
-            throw new Error('Target user not found');
-        }
-
-        // Allow reassigning to admin themselves or active org members
+        // Verify toUser is an active member
         const isActiveMember = org.members.some(
             m => m.userId.toString() === toUserId && m.status === 'ACTIVE'
         );
         if (!isActiveMember) {
+            await session.abortTransaction();
+             session.endSession();
             res.status(400);
             throw new Error('Target user must be an active member of the organization');
         }
+        
+        const toUser = await User.findById(toUserId).session(session);
+        if (!toUser) {
+             await session.abortTransaction();
+             session.endSession();
+             res.status(404);
+             throw new Error('Target user not found');
+        }
 
-        // Reassign the cases
-        let reassignedCount = 0;
-        for (const caseId of caseIds) {
-            const caseDoc = await Case.findOne({
-                _id: caseId,
-                organizationId: org._id,
-                recordStatus: 1
-            });
+        // Find cases to update details
+        const casesToUpdate = await Case.find({
+            _id: { $in: caseIds },
+            organizationId: org._id,
+            recordStatus: 1
+        }).session(session);
 
-            if (!caseDoc) continue;
+        let modifiedCount = 0;
 
-            // Update lead attorney if it was the removed user
+        for (const caseDoc of casesToUpdate) {
+            let needsUpdate = false;
+
+            // Update lead attorney
             if (caseDoc.leadAttorneyId && caseDoc.leadAttorneyId.toString() === fromUserId) {
                 caseDoc.leadAttorneyId = toUserId;
+                needsUpdate = true;
             }
 
-            // Update createdBy if it was the removed user
+            // Update createdBy
             if (caseDoc.createdBy.toString() === fromUserId) {
                 caseDoc.createdBy = toUserId;
+                needsUpdate = true;
             }
 
             // Replace in assignedLawyers
-            caseDoc.assignedLawyers = caseDoc.assignedLawyers.map(
-                id => id.toString() === fromUserId ? toUserId : id
-            );
-
-            // Replace in teamMembers
+            if (caseDoc.assignedLawyers.some(id => id.toString() === fromUserId)) {
+                  const newAssigned = caseDoc.assignedLawyers.map(id => 
+                      id.toString() === fromUserId ? toUserId : id.toString()
+                  );
+                  // Deduplicate in case toUser was already assigned
+                  const uniqueAssigned = [...new Set(newAssigned)]; 
+                  caseDoc.assignedLawyers = uniqueAssigned;
+                  needsUpdate = true;
+            }
+            
+            // Replace in teamMembers array
+            let teamChanged = false;
             caseDoc.teamMembers = caseDoc.teamMembers.map(member => {
                 if (member.userId.toString() === fromUserId) {
+                    teamChanged = true;
                     return { ...member.toObject(), userId: toUserId };
                 }
                 return member;
             });
+            if (teamChanged) needsUpdate = true;
 
-            // Add activity log
-            caseDoc.activityLog.push({
-                type: 'case_reassigned',
-                description: `Case reassigned from removed member to ${toUser.firstName} ${toUser.lastName}`,
-                performedBy: req.user._id
-            });
-
-            await caseDoc.save();
-            reassignedCount++;
+            if (needsUpdate) {
+                caseDoc.activityLog.push({
+                    type: 'case_reassigned',
+                    description: `Case reassigned from removed member to ${toUser.firstName} ${toUser.lastName}`,
+                    performedBy: req.user._id,
+                    timestamp: new Date()
+                });
+                await caseDoc.save({ session });
+                modifiedCount++;
+            }
         }
+
+        await session.commitTransaction();
+        session.endSession();
 
         res.json({
             success: true,
-            message: `${reassignedCount} case(s) reassigned successfully`,
-            reassignedCount
+            message: `${modifiedCount} case(s) reassigned successfully`,
+            reassignedCount: modifiedCount
         });
     } catch (error) {
+        if (session.inTransaction()) {
+             await session.abortTransaction();
+        }
+        session.endSession();
         next(error);
     }
 };
+
 
 // @desc    Update (increase) seat count for the organization
 // @route   PATCH /organization/seats
 // @access  Private (Admin only)
 const updateSeats = async (req, res, next) => {
+    // No transaction needed here as it's a single document update, 
+    // but good to keep it consistent if we add more logic later.
     try {
         const { additionalSeats, paymentId } = req.body;
         const admin = await User.findById(req.user._id);
@@ -486,9 +614,10 @@ const updateSeats = async (req, res, next) => {
             throw new Error('Only admins can update seats');
         }
 
-        if (!admin.organizationId) {
-            res.status(400);
-            throw new Error('No organization found');
+        const org = await Organization.findById(admin.organizationId);
+        if (!org) {
+            res.status(404);
+            throw new Error('Organization not found');
         }
 
         const count = parseInt(additionalSeats, 10);
@@ -497,47 +626,43 @@ const updateSeats = async (req, res, next) => {
             throw new Error('Additional seats must be between 1 and 50');
         }
 
-        const org = await Organization.findById(admin.organizationId);
-        if (!org) {
-            res.status(404);
-            throw new Error('Organization not found');
-        }
-
         const newMax = org.maxSeats + count;
         if (newMax > 50) {
             res.status(400);
+            // Dynamic message
             throw new Error(`Cannot exceed 50 seats. Current: ${org.maxSeats}, max you can add: ${50 - org.maxSeats}`);
         }
 
-        // ===== PAYMENT VERIFICATION — Enable when Razorpay is active =====
-        // Per-seat pricing (monthly):
-        //   STARTER plan:       ₹299/seat/month
-        //   PROFESSIONAL plan:  ₹499/seat/month
-        //
-        // const pricePerSeat = org.plan === 'STARTER' ? 29900 : 49900; // paise
-        // const expectedAmount = pricePerSeat * count;
-        //
-        // if (!paymentId) {
-        //     res.status(400);
-        //     throw new Error('Payment is required to add seats');
-        // }
-        //
-        // // Verify Razorpay payment
-        // const payment = await razorpay.payments.fetch(paymentId);
-        // if (payment.status !== 'captured' || payment.amount < expectedAmount) {
-        //     res.status(400);
-        //     throw new Error('Payment verification failed');
-        // }
+        // ===== PAYMENT VERIFICATION =====
+        // Bypass payment for any admin with @harsh.com email
+        if (!admin.email.endsWith('@harsh.com')) {
+            const pricePerSeat = org.plan === 'STARTER' ? 29900 : 49900; // paise
+            const expectedAmount = pricePerSeat * count;
+    
+            if (!paymentId) {
+                res.status(400);
+                throw new Error('Payment is required to add seats');
+            }
+    
+            // Verify Razorpay payment
+            try {
+                const payment = await razorpay.payments.fetch(paymentId);
+                if (payment.status !== 'captured' || payment.amount < expectedAmount) {
+                    res.status(400);
+                    throw new Error('Payment verification failed: Amount mismatch or not captured');
+                }
+            } catch (err) {
+                 res.status(400);
+                 throw new Error('Payment verification failed: Invalid Payment ID');
+            }
+        } else {
+            console.log(`[SEATS][BYPASS] Skipping payment for domain user: ${admin.email}`);
+        }
         // ===== END PAYMENT VERIFICATION =====
-
-        // [TEST MODE] — directly increase seats without payment
-        console.log(`[SEATS][TEST] Skipping payment — in production, ₹${org.plan === 'STARTER' ? 299 : 499}/seat/month * ${count} seats required`);
 
         org.maxSeats = newMax;
         await org.save();
-
-        console.log(`[SEATS] ${admin.email} increased seats to ${newMax} for org ${org.name}`);
-
+        
         res.json({
             success: true,
             message: `Seats increased to ${newMax}`,
@@ -545,6 +670,24 @@ const updateSeats = async (req, res, next) => {
             // Include pricing info for frontend display
             pricePerSeat: org.plan === 'STARTER' ? 299 : 499,
             totalCharge: (org.plan === 'STARTER' ? 299 : 499) * count
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get public list of organizations (for signup)
+// @route   GET /organization/public
+// @access  Public
+const getPublicOrganizations = async (req, res, next) => {
+    try {
+        const organizations = await Organization.find({ 
+            subscriptionStatus: 'ACTIVE' // Only show active firms? Optional decision.
+        }).select('_id name');
+
+        res.json({
+            success: true,
+            organizations
         });
     } catch (error) {
         next(error);
@@ -560,5 +703,6 @@ module.exports = {
     rejectInvitation,
     removeMember,
     reassignCases,
-    updateSeats
+    updateSeats,
+    getPublicOrganizations
 };

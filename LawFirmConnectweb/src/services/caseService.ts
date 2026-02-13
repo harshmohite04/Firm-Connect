@@ -282,8 +282,8 @@ const runInvestigationStream = (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...headers,
-    },
+      ...(headers || {}),
+    } as HeadersInit,
     body: JSON.stringify({ caseId, focusQuestions }),
     signal: controller.signal,
   })

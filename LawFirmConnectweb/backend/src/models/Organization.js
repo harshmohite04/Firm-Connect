@@ -34,7 +34,7 @@ const organizationSchema = new mongoose.Schema({
         },
         status: {
             type: String,
-            enum: ['ACTIVE', 'REMOVED'],
+            enum: ['ACTIVE', 'PENDING', 'REMOVED'],
             default: 'ACTIVE'
         },
         joinedAt: {

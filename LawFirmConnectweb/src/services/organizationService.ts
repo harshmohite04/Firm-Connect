@@ -116,8 +116,12 @@ const reassignCases = async (
 
 const updateSeats = async (
   additionalSeats: number,
+  paymentId?: string,
 ): Promise<{ success: boolean; message: string; maxSeats: number }> => {
-  const response = await api.patch("/organization/seats", { additionalSeats });
+  const response = await api.patch("/organization/seats", {
+    additionalSeats,
+    paymentId,
+  });
   return response.data;
 };
 

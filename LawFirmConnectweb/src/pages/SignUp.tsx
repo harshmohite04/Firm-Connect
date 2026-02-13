@@ -4,11 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
 
-const LogoIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    </svg>
-);
+
 
 const EyeIcon = () => (
     <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -29,6 +25,12 @@ const ShieldIcon = () => (
     </svg>
 )
 
+const BuildingIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+)
+
 const SignUp: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
@@ -38,12 +40,15 @@ const SignUp: React.FC = () => {
         lastName: '',
         email: '',
         phone: '',
-        password: ''
+        password: '',
+        accountType: 'FIRM' as 'FIRM' | 'ATTORNEY', // Locked to FIRM
+        organizationId: ''
     });
     
+    // Removed Org List State and useEffect for Attorney restriction
+
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
 
     const getPasswordErrors = (password: string): string[] => {
         const errors: string[] = [];
@@ -55,9 +60,11 @@ const SignUp: React.FC = () => {
         return errors;
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
+
+    // Removed handleAccountTypeChange
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -100,7 +107,7 @@ const SignUp: React.FC = () => {
                         <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
                             Create Client Account
                         </h1>
-                        <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                        <p className="text-slate-500 text-sm leading-relaxed mb-6">
                              Join our secure portal to manage your legal cases and communications seamlessly.
                         </p>
 
@@ -111,6 +118,24 @@ const SignUp: React.FC = () => {
                         )}
 
                         <form className="space-y-4" onSubmit={handleRegister}>
+                            
+                            {/* Account Type Selection - HIDDEN/REMOVED for Attorney Restriction */}
+                            {/* Inherently creating a FIRM (Admin) account now */}
+                            
+                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="text-blue-600 mt-1">
+                                        <BuildingIcon />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold text-blue-900">Creating a New Firm</h3>
+                                        <p className="text-xs text-blue-700 mt-1">
+                                            You are registering as a Firm Owner/Admin. You can invite your team members after creating your account.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">First Name</label>

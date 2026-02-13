@@ -9,9 +9,13 @@ const {
     rejectInvitation,
     removeMember,
     reassignCases,
-    updateSeats
+    updateSeats,
+    getPublicOrganizations
 } = require('../controllers/organizationController');
 const { protect } = require('../middlewares/authMiddleware');
+
+// Public list of organizations
+router.get('/public', getPublicOrganizations);
 
 // Organization info
 router.get('/', protect, getOrganization);
