@@ -169,10 +169,8 @@ const StartCase: React.FC = () => {
                 data.append('files', file);
             });
             
-            // Debug: Log FormData contents
-            for (const pair of data.entries()) {
-                console.log('FormData:', pair[0], pair[1]);
-            }
+
+
 
             await caseService.createCase(data);
             

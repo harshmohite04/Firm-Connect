@@ -29,7 +29,6 @@ app.use(
 );
 
 // Enhanced Helmet configuration with Content Security Policy
-// Enhanced Helmet configuration with Content Security Policy
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {

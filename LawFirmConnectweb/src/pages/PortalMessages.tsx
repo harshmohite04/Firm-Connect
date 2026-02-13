@@ -83,7 +83,6 @@ const PortalMessages: React.FC = () => {
         socketRef.current = io(import.meta.env.VITE_API_URL || 'http://localhost:5000'); // Ensure this matches your backend URL
 
         socketRef.current.on('connect', () => {
-            console.log('Socket connected');
             socketRef.current?.emit('join', userId);
         });
 
@@ -103,7 +102,7 @@ const PortalMessages: React.FC = () => {
         if (!socketRef.current) return;
 
         const listener = (message: any) => {
-            console.log('socket: newMessage received:', message);
+
             const currentContactId = selectedContactIdRef.current;
             
             // Normalize IDs to strings
@@ -206,7 +205,7 @@ const PortalMessages: React.FC = () => {
         try {
             // Use the new conversations API that returns last message + unread count
             const conversationsData = await messageService.getConversations();
-            console.log('fetched conversations:', conversationsData);
+
             
             const mappedConversations: Conversation[] = conversationsData.map((convo: any) => ({
                 contactId: convo.contactId,
@@ -227,7 +226,7 @@ const PortalMessages: React.FC = () => {
     };
 
     const handleSelectContact = async (contactId: string) => {
-        console.log('selecting contact:', contactId);
+
         setSelectedContactId(contactId);
         setActiveMessages([]); 
         
@@ -241,7 +240,7 @@ const PortalMessages: React.FC = () => {
         try {
             await messageService.markAsRead(contactId);
             const msgs = await messageService.getMessages(contactId);
-            console.log('fetched messages:', msgs);
+
             const formatted: Message[] = msgs.map((m: any) => ({
                 _id: m._id,
                 content: m.content,
@@ -261,7 +260,7 @@ const PortalMessages: React.FC = () => {
 
         try {
             const sentMsg = await messageService.sendMessage(selectedContactId, inputMessage);
-            console.log('message sent response:', sentMsg);
+
             
             // Manually append to UI for immediate feedback
             const formattedMsg: Message = {

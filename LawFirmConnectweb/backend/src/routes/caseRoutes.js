@@ -18,13 +18,7 @@ const fileUpload = require('../middlewares/fileUpload');
 // Main Case Routes
 router.route('/')
     .get(protect, getCases)
-    .post((req, res, next) => {
-        console.log('Request HIT /cases POST route');
-        next();
-    }, protect, fileUpload.array('files'), (req, res, next) => {
-        console.log('Passed middleware, entering controller');
-        createCase(req, res, next);
-    });
+    .post(protect, fileUpload.array('files'), createCase);
 
 router.route('/:id')
     .get(protect, getCaseById)

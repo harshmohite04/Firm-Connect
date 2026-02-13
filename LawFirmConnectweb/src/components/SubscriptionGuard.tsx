@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import api from '../services/api';
 import axios from 'axios';
 
 interface User {
@@ -16,12 +17,12 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     const location = useLocation();
 
     useEffect(() => {
-        console.log('SubscriptionGuard: MOUNTED');
+
         const checkSubscription = async () => {
             try {
                 const userInfo = localStorage.getItem('user');
                 if (!userInfo) {
-                    console.log('SubscriptionGuard: No user in localStorage, redirecting to pricing');
+
                     setHasAccess(false);
                     setLoading(false);
                     return;
@@ -29,15 +30,13 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
 
                 const { token } = JSON.parse(userInfo);
                 if (!token) {
-                    console.log('SubscriptionGuard: No token found, redirecting to pricing');
+
                     setHasAccess(false);
                     setLoading(false);
                     return;
                 }
 
-                const { data } = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/auth/me`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                const { data } = await api.get('/auth/me');
 
                 const user: User = data;
                 
@@ -45,13 +44,13 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                 // 1. Check for Admin Domain Bypass (@harsh.com)
                 // If this is true, you get access immediately.
                 if (user.email && user.email.toLowerCase().endsWith('@harsh.com')) {
-                    console.log('SubscriptionGuard: Access granted via @harsh.com domain bypass');
+
                     setHasAccess(true);
                 } 
                 // 2. Check Valid Subscription (For everyone else)
                 // If status is 'ACTIVE' AND expiration date is in the future.
                 else if (user.subscriptionStatus === 'ACTIVE' && new Date(user.subscriptionExpiresAt) > new Date()) {
-                    console.log('SubscriptionGuard: Access granted via active subscription');
+
                     setHasAccess(true);
                 } 
                 // 3. No Access
@@ -62,7 +61,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                     setHasAccess(false);
                 }
 
-                console.log('Subscription Check:', { email: user.email, status: user.subscriptionStatus, expires: user.subscriptionExpiresAt });
+
 
             } catch (error: any) {
                 console.error('Subscription check failed:', error);

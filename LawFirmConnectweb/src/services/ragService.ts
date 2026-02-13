@@ -1,22 +1,5 @@
 import axios from "axios";
-
-const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
-
-// Helper to get auth headers
-const getAuthHeaders = () => {
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.token) {
-        return { Authorization: `Bearer ${user.token}` };
-      }
-    } catch (e) {
-      console.error("Error parsing user from localStorage", e);
-    }
-  }
-  return {};
-};
+import { RAG_API_URL, getAuthHeaders } from "./ragApi";
 
 const ragService = {
   /**

@@ -65,8 +65,6 @@ const getCases = async (req, res, next) => {
 const createCase = async (req, res, next) => {
     try {
         const { title, description, legalMatter, assignedLawyers } = req.body;
-        console.log('Backend createCase - req.files:', req.files);
-        console.log('Backend createCase - req.body keys:', Object.keys(req.body));
 
         let documents = [];
         if (req.files) {

@@ -11,7 +11,6 @@ const useS3 = process.env.USE_S3 === 'true';
 let storage;
 
 if (useS3) {
-    console.log('Using AWS S3 Storage');
     const s3 = new S3Client({
         region: process.env.AWS_REGION,
         credentials: {
@@ -31,7 +30,6 @@ if (useS3) {
         }
     });
 } else {
-    console.log('Using Local Disk Storage (uploads/)');
     storage = multer.diskStorage({
         destination(req, file, cb) {
             cb(null, 'uploads/');

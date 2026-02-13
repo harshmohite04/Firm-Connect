@@ -1,8 +1,6 @@
 import axios from "axios";
-// Assuming types are defined or inferred
 import api from "./api";
-// or just:
-// import api from './api';
+import { RAG_API_URL, getAuthHeaders } from "./ragApi";
 
 export interface Case {
   _id: string;
@@ -164,30 +162,6 @@ const updateCaseSettings = async (id: string, updates: any): Promise<Case> => {
 
 // -- Investigator Agent --
 
-// Note: This calls the Python server (port 8000) directly or via proxy if configured.
-// However, the current setup seems to have two backends: Node/Express (port 5000) and Python (port 8000).
-// 'api' instance likely points to Node backend.
-// checking ragService.ts, it uses direct axios call to 8000 for AI stuff.
-// So we should do the same here.
-
-const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
-
-// Helper to get auth headers for Python backend
-const getAuthHeaders = () => {
-  const userStr = localStorage.getItem("user");
-  if (userStr) {
-    try {
-      const user = JSON.parse(userStr);
-      if (user.token) {
-        return { Authorization: `Bearer ${user.token}` };
-      }
-    } catch (e) {
-      console.error("Error parsing user from localStorage", e);
-    }
-  }
-  return {};
-};
-
 export interface InvestigationFact {
   id: string;
   description: string;
@@ -348,15 +322,6 @@ const generateDocument = async (
   caseId: string,
   instructions: string,
 ): Promise<string> => {
-  // using raw axios or api instance. server.py has /generate-document
-  // server.py runs on 8000, but caseService seems to use api instance which might point to 5000 (node backend)?
-  // Wait, the python server is likely the one with RAG.
-  // server.py is FastAPI on 8000.
-  // createCase uses localhost:5000.
-  // I need to hit the Python server for RAG.
-
-  // server.py has: @app.post("/generate-document")
-
   const response = await axios.post(
     `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/generate-document`,
     {
