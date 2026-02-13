@@ -743,6 +743,12 @@ const InvestigatorAgent: React.FC = () => {
                             <textarea
                                 value={focusText}
                                 onChange={(e) => setFocusText(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') {
+                                        setShowFocus(false);
+                                        (e.target as HTMLTextAreaElement).blur();
+                                    }
+                                }}
                                 placeholder={"Enter questions to focus the investigation (one per line):\n\u2022 Was there a breach of contract?\n\u2022 What are the payment discrepancies?"}
                                 className="w-full rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2"
                                 style={viewMode === 'intel' && (report || loading)

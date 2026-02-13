@@ -43,6 +43,16 @@ const CaseBilling: React.FC = () => {
         }
     }, [id]);
 
+    // ESC key to close expense modal
+    useEffect(() => {
+        if (!showExpenseModal) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setShowExpenseModal(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showExpenseModal]);
+
     const loadBilling = async () => {
         try {
             if(!id) return;
@@ -159,8 +169,8 @@ const CaseBilling: React.FC = () => {
 
                 {/* Add Expense Modal */}
                 {showExpenseModal && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowExpenseModal(false)}>
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
                         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                             <h3 className="font-bold text-lg text-slate-900">Add New Expense</h3>
                             <button onClick={() => setShowExpenseModal(false)} className="text-slate-400 hover:text-slate-600">
