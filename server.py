@@ -44,6 +44,29 @@ from utils.error_handler import (
     log_security_event,
     logger
 )
+import asyncio
+
+async def _run_ingestion_background(
+    ingest_fn, db_case_id, db_filename, document_status_collection, logger, **kwargs
+):
+    """Run ingestion in the background and update document status on completion/failure."""
+    try:
+        # Run the synchronous ingest_document function in a separate thread
+        await asyncio.to_thread(ingest_fn, **kwargs)
+        
+        # Update status to Ready upon success
+        document_status_collection.update_one(
+            {"case_id": db_case_id, "filename": db_filename},
+            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
+        )
+        logger.info(f"Background ingestion complete: {db_filename} for case {db_case_id}")
+    except Exception as e:
+        logger.error(f"Background ingestion failed for {db_filename}: {e}", exc_info=True)
+        # Update status to Failed upon error
+        document_status_collection.update_one(
+            {"case_id": db_case_id, "filename": db_filename},
+            {"$set": {"status": "Failed", "error": str(e)[:200], "last_updated": datetime.utcnow()}}
+        )
 
 generator = DocumentGenerator()
 
@@ -179,6 +202,10 @@ class SaveDocumentRequest(BaseModel):
     caseId: str
     filename: str
     content: str
+
+class RetryIngestRequest(BaseModel):
+    caseId: str
+    filename: str
 
 class ConversationalDraftRequest(BaseModel):
     caseId: str
@@ -573,15 +600,21 @@ async def ingest_file(
                             text = "\n".join(p.get("text", "") for p in page_data)
 
                             if text.strip():
-                                ingest_document(text, source_name=extracted_safe_name, case_id=caseId, page_metadata=page_data)
+                                # Start background ingestion
+                                asyncio.create_task(_run_ingestion_background(
+                                    ingest_document, 
+                                    caseId, 
+                                    extracted_safe_name, 
+                                    document_status_collection, 
+                                    logger,
+                                    text=text, 
+                                    source_name=extracted_safe_name, 
+                                    case_id=caseId, 
+                                    page_metadata=page_data
+                                ))
                                 
-                                # Set status to Ready
-                                document_status_collection.update_one(
-                                    {"case_id": caseId, "filename": extracted_safe_name},
-                                    {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
-                                )
                                 ingested_files.append(extracted_safe_name)
-                                logger.info(f"Ingested from zip: {extracted_safe_name}")
+                                logger.info(f"Started background ingestion for zip entry: {extracted_safe_name}")
                             else:
                                 document_status_collection.update_one(
                                     {"case_id": caseId, "filename": extracted_safe_name},
@@ -598,8 +631,8 @@ async def ingest_file(
                             failed_files.append(extracted_safe_name)
             
             return {
-                "status": "success",
-                "message": f"Zip extracted and processed",
+                "status": "processing",
+                "message": f"Zip extracted. AI ingestion started in background.",
                 "ingested_files": ingested_files,
                 "failed_files": failed_files,
                 "caseId": caseId
@@ -642,20 +675,29 @@ async def ingest_file(
                 )
 
             # Ingest with page metadata
-            ingest_document(text, source_name=safe_filename, case_id=caseId, page_metadata=page_data)
+            # Ingest with page metadata in BACKGROUND
+            # We already set status to "Processing" above.
             
-            # Set status to Ready
-            document_status_collection.update_one(
-                {"case_id": caseId, "filename": safe_filename},
-                {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
-            )
+            # Start background task
+            asyncio.create_task(_run_ingestion_background(
+                ingest_document, 
+                caseId, 
+                safe_filename, 
+                document_status_collection, 
+                logger,
+                text=text, 
+                source_name=safe_filename, 
+                case_id=caseId, 
+                page_metadata=page_data
+            ))
             
-            logger.info(f"File ingested: {safe_filename} for case {caseId} by user {user_id}")
+            logger.info(f"Started background ingestion: {safe_filename} for case {caseId}")
             
             return {
-                "status": "success", 
+                "status": "processing", 
                 "filename": safe_filename, 
-                "caseId": caseId
+                "caseId": caseId,
+                "message": "File uploaded. AI ingestion processing in background."
             }
 
     except HTTPException:
@@ -815,17 +857,25 @@ async def save_document_endpoint(
             upsert=True
         )
 
-        ingest_document(body.content, source_name=safe_filename, case_id=body.caseId)
+        # Start background ingestion
+        asyncio.create_task(_run_ingestion_background(
+            ingest_document, 
+            body.caseId, 
+            safe_filename, 
+            document_status_collection, 
+            logger,
+            text=body.content, 
+            source_name=safe_filename, 
+            case_id=body.caseId
+        ))
         
-        # Set status to Ready
-        document_status_collection.update_one(
-            {"case_id": body.caseId, "filename": safe_filename},
-            {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
-        )
+        logger.info(f"Document saved, background ingestion started: {safe_filename}")
 
-        logger.info(f"Document saved: {safe_filename} for case {body.caseId} by user {user_id}")
-
-        return {"status": "success", "filename": safe_filename}
+        return {
+            "status": "processing", 
+            "filename": safe_filename,
+            "message": "Document saved. AI ingestion processing in background."
+        }
 
     except HTTPException:
         raise
@@ -837,6 +887,67 @@ async def save_document_endpoint(
                 {"$set": {"status": "Failed", "error": "Processing failed", "last_updated": datetime.utcnow()}}
             )
         raise HTTPException(status_code=500, detail="Failed to save document")
+
+
+@app.post("/retry-ingest")
+@limiter.limit("10/minute")
+async def retry_ingest(
+    request: Request,
+    body: RetryIngestRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    try:
+        validate_case_id(body.caseId)
+        safe_filename = sanitize_filename(body.filename)
+        
+        # Check if file exists
+        file_path = f"documents/{safe_filename}"
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on server")
+            
+        # Read content
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except:
+            # Maybe binary? But we only ingest text...
+            # For now try reading as binary and decoding with error ignore
+             with open(file_path, "rb") as f:
+                content = f.read().decode("utf-8", errors="ignore")
+
+        # Set status to Processing
+        document_status_collection.update_one(
+            {"case_id": body.caseId, "filename": safe_filename},
+            {
+                "$set": {
+                    "status": "Processing",
+                    "last_updated": datetime.utcnow()
+                }
+            },
+            upsert=True
+        )
+
+        # Start background ingestion
+        asyncio.create_task(_run_ingestion_background(
+            ingest_document, 
+            body.caseId, 
+            safe_filename, 
+            document_status_collection, 
+            logger,
+            text=content, 
+            source_name=safe_filename, 
+            case_id=body.caseId
+        ))
+        
+        logger.info(f"Retry ingestion started: {safe_filename}")
+        
+        return {"status": "processing", "message": "Result initiated in background"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Retry ingestion error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to retry ingestion")
 
 
 @app.get("/health")
