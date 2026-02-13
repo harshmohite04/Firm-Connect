@@ -58,8 +58,9 @@ export interface BillingRecord {
 
 // -- Main Case Endpoints --
 
-const getCases = async (): Promise<Case[]> => {
-  const response = await api.get("/cases");
+const getCases = async (userId?: string): Promise<Case[]> => {
+  const url = userId ? `/cases?userId=${userId}` : "/cases";
+  const response = await api.get(url);
   return response.data;
 };
 
@@ -281,8 +282,8 @@ const runInvestigationStream = (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...headers,
-    },
+      ...(headers || {}),
+    } as HeadersInit,
     body: JSON.stringify({ caseId, focusQuestions }),
     signal: controller.signal,
   })

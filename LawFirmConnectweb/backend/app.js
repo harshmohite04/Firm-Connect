@@ -66,6 +66,7 @@ app.use('/schedule', scheduleRoutes);
 app.use('/messages', messageRoutes);
 app.use('/contact', contactRoutes);
 app.use('/team', teamRoutes);
+app.use('/organization', require('./src/routes/organizationRoutes'));
 app.use('/payments', require('./src/routes/paymentRoutes'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

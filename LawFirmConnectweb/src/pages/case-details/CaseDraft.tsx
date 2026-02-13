@@ -257,7 +257,7 @@ const CaseDraft: React.FC = () => {
         try {
             await caseService.saveGeneratedDocument(caseData._id, filename, documentContent);
             setShowSaveModal(false);
-            toast.success('Document saved and ingested successfully!');
+            toast.success('Document saved! AI processing will complete shortly in the background.');
             navigate('../documents');
         } catch (error) {
             console.error('Save failed', error);

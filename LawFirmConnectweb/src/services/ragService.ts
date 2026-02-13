@@ -59,6 +59,23 @@ const ragService = {
   },
 
   /**
+   * Retries ingestion for a document.
+   */
+  retryIngest: async (caseId: string, filename: string) => {
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/retry-ingest`,
+        { caseId, filename },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Retry ingest failed", error);
+      throw error;
+    }
+  },
+
+  /**
    * Sends a chat message to the RAG system.
    * (Replaces direct axios calls in CaseChat.tsx for cleaner code)
    */

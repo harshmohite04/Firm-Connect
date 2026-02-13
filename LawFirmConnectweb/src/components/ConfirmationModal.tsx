@@ -38,6 +38,23 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         }
     }, [isOpen]);
 
+    // Keyboard support: ESC to close, Enter to confirm
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                onConfirm();
+                onClose();
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose, onConfirm]);
+
     if (!shouldRender) return null;
 
     // Determine type for styling, prioritizing 'type' prop but falling back to 'isDanger'

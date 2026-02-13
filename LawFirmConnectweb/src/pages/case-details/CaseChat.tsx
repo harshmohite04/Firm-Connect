@@ -65,6 +65,7 @@ const CaseChat: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = useState(true);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const creatingSessionRef = useRef(false); // Guard against double session creation
 
     // Selection & Sources State
     const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
@@ -83,8 +84,7 @@ const CaseChat: React.FC = () => {
     const selectionRef = useRef<HTMLElement | null>(null); // ref for blue selection highlight
     const docViewerRef = useRef<HTMLDivElement>(null);
 
-    // Highlighted citation index
-    const [highlightedCitation, setHighlightedCitation] = useState<number | null>(null);
+
 
     // Jaccard similarity
     const computeJaccard = (textA: string, textB: string): number => {
@@ -97,23 +97,50 @@ const CaseChat: React.FC = () => {
         return intersection / (setA.size + setB.size - intersection);
     };
 
+    // Helper: find the next "Chat N" number from a list of sessions
+    const getNextChatNumber = (existingSessions: Session[]): number => {
+        let maxNum = 0;
+        existingSessions.forEach(s => {
+            const match = s.title.match(/^Chat\s+(\d+)$/i);
+            if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNum) maxNum = num;
+            }
+        });
+        return maxNum + 1;
+    };
+
     // ---- Sessions ----
     useEffect(() => {
+        let cancelled = false;
         const loadSessions = async () => {
             if (!caseData?._id) return;
             try {
                 const fetchedSessions = await ragService.getSessions(caseData._id);
+                if (cancelled) return;
                 if (fetchedSessions && fetchedSessions.length > 0) {
                     setSessions(fetchedSessions);
                     setCurrentSessionId(fetchedSessions[0].session_id);
                 } else {
-                    await handleCreateSession();
+                    // Create first session inline (guarded against StrictMode double-run)
+                    if (creatingSessionRef.current) return;
+                    creatingSessionRef.current = true;
+                    try {
+                        const newSession = await ragService.createSession(caseData._id, 'Chat 1');
+                        if (cancelled) return;
+                        setSessions([newSession]);
+                        setCurrentSessionId(newSession.session_id);
+                        setMessages([]);
+                    } finally {
+                        creatingSessionRef.current = false;
+                    }
                 }
             } catch (error) {
                 console.error("Error loading sessions", error);
             }
         };
         loadSessions();
+        return () => { cancelled = true; };
     }, [caseData._id]);
 
     useEffect(() => {
@@ -144,14 +171,20 @@ const CaseChat: React.FC = () => {
     }, [currentSessionId, caseData._id]);
 
     const handleCreateSession = async () => {
-        if (!caseData?._id) return;
+        if (!caseData?._id || creatingSessionRef.current) return;
+        creatingSessionRef.current = true;
         try {
-            const newSession = await ragService.createSession(caseData._id, `Chat ${sessions.length + 1}`);
-            setSessions([newSession, ...sessions]);
+            // Re-fetch sessions from server to get the true latest list
+            const latestSessions = await ragService.getSessions(caseData._id);
+            const nextNum = getNextChatNumber(latestSessions || []);
+            const newSession = await ragService.createSession(caseData._id, `Chat ${nextNum}`);
+            setSessions(prev => [newSession, ...prev]);
             setCurrentSessionId(newSession.session_id);
             setMessages([]);
         } catch (error) {
             console.error("Failed to create session", error);
+        } finally {
+            creatingSessionRef.current = false;
         }
     };
 
@@ -640,8 +673,6 @@ const CaseChat: React.FC = () => {
                                                                             key={i}
                                                                             className="inline-flex items-center justify-center w-5 h-5 mx-0.5 rounded bg-blue-100 text-blue-700 text-[10px] font-bold cursor-pointer hover:bg-blue-600 hover:text-white transition-colors align-super"
                                                                             title={citCtx ? `Source: ${citCtx.source || 'Unknown'}` : `Citation ${citNum}`}
-                                                                            onMouseEnter={() => setHighlightedCitation(citNum)}
-                                                                            onMouseLeave={() => setHighlightedCitation(null)}
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 if (msg.contexts) openSourcesPanel(msg.contexts);

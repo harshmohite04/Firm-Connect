@@ -20,10 +20,15 @@ const caseSchema = new mongoose.Schema({
         enum: ['Family Law', 'Corporate', 'Real Estate', 'Litigation', 'Other'],
         required: true
     },
-    clientId: {
+    createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    organizationId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        default: null
     },
     assignedLawyers: [{
         type: mongoose.Schema.Types.ObjectId,
@@ -42,11 +47,7 @@ const caseSchema = new mongoose.Schema({
         fileSize: { type: Number },
         recordStatus: { type: Number, enum: [0, 1], default: 1 }
     }],
-    teamType: {
-        type: String,
-        enum: ['solo', 'team'],
-        default: 'solo'
-    },
+
     leadAttorneyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

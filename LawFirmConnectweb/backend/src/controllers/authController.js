@@ -6,6 +6,8 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
 const { logLoginAttempt, logAccountLockout, logRegistration, getClientIp } = require('../utils/auditLogger');
+const Organization = require('../models/Organization');
+const TeamInvitation = require('../models/TeamInvitation'); // Added if we need it, though we might just push to members array directly
 
 // Environment-based toggle for email verification
 // const REQUIRE_EMAIL_VERIFICATION = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
@@ -27,7 +29,7 @@ const registerUser = async (req, res, next) => {
             });
         }
 
-        const { firstName, lastName, phone, email, password } = req.body;
+        const { firstName, lastName, phone, email, password, accountType, organizationId } = req.body;
         const clientIp = getClientIp(req);
 
         const userExists = await User.findOne({ $or: [{ email }, { phone }] });
@@ -39,6 +41,10 @@ const registerUser = async (req, res, next) => {
 
         // Set status based on verification requirement
         const initialStatus = 'VERIFIED';
+        
+        // Determine Role
+        // If accountType is 'FIRM', role is ADMIN. Default is ATTORNEY.
+        const role = accountType === 'FIRM' ? 'ADMIN' : 'ATTORNEY';
 
         const user = await User.create({
             firstName,
@@ -46,6 +52,7 @@ const registerUser = async (req, res, next) => {
             phone,
             email,
             password,
+            role,
             status: initialStatus,
             // Auto-activate for @harsh.com
             subscriptionStatus: email.toLowerCase().endsWith('@harsh.com') ? 'ACTIVE' : 'INACTIVE',
@@ -54,17 +61,62 @@ const registerUser = async (req, res, next) => {
         });
 
         if (user) {
+            // Case 1: USER CREATING A FIRM
+            // Only auto-create org for @harsh.com users (who bypass payment).
+            // All other ADMIN users must go through the Pricing page to pay and create their org.
+            if (role === 'ADMIN' && email.toLowerCase().endsWith('@harsh.com')) {
+                const org = await Organization.create({
+                    name: `${firstName}'s Law Firm`, // Default name
+                    ownerId: user._id,
+                    plan: 'STARTER', 
+                    maxSeats: 2, 
+                    members: [{
+                        userId: user._id,
+                        role: 'ADMIN',
+                        status: 'ACTIVE',
+                        joinedAt: new Date()
+                    }],
+                    subscriptionStatus: user.subscriptionStatus, 
+                    subscriptionExpiresAt: user.subscriptionExpiresAt
+                });
+
+                user.organizationId = org._id;
+                await user.save();
+            }
+            // Case 2: USER JOINING A FIRM (ATTORNEY)
+            else if (role === 'ATTORNEY' && organizationId) {
+                const org = await Organization.findById(organizationId);
+                if (org) {
+                    // Check if seats available (Optional: enforce strict, or allow pending even if full?)
+                    // Let's allow adding as PENDING even if full, Admin resolves it later.
+                    
+                    // Add to organization members list as PENDING
+                    org.members.push({
+                        userId: user._id,
+                        role: 'ATTORNEY',
+                        status: 'PENDING', // Admin must approve
+                        joinedAt: new Date()
+                    });
+                    await org.save();
+                    
+                    // We DO NOT set user.organizationId yet. 
+                    // It stays null until Admin approves (Active status).
+                }
+            }
+
             // Log successful registration
             logRegistration(email, user._id.toString(), clientIp);
 
-            // Auto-verified for development
             res.status(201).json({
                 _id: user._id,
                 firstName: user.firstName,
                 email: user.email,
                 role: user.role,
+                organizationId: user.organizationId,
                 token: generateToken(user._id),
-                msg: 'User registered successfully.'
+                msg: role === 'ATTORNEY' && organizationId 
+                    ? 'Account created. Your request to join the firm is pending approval.' 
+                    : 'User registered successfully.'
             });
         } else {
             res.status(400);
@@ -145,9 +197,6 @@ const loginUser = async (req, res, next) => {
                  user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
             }
             await user.save();
-            
-            // Re-fetch to ensure we have latest data
-            // (Mongoose usually updates the object but to be safe)
         }
 
         res.json({
@@ -156,7 +205,8 @@ const loginUser = async (req, res, next) => {
             lastName: user.lastName,
             email: user.email,
             role: user.role,
-            subscriptionStatus: user.subscriptionStatus, // Return status
+            organizationId: user.organizationId,
+            subscriptionStatus: user.subscriptionStatus,
             token: generateToken(user._id)
         });
 
@@ -185,6 +235,7 @@ const getCurrentUser = async (req, res, next) => {
             email: user.email,
             phone: user.phone,
             role: user.role,
+            organizationId: user.organizationId,
             subscriptionStatus: user.subscriptionStatus,
             subscriptionPlan: user.subscriptionPlan,
             subscriptionExpiresAt: user.subscriptionExpiresAt

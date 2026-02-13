@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 
 const teamInvitationSchema = new mongoose.Schema({
-    caseId: {
+    organizationId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Case',
+        ref: 'Organization',
         required: true
     },
     invitedBy: {
@@ -21,7 +21,7 @@ const teamInvitationSchema = new mongoose.Schema({
     invitedUserId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        default: null
     },
     status: {
         type: String,

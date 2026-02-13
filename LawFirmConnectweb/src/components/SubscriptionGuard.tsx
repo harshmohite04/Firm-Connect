@@ -41,23 +41,28 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
 
                 const user: User = data;
                 
-                // VALIDATION LOGIC STARTS HERE
+                // VALIDATION LOGIC
                 // 1. Check for Admin Domain Bypass (@harsh.com)
-                // If this is true, you get access immediately.
                 if (user.email && user.email.toLowerCase().endsWith('@harsh.com')) {
                     console.log('SubscriptionGuard: Access granted via @harsh.com domain bypass');
                     setHasAccess(true);
                 } 
-                // 2. Check Valid Subscription (For everyone else)
-                // If status is 'ACTIVE' AND expiration date is in the future.
+                // 2. Check Valid Subscription (Admin who purchased a plan)
                 else if (user.subscriptionStatus === 'ACTIVE' && new Date(user.subscriptionExpiresAt) > new Date()) {
                     console.log('SubscriptionGuard: Access granted via active subscription');
                     setHasAccess(true);
-                } 
-                // 3. No Access
+                }
+                // 3. Check Firm Membership (Attorney invited to a paid firm)
+                // Only ATTORNEYs get org-based access (they were invited by a paying admin).
+                // ADMINs must have an active subscription (checked in step 2).
+                else if ((data as any).organizationId && (data as any).role === 'ATTORNEY') {
+                    console.log('SubscriptionGuard: Access granted via organization membership (ATTORNEY)');
+                    setHasAccess(true);
+                }
+                // 4. No Access
                 else {
                     console.warn('SubscriptionGuard: Access DENIED. User:', user);
-                    const errorMsg = `Access Denied. Email: ${user.email}, Status: ${user.subscriptionStatus}, Expires: ${user.subscriptionExpiresAt}`;
+                    const errorMsg = `You need an active subscription or firm membership to access the portal.`;
                     setAccessError(errorMsg);
                     setHasAccess(false);
                 }
@@ -85,7 +90,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
     }
 
     if (!hasAccess) {
-        return <Navigate to="/pricing" state={{ from: location, error: accessError }} replace />;
+        return <Navigate to="/pricing" state={{ from: location, needsSubscription: true, error: accessError }} replace />;
     }
 
     return <>{children}</>;

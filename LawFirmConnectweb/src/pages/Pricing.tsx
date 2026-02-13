@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, Rocket, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -16,9 +16,12 @@ const Pricing: React.FC = () => {
     const location = useLocation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showWelcome, setShowWelcome] = useState(false);
 
     React.useEffect(() => {
-        if (location.state?.error) {
+        if (location.state?.needsSubscription) {
+            setShowWelcome(true);
+        } else if (location.state?.error) {
             setError(location.state.error);
         }
     }, [location.state]);
@@ -57,33 +60,49 @@ const Pricing: React.FC = () => {
         try {
             setLoading(true);
             setError(null);
-            
+
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
             const token = user?.token;
 
             if (!token) {
-                // Redirect to login with return path
                 navigate('/signin', { state: { from: { pathname: '/pricing' } } });
                 return;
             }
 
-            // 1. Create Order
-            const { data: orderData } = await axios.post(
-                `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/create-order`,
-                { planId: plan.id, amount: plan.price },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+            const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-            if (!orderData.success) {
-                setError('Failed to initiate payment');
-                setLoading(false);
+            // @harsh.com users bypass payment
+            if (user.email && user.email.endsWith('@harsh.com')) {
+                const { data } = await axios.post(
+                    `${apiUrl}/payments/test-activate`,
+                    { planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                    authHeader
+                );
+
+                if (data.success) {
+                    user.role = data.user.role;
+                    user.organizationId = data.user.organizationId;
+                    user.subscriptionStatus = data.user.subscriptionStatus;
+                    localStorage.setItem('user', JSON.stringify(user));
+                    navigate('/portal');
+                } else {
+                    setError('Activation failed');
+                }
                 return;
             }
 
-            // 2. Open Razorpay Modal
+            // All other users go through Razorpay payment
+            const { data: orderData } = await axios.post(
+                `${apiUrl}/payments/create-order`,
+                { planId: plan.id, amount: plan.price },
+                authHeader
+            );
+            if (!orderData.success) { setError('Failed to initiate payment'); setLoading(false); return; }
+
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID, 
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.order.amount,
                 currency: "INR",
                 name: "LawfirmAI",
@@ -91,45 +110,40 @@ const Pricing: React.FC = () => {
                 order_id: orderData.order.id,
                 handler: async function (response: any) {
                     try {
-                        // 3. Verify Payment
                         const verifyRes = await axios.post(
-                            `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/payments/verify`,
-                            {
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                planId: plan.id
-                            },
-                            { headers: { Authorization: `Bearer ${token}` } }
+                            `${apiUrl}/payments/verify`,
+                            { ...response, planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                            authHeader
                         );
-
                         if (verifyRes.data.success) {
-                            // Payment Successful
+                            user.role = 'ADMIN';
+                            user.subscriptionStatus = 'ACTIVE';
+                            localStorage.setItem('user', JSON.stringify(user));
                             navigate('/portal');
                         } else {
-                            setError('Payment Verification Failed');
+                            setError('Payment verification failed');
                         }
-                    } catch (error) {
-                        console.error(error);
-                        setError('Payment Verification Error');
+                    } catch {
+                        setError('Payment verification failed');
+                    } finally {
+                        setLoading(false);
                     }
                 },
-                prefill: {
-                    name: "User Name", // Should fetch from user profile
-                    email: "user@example.com",
-                    contact: "9999999999"
-                },
-                theme: {
-                    color: "#4F46E5"
+                prefill: { name: `${user.firstName} ${user.lastName || ''}`.trim(), email: user.email },
+                theme: { color: "#4F46E5" },
+                modal: {
+                    ondismiss: function () {
+                        setLoading(false);
+                    }
                 }
             };
-
             const rzp1 = new window.Razorpay(options);
             rzp1.open();
+            return; // loading will be cleared by handler or ondismiss
 
         } catch (error) {
             console.error('Payment Error:', error);
-            setError('Something went wrong during payment initialization');
+            setError('Something went wrong during payment. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -140,45 +154,69 @@ const Pricing: React.FC = () => {
             <Navbar />
             
             <div className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8">
-                {error && (
-                     <div className="max-w-7xl mx-auto mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-md shadow-sm">
-                        <div className="flex">
-                            <div className="flex-shrink-0">
-                                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
+                {/* Conversion-focused welcome banner for redirected users */}
+                {showWelcome && (
+                    <div className="max-w-3xl mx-auto mb-10 relative overflow-hidden rounded-2xl shadow-lg border border-indigo-100">
+                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50"></div>
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-100 rounded-full -translate-y-1/2 translate-x-1/2 opacity-40"></div>
+                        <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-100 rounded-full translate-y-1/2 -translate-x-1/2 opacity-40"></div>
+                        <button
+                            onClick={() => setShowWelcome(false)}
+                            className="absolute top-4 right-4 z-10 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-all"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                        <div className="relative px-8 py-8 flex flex-col items-center text-center">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md mb-5">
+                                <Rocket className="w-7 h-7 text-white" />
                             </div>
-                            <div className="ml-3 flex-1">
-                                <p className="text-sm font-medium text-red-800">
-                                    Access Denied
-                                </p>
-                                <p className="mt-1 text-sm text-red-700">
-                                    {error}
-                                </p>
-                            </div>
-                            <div className="ml-auto pl-3">
-                                <div className="-mx-1.5 -my-1.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => setError(null)}
-                                        className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
-                                    >
-                                        <span className="sr-only">Dismiss</span>
-                                        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
+                            <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                                You're almost there! 🎉
+                            </h3>
+                            <p className="mt-3 text-base text-slate-600 max-w-lg leading-relaxed">
+                                Your account is all set up. Choose a plan below to unlock the full power of <strong>LawfirmAI</strong> — AI-driven investigations, secure case management, and more.
+                            </p>
+                            <div className="mt-4 flex items-center gap-6 text-xs text-slate-500">
+                                <span className="flex items-center gap-1.5">
+                                    <CheckCircle className="w-4 h-4 text-emerald-500" /> Cancel anytime
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <CheckCircle className="w-4 h-4 text-emerald-500" /> Instant access
+                                </span>
+                                <span className="flex items-center gap-1.5">
+                                    <CheckCircle className="w-4 h-4 text-emerald-500" /> Secure payments
+                                </span>
                             </div>
                         </div>
                     </div>
                 )}
+
+                {/* Actual error banner (for payment failures, etc.) */}
+                {error && !showWelcome && (
+                    <div className="max-w-3xl mx-auto mb-8 bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                <svg className="h-4 w-4 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <p className="flex-1 text-sm font-medium text-red-800">{error}</p>
+                            <button onClick={() => setError(null)} className="p-1 rounded-full text-red-400 hover:text-red-600 hover:bg-red-100 transition-all">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="max-w-7xl mx-auto text-center">
                     <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
-                        Simple, Transparent Pricing
+                        {showWelcome ? 'Pick a Plan to Get Started' : 'Simple, Transparent Pricing'}
                     </h2>
                     <p className="mt-4 text-xl text-slate-600">
-                        Choose the plan that fits your firm's size and needs.
+                        {showWelcome
+                            ? 'Supercharge your legal practice with AI-powered tools.'
+                            : "Choose the plan that fits your firm's size and needs."
+                        }
                     </p>
                 </div>
 
