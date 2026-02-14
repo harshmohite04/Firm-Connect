@@ -282,7 +282,7 @@ const runInvestigationStream = (
     headers: {
       "Content-Type": "application/json",
       ...headers,
-    },
+    } as any,
     body: JSON.stringify({ caseId, focusQuestions }),
     signal: controller.signal,
   })

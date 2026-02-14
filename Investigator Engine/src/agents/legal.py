@@ -23,12 +23,12 @@ def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
 
     prompt = ChatPromptTemplate.from_template(
         """
-        You are a Legal Research Assistant.
-        Analyze the case facts and narrative to identify key Legal Issues.
+        You are a Legal Research Assistant specializing in INDIAN LAW.
+        Analyze the case facts and narrative to identify key Legal Issues under Indian Jurisdiction.
 
         Narrative: {narrative}
 
-        For each issue, cite RELEVANT LAWS (Mock them if needed, e.g. "Section X of Contract Act") and PRECEDENTS.
+        For each issue, cite RELEVANT INDIAN LAWS (e.g., "Section 420 of IPC", "Section 138 of NI Act", "Article 21 of Constitution") and relevant Supreme Court/High Court PRECEDENTS.
 
         return a list of "issues".
         Each issue has: "description", "relevant_laws" (list), "precedents" (list of case names).

@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
 
-const LogoIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    </svg>
-);
+
 
 const EyeIcon = () => (
     <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -31,6 +27,7 @@ const ShieldIcon = () => (
 
 const SignUp: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const navigate = useNavigate();
     
     const [formData, setFormData] = useState({
@@ -44,6 +41,22 @@ const SignUp: React.FC = () => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+
+    const location = useLocation();
+
+    // Check for persited data from SignIn
+    React.useEffect(() => {
+        if (location.state?.email || location.state?.password || location.state?.rememberMe !== undefined) {
+            setFormData(prev => ({
+                ...prev,
+                email: location.state?.email || prev.email,
+                password: location.state?.password || prev.password
+            }));
+            if (location.state?.rememberMe !== undefined) {
+                setRememberMe(location.state.rememberMe);
+            }
+        }
+    }, [location.state]);
 
     const getPasswordErrors = (password: string): string[] => {
         const errors: string[] = [];
@@ -79,6 +92,17 @@ const SignUp: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSignInClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        navigate('/signin', { 
+            state: { 
+                email: formData.email, 
+                password: formData.password,
+                rememberMe: rememberMe
+            } 
+        });
     };
 
     return (
@@ -187,7 +211,7 @@ const SignUp: React.FC = () => {
                             
                             <div className="text-center mt-6">
                                 <p className="text-sm text-slate-500">
-                                    Already have an account? <a href="/signin" className="font-bold text-blue-600 hover:text-blue-700">Log in</a>
+                                    Already have an account? <a href="/signin" onClick={handleSignInClick} className="font-bold text-blue-600 hover:text-blue-700">Log in</a>
                                 </p>
                             </div>
                         </form>

@@ -92,7 +92,7 @@ const loginUser = async (req, res, next) => {
             });
         }
 
-        const { email, password } = req.body;
+        const { email, password, rememberMe } = req.body;
         const clientIp = getClientIp(req);
 
         const user = await User.findOne({ email });
@@ -150,6 +150,9 @@ const loginUser = async (req, res, next) => {
             // (Mongoose usually updates the object but to be safe)
         }
 
+        // Determine token expiration
+        const expiresIn = rememberMe ? '30d' : '1d';
+
         res.json({
             _id: user._id,
             firstName: user.firstName,
@@ -157,7 +160,7 @@ const loginUser = async (req, res, next) => {
             email: user.email,
             role: user.role,
             subscriptionStatus: user.subscriptionStatus, // Return status
-            token: generateToken(user._id)
+            token: generateToken(user._id, expiresIn)
         });
 
     } catch (error) {

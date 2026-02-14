@@ -136,7 +136,7 @@ const ContactUs: React.FC = () => {
                                   <div className="flex gap-4">
                                      <div className="pt-1"><EmailIcon /></div>
                                      <div>
-                                         <div className="text-slate-500 text-sm">contact@lawfirmai.com</div>
+                                         <div className="text-slate-500 text-sm">contact@lawfirmai.in</div>
                                      </div>
                                  </div>
 

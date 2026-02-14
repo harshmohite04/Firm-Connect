@@ -245,7 +245,7 @@ export const dummyActivities = [
     date: "2023-10-23T16:30:00Z",
     user: "Opposing Counsel",
     meta: {
-      from: "opposing.counsel@lawfirmai.com",
+      from: "opposing.counsel@lawfirmai.in",
       snippet:
         '"We have reviewed your request for an extension and are willing to grant an additional 14 days provided that..."',
     },

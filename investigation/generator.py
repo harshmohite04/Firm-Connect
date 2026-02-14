@@ -46,23 +46,97 @@ Yours faithfully,
 {sender_credentials}""",
             
             "legal_notice": """LEGAL NOTICE
-
-Under Section {section} of {act}
+UNDER SECTION 80 CPC / SECTION 138 NI ACT
 
 To,
 {recipient_details}
 
-Notice is hereby served upon you on behalf of {client_name} regarding {matter}.
+SUBJECT: NOTICE UNDER SECTION {section} OF {act}
 
-{notice_body}
+Sir/Madam,
 
-Take notice that if the above demands are not complied with within {timeframe}, legal proceedings will be initiated without further reference.
+Under instructions from my client, {client_name}, I hereby serve you with the following legal notice:
+
+1. {fact_1}
+2. {fact_2}
+3. {fact_3}
+
+I hereby call upon you to {demand} within {timeframe} days from the receipt of this notice, failing which my client shall be constrained to initiate appropriate legal proceedings against you at your risk as to costs and consequences.
 
 Date: {date}
 Place: {place}
 
-{advocate_details}""",
-            
+(Signature)
+{advocate_name}
+Advocate""",
+
+            "vakalatnama": """VAKALATNAMA
+IN THE COURT OF {court_name} AT {place}
+SUIT / PETITION NO. ______ OF 20__
+
+{plaintiff_name} ... Plaintiff / Petitioner
+VERSUS
+{defendant_name} ... Defendant / Respondent
+
+I / We, {client_name}, the above named do hereby appoint and retain:
+
+{advocate_name}
+Advocate, High Court
+
+to appear, plead and act for me/us in the above matter, to file written statements, documents, and petitions, and to do all acts necessary for the prosecution/defense of this case.
+
+Dated this ___ day of _______, 20__.
+
+ACCEPTED                             EXECUTED
+(Advocate's Signature)               (Client's Signature)""",
+
+            "rti_application": """APPLICATION UNDER RIGHT TO INFORMATION ACT, 2005
+
+To,
+The Public Information Officer (PIO),
+{department_name},
+{address}
+
+1. Name of Applicant: {applicant_name}
+2. Address: {applicant_address}
+3. Particulars of Information Required:
+   (a) Subject matter of information: {subject}
+   (b) Period to which information relates: {period}
+   (c) Description of information required:
+       {details_of_info}
+
+4. Whether information is required by post or in person: {delivery_mode}
+5. In case by post, pay order number: {payment_details}
+
+Date: {date}
+Place: {place}
+
+(Signature of Applicant)""",
+
+            "bail_application": """IN THE COURT OF {judge_designation}, {place}
+BAIL APPLICATION NO. ______ OF 20__
+IN FIR NO. {fir_no} UNDER SECTION {sections} OF {police_station}
+
+{applicant_name} ... Applicant / Accused
+VERSUS
+State of {state} ... Respondent
+
+APPLICATION UNDER SECTION 437/439 OF CODE OF CRIMINAL PROCEDURE FOR GRANT OF BAIL
+
+MOST RESPECTFULLY SHOWETH:
+
+1. That the applicant has been falsely implicated in the above-mentioned case.
+2. That the applicant was arrested on {arrest_date} and is currently in judicial custody.
+3. That the investigation is complete / ongoing and no recovery is to be effected from the applicant.
+4. That the applicant undertakes to abide by all terms and conditions imposed by this Hon'ble Court.
+5. {additional_grounds}
+
+PRAYER
+It is therefore permitted that the applicant be released on bail in the interest of justice.
+
+(Counsel for Applicant)
+{advocate_name}""",
+
             "blank": ""  # Empty for blank documents
         }
 

@@ -24,7 +24,7 @@ const Hero: React.FC = () => {
                     <div className="max-w-2xl">
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 mb-6">
                              <span className="flex h-2 w-2 rounded-full bg-blue-600"></span>
-                             <span className="text-xs font-semibold text-blue-700 tracking-wide uppercase">Trusted Since 1995</span>
+                             <span className="text-xs font-semibold text-blue-700 tracking-wide uppercase">Trusted Since 2025</span>
                         </div>
                         
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-[1.15] mb-6 tracking-tight">

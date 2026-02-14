@@ -67,8 +67,8 @@ const Services: React.FC = () => {
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {services.map((service, index) => (
                         <div key={index} className="bg-white p-8 rounded-xl border border-slate-200 hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group cursor-pointer">
-                            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-600 transition-colors duration-300">
-                                <div className="group-hover:text-white transition-colors duration-300">
+                            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-6">
+                                <div>
                                     {service.icon}
                                 </div>
                             </div>

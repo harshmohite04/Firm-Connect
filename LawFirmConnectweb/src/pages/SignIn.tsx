@@ -5,11 +5,7 @@ import Logo from '../assets/logo.svg';
 
 // ... icons ...
 
-const LogoIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-  </svg>
-);
+
 
 const EyeIcon = () => (
     <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -32,6 +28,7 @@ const ShieldIcon = () => (
 
 const SignIn: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
@@ -48,13 +45,27 @@ const SignIn: React.FC = () => {
     // Get the previous path (if any) or default to /portal
     const from = location.state?.from?.pathname || '/portal';
 
+    // Check for persited data from SignUp
+    React.useEffect(() => {
+        if (location.state?.email || location.state?.password || location.state?.rememberMe !== undefined) {
+            setFormData(prev => ({
+                ...prev,
+                email: location.state?.email || prev.email,
+                password: location.state?.password || prev.password
+            }));
+            if (location.state?.rememberMe !== undefined) {
+                setRememberMe(location.state.rememberMe);
+            }
+        }
+    }, [location.state]);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setIsLoading(true);
 
         try {
-            await authService.login(formData.email, formData.password);
+            await authService.login(formData.email, formData.password, rememberMe);
             // Redirect to previous page or portal
             navigate(from, { replace: true });
         } catch (err: any) {
@@ -63,6 +74,17 @@ const SignIn: React.FC = () => {
             setIsLoading(false);
         }
     }
+
+    const handleSignUpClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        navigate('/signup', { 
+            state: { 
+                email: formData.email, 
+                password: formData.password,
+                rememberMe: rememberMe
+            } 
+        });
+    };
 
     return (
         <div className="min-h-screen bg-slate-100 flex items-center justify-center p-14">
@@ -138,6 +160,8 @@ const SignIn: React.FC = () => {
                                         id="remember-me" 
                                         name="remember-me" 
                                         type="checkbox" 
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
                                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
                                     />
                                     <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-500">
@@ -166,7 +190,7 @@ const SignIn: React.FC = () => {
                             
                             <div className="text-center mt-6">
                                 <p className="text-sm text-slate-500">
-                                    First time here? <a href="/signup" className="font-bold text-blue-600 hover:text-blue-700">Activate your account</a>
+                                    First time here? <a href="/signup" onClick={handleSignUpClick} className="font-bold text-blue-600 hover:text-blue-700">Activate your account</a>
                                 </p>
                             </div>
                         </form>
