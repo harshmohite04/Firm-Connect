@@ -105,6 +105,24 @@ const CaseDraft: React.FC = () => {
         loadDraftSessions();
     }, [caseData._id]);
 
+    // ESC key to close modals
+    useEffect(() => {
+        if (!showAddDocumentModal && !showSaveModal) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (showSaveModal) setShowSaveModal(false);
+                if (showAddDocumentModal) {
+                    setShowAddDocumentModal(false);
+                    setIsCustomDocument(false);
+                    setCustomDocumentName('');
+                    setSelectedTemplate('');
+                }
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showAddDocumentModal, showSaveModal]);
+
     // Auto-scroll messages
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -271,7 +289,7 @@ const CaseDraft: React.FC = () => {
         try {
             await caseService.saveGeneratedDocument(caseData._id, filename, documentContent);
             setShowSaveModal(false);
-            toast.success('Document saved and ingested successfully!');
+            toast.success('Document saved! AI processing will complete shortly in the background.');
             navigate('../documents');
         } catch (error) {
             console.error('Save failed', error);
@@ -374,8 +392,8 @@ const CaseDraft: React.FC = () => {
 
                 {/* Add Document Modal */}
                 {showAddDocumentModal && (
-                    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => { setShowAddDocumentModal(false); setIsCustomDocument(false); setCustomDocumentName(''); setSelectedTemplate(''); }}>
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-slate-200">
                                 <h3 className="text-2xl font-bold text-slate-900">{t('portal.drafting.modalTitle')}</h3>
                                 <p className="text-sm text-slate-600 mt-1">{t('portal.drafting.modalSubtitle')}</p>
@@ -658,9 +676,9 @@ const CaseDraft: React.FC = () => {
 
             {/* Save Modal */}
             {showSaveModal && (
-                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md animate-in fade-in zoom-in-95 duration-200">
-                        <h3 className="text-xl font-bold text-slate-900 mb-4">{t('portal.drafting.saveModalTitle')}</h3>
+                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => setShowSaveModal(false)}>
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-slate-900 mb-4">Save Document</h3>
                         <div className="mb-6">
                             <label className="block text-sm font-bold text-slate-700 mb-2">{t('portal.drafting.filename')}</label>
                             <input

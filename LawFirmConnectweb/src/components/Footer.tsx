@@ -2,12 +2,6 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Logo from '../assets/logo.svg';
 
-const LogoIcon = () => (
-    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-white" stroke="currentColor" strokeWidth="2">
-        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-    </svg>
-);
-
 const Footer: React.FC = () => {
     const { t } = useTranslation();
 

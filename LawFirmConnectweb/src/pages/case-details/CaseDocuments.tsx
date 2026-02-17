@@ -100,30 +100,61 @@ const CaseDocuments: React.FC = () => {
             const statuses = await ragService.getDocumentStatuses(id);
             const statusMap: Record<string, string> = {};
             statuses.forEach((s: any) => {
+                // Python returns sanitized filenames as keys
                 statusMap[s.filename] = s.status;
             });
+            console.log("AI Status Map:", statusMap);
             setAiStatuses(statusMap);
         } catch (e) {
             console.error("Failed to fetch AI statuses", e);
         }
     };
 
+    // Helper to match Python's sanitize_filename logic
+    // Helper to match Python's sanitize_filename logic
+    const sanitizeFilename = (filePath: string) => {
+        if (!filePath) return '';
+        // Extract basename
+        const name = filePath.split(/[/\\]/).pop() || '';
+        // Remove non-alphanumeric, non-space, non-dot, non-hyphen (Python: re.sub(r'[^\w\s.-]', '', filename))
+        const sanitized = name.replace(/[^\w\s.-]/g, '');
+        console.log(`[Sanitize] ${filePath} -> ${name} -> ${sanitized}`);
+        return sanitized;
+    };
 
+    const handleRetryIngest = async (doc: any) => {
+        const filename = sanitizeFilename(doc.filePath);
+        try {
+            toast.loading("Retrying ingestion...");
+            await ragService.retryIngest(id!, filename);
+            toast.dismiss();
+            toast.success("Retry started. AI is processing in background.");
+            // Immediate refresh to show Processing
+            setAiStatuses(prev => ({ ...prev, [filename]: 'Processing' }));
+            fetchAIStatuses(); 
+        } catch (error) {
+            toast.dismiss();
+            toast.error("Failed to retry ingestion.");
+        }
+    };
 
-    const uploadCategories = [
-        { value: 'Case Filing', label: t('portal.documents.filter.case_filing') },
-        { value: 'Evidence', label: t('portal.documents.filter.evidence') },
-        { value: 'Correspondence', label: t('portal.documents.filter.correspondence') },
-        { value: 'General', label: t('portal.documents.filter.general') }
-    ];
+    const uploadCategories = ['Case Filing', 'Evidence', 'Correspondence', 'General'];
 
-    const filterCategories = [
-        { value: 'All Files', label: t('portal.documents.filter.all') },
-        { value: 'Court Filings', label: t('portal.documents.filter.court_filings') },
-        { value: 'Evidence', label: t('portal.documents.filter.evidence') },
-        { value: 'Correspondence', label: t('portal.documents.filter.correspondence') },
-        { value: 'Drafts', label: t('portal.documents.filter.drafts') }
-    ];
+    // Polling for AI Status
+    useEffect(() => {
+        const hasProcessing = Object.values(aiStatuses).some(status => status === 'Processing');
+        let interval: any;
+
+        if (hasProcessing) {
+            interval = setInterval(() => {
+                fetchAIStatuses();
+            }, 3000);
+        }
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [aiStatuses]);
 
     const handleOpenUploadModal = () => {
         setIsUploadModalOpen(true);
@@ -161,28 +192,18 @@ const CaseDocuments: React.FC = () => {
                 formData.append('files', pf.file);
                 formData.append('category', pf.category);
                 
-                // 1. Upload to Node.js Backend (Storage)
-                await caseService.uploadDocument(id, formData);
-
-                // 2. Ingest into RAG System (AI)
-                try {
-                    await ragService.ingestDocument(id, pf.file);
-                    console.log(`[RAG] Ingested ${pf.file.name}`);
-                } catch (ragError) {
-                    console.error(`[RAG] Failed to ingest ${pf.file.name}`, ragError);
-                    // Decide if we want to block or just warn. 
-                    // For now, we log but don't stop the UI success state since storage succeeded.
-                }
+                // 1. Upload to Node.js Backend (Storage + Automatic Ingestion Trigger)
+            await caseService.uploadDocument(id, formData);
+            
+            // Note: Backend now handles ingestion trigger automatically upon upload.
+            // Removing manual frontend trigger to prevent duplicate status entries/race conditions.
             }
 
-            // Refresh docs (naive re-fetch or rely on the last response)
-            // Ideally we should just append all new docs. 
-            // For simplicity, let's just re-fetch the whole list to be safe or just alert.
-            // But we can also use the results.
+            // Refresh docs
             const results = await caseService.getCaseDocuments(id);
             setCaseData((prev: any) => ({ ...prev, documents: results }));
             
-            toast.success("All documents uploaded successfully!");
+            toast.success("Documents uploaded! AI analysis is running in the background.");
             fetchAIStatuses();
             setIsUploadModalOpen(false);
             setPendingFiles([]);
@@ -232,6 +253,16 @@ const CaseDocuments: React.FC = () => {
             toast.error("Failed to download file");
         }
     };
+
+    // Keyboard: ESC to close upload modal
+    useEffect(() => {
+        if (!isUploadModalOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsUploadModalOpen(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isUploadModalOpen]);
 
     // Keyboard Accessiblity (Esc to Close, Focus Trap)
     useEffect(() => {
@@ -409,21 +440,50 @@ const CaseDocuments: React.FC = () => {
                                         <p className="text-xs text-slate-500">{new Date(doc.uploadedAt).toLocaleDateString()}</p>
                                     </div>
                                     <div className="mb-2">
-                                         {aiStatuses[doc.fileName] === 'Ready' && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                                                AI Ready
-                                            </span>
-                                        )}
-                                        {aiStatuses[doc.fileName] === 'Processing' && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
-                                                Processing
-                                            </span>
-                                        )}
-                                        {aiStatuses[doc.fileName] === 'Failed' && (
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
-                                                AI Failed
-                                            </span>
-                                        )}
+                                         {(() => {
+                                            let statusKey = sanitizeFilename(doc.filePath);
+                                            let status = aiStatuses[statusKey];
+                                            
+                                            // Fallback to filename if filePath match fails
+                                            if (!status) {
+                                                const fallbackKey = sanitizeFilename(doc.fileName);
+                                                if (aiStatuses[fallbackKey]) {
+                                                    console.log(`[Status Fallback] Matched ${doc.fileName} via fallback key: ${fallbackKey}`);
+                                                    status = aiStatuses[fallbackKey];
+                                                }
+                                            }
+                                            
+                                            if (status === 'Processing') {
+                                                return (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                        AI Inference Pending
+                                                    </span>
+                                                );
+                                            }
+                                            if (status === 'Failed') {
+                                                return (
+                                                    <div className="flex items-center space-x-2">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                                            AI Failed
+                                                        </span>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleRetryIngest(doc); }}
+                                                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                                                        >
+                                                            Retry
+                                                        </button>
+                                                    </div>
+                                                );
+                                            }
+                                            if (status === 'Ready') {
+                                                return (
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                                        AI Ready
+                                                    </span>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </div>
                                     <div className="mt-auto flex items-center justify-between pt-3 border-t border-slate-100">
                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
@@ -474,21 +534,49 @@ const CaseDocuments: React.FC = () => {
                                                     </div>
                                                     <div>
                                                         <p className="text-sm font-bold text-slate-900 mb-0.5">{fileName}</p>
-                                                        {aiStatuses[fileName] === 'Ready' && (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
-                                                                AI Ready
-                                                            </span>
-                                                        )}
-                                                         {aiStatuses[fileName] === 'Processing' && (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
-                                                                Processing
-                                                            </span>
-                                                        )}
-                                                        {aiStatuses[fileName] === 'Failed' && (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
-                                                                AI Failed
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            let statusKey = sanitizeFilename(doc.filePath);
+                                                            let status = aiStatuses[statusKey];
+
+                                                            // Fallback to filename if filePath match fails
+                                                            if (!status) {
+                                                                const fallbackKey = sanitizeFilename(doc.fileName); // using variable from map iteration
+                                                                if (aiStatuses[fallbackKey]) {
+                                                                     status = aiStatuses[fallbackKey];
+                                                                }
+                                                            }
+                                                            
+                                                            if (status === 'Processing') {
+                                                                return (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                                        AI Inference Pending
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            if (status === 'Failed') {
+                                                                return (
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
+                                                                            AI Failed
+                                                                        </span>
+                                                                        <button 
+                                                                            onClick={(e) => { e.stopPropagation(); handleRetryIngest(doc); }}
+                                                                            className="text-[10px] text-blue-600 hover:underline"
+                                                                        >
+                                                                            Retry
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            if (status === 'Ready') {
+                                                                return (
+                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-green-100 text-green-700">
+                                                                        AI Ready
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </td>

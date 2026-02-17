@@ -379,6 +379,16 @@ const PortalMessages: React.FC = () => {
         setIsSearching(false);
     }
 
+    // Keyboard: ESC to close Add Friend modal
+    useEffect(() => {
+        if (!showAddFriendModal) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeModal();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showAddFriendModal]);
+
     const selectedConversation = conversations.find(c => c.contactId === selectedContactId);
 
     return (

@@ -88,6 +88,19 @@ const PortalBilling: React.FC = () => {
     const [showQuickPay, setShowQuickPay] = useState(false);
     const { t } = useTranslation();
 
+    // Keyboard: ESC to close billing modals
+    React.useEffect(() => {
+        if (!showQuickPay && !showCreateModal) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                if (showQuickPay) setShowQuickPay(false);
+                if (showCreateModal) setShowCreateModal(false);
+            }
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showQuickPay, showCreateModal]);
+
     // Convert billing data to INR
     const billingData = useMemo(() => 
         dummyBilling.map(b => ({ ...b, amount: toINR(b.amount) })), 
