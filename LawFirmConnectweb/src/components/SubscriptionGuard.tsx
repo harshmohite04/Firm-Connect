@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { getAuthData, clearAuthData } from '../utils/storage';
 
 interface User {
     _id: string;
@@ -19,7 +20,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
         console.log('SubscriptionGuard: MOUNTED');
         const checkSubscription = async () => {
             try {
-                const userInfo = localStorage.getItem('user');
+                const userInfo = getAuthData() as { token?: string } | null;
                 if (!userInfo) {
                     console.log('SubscriptionGuard: No user in localStorage, redirecting to pricing');
                     setHasAccess(false);
@@ -27,7 +28,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                     return;
                 }
 
-                const { token } = JSON.parse(userInfo);
+                const { token } = userInfo;
                 if (!token) {
                     console.log('SubscriptionGuard: No token found, redirecting to pricing');
                     setHasAccess(false);
@@ -74,7 +75,7 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                 setAccessError(`Subscription Check Failed! Error: ${error.message}`);
                 // If 401, clear user data
                 if (axios.isAxiosError(error) && error.response?.status === 401) {
-                    localStorage.removeItem('user');
+                    clearAuthData();
                 }
                 setHasAccess(false);
             } finally {

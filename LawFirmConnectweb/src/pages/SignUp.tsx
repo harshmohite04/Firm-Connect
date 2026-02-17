@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+
 
 
 
@@ -32,9 +35,12 @@ const BuildingIcon = () => (
 )
 
 const SignUp: React.FC = () => {
+    const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
     const [passwordTouched, setPasswordTouched] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+    const from = location.state?.from;
     
     const [formData, setFormData] = useState({
         firstName: '',
@@ -53,11 +59,11 @@ const SignUp: React.FC = () => {
 
     const getPasswordErrors = (password: string): string[] => {
         const errors: string[] = [];
-        if (password.length < 8) errors.push('At least 8 characters');
-        if (!/[A-Z]/.test(password)) errors.push('One uppercase letter');
-        if (!/[a-z]/.test(password)) errors.push('One lowercase letter');
-        if (!/[0-9]/.test(password)) errors.push('One number');
-        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push('One special character (!@#$%^&*...)');
+        if (password.length < 8) errors.push(t('signUp.pwdMinChars'));
+        if (!/[A-Z]/.test(password)) errors.push(t('signUp.pwdUppercase'));
+        if (!/[a-z]/.test(password)) errors.push(t('signUp.pwdLowercase'));
+        if (!/[0-9]/.test(password)) errors.push(t('signUp.pwdNumber'));
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) errors.push(t('signUp.pwdSpecial'));
         return errors;
     };
 
@@ -73,17 +79,17 @@ const SignUp: React.FC = () => {
         
         const passwordErrors = getPasswordErrors(formData.password);
         if (passwordErrors.length > 0) {
-            setError(`Password requirements: ${passwordErrors.join(', ')}`);
+            setError(`${t('signUp.pwdRequirements')} ${passwordErrors.join(', ')}`);
             return;
         }
 
         setIsLoading(true);
         try {
             await authService.register(formData);
-            toast.success('Account created successfully! Please log in.');
-            navigate('/signin');
+            toast.success(t('signUp.successMessage'));
+            navigate('/signin', { state: { from } });
         } catch (err: any) {
-             setError(err.response?.data?.message || 'Registration failed. Please try again.');
+             setError(err.response?.data?.message || t('signUp.errorDefault'));
         } finally {
             setIsLoading(false);
         }
@@ -96,17 +102,20 @@ const SignUp: React.FC = () => {
                 {/* Left Side: Form */}
                 <div className="flex flex-col p-8 sm:p-12 lg:p-16 overflow-y-auto">
                     {/* Branding */}
-                    <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => navigate('/')}>
-                        <div className="rounded-lg">
-                           {/* <LogoIcon /> */}
-                           <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                            <div className="rounded-lg">
+                               {/* <LogoIcon /> */}
+                               <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
+                            </div>
+                            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
+                        <LanguageSwitcher variant="navbar" />
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">
                         <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
-                            Create Client Account
+                            {t('signUp.title')}
                         </h1>
                         <p className="text-slate-500 text-sm leading-relaxed mb-6">
                              Join our secure portal to manage your legal cases and communications seamlessly.
@@ -139,47 +148,47 @@ const SignUp: React.FC = () => {
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">First Name</label>
+                                    <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.firstName')}</label>
                                     <input 
                                         id="firstName" name="firstName" type="text" required 
                                         value={formData.firstName} onChange={handleInputChange}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="John"
+                                        placeholder={t('signUp.firstNamePlaceholder')}
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="lastName" className="block text-xs font-bold text-slate-900 mb-1.5">Last Name</label>
+                                    <label htmlFor="lastName" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.lastName')}</label>
                                     <input 
                                         id="lastName" name="lastName" type="text" required 
                                         value={formData.lastName} onChange={handleInputChange}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        placeholder="Doe"
+                                        placeholder={t('signUp.lastNamePlaceholder')}
                                     />
                                 </div>
                             </div>
 
                             <div>
-                                <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">Email Address</label>
+                                <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.emailLabel')}</label>
                                 <input 
                                     id="email" name="email" type="email" required 
                                     value={formData.email} onChange={handleInputChange}
                                     className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                    placeholder="name@example.com"
+                                    placeholder={t('signUp.emailPlaceholder')}
                                 />
                             </div>
 
                             <div>
-                                <label htmlFor="phone" className="block text-xs font-bold text-slate-900 mb-1.5">Phone Number</label>
+                                <label htmlFor="phone" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.phoneLabel')}</label>
                                 <input 
                                     id="phone" name="phone" type="tel" required 
                                     value={formData.phone} onChange={handleInputChange}
                                     className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                    placeholder="+1 (555) 000-0000"
+                                    placeholder={t('signUp.phonePlaceholder')}
                                 />
                             </div>
 
                             <div>
-                                <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">Password</label>
+                                <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.passwordLabel')}</label>
                                 <div className="relative">
                                     <input 
                                         id="password" name="password" 
@@ -188,7 +197,7 @@ const SignUp: React.FC = () => {
                                         value={formData.password} onChange={handleInputChange}
                                         onFocus={() => setPasswordTouched(true)}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
-                                        placeholder="Create a strong password"
+                                        placeholder={t('signUp.passwordPlaceholder')}
                                     />
                                     <div 
                                         className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
@@ -224,16 +233,16 @@ const SignUp: React.FC = () => {
                                 disabled={isLoading}
                                 className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? 'Processing...' : (
+                                {isLoading ? t('signUp.processing') : (
                                     <>
-                                        <LockIcon /> Create Account
+                                        <LockIcon /> {t('signUp.createAccount')}
                                     </>
                                 )}
                             </button>
                             
                             <div className="text-center mt-6">
                                 <p className="text-sm text-slate-500">
-                                    Already have an account? <a href="/signin" className="font-bold text-blue-600 hover:text-blue-700">Log in</a>
+                                    {t('signUp.alreadyHaveAccount')} <Link to="/signin" state={{ from }} className="font-bold text-blue-600 hover:text-blue-700">{t('signUp.logIn')}</Link>
                                 </p>
                             </div>
                         </form>
@@ -243,7 +252,7 @@ const SignUp: React.FC = () => {
                         <div className="flex flex-col gap-2">
                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 tracking-wider">
                                 <ShieldIcon />
-                                 256-BIT SSL SECURE CONNECTION
+                                 {t('signUp.sslSecure')}
                              </div>
                         </div>
 
@@ -264,7 +273,7 @@ const SignUp: React.FC = () => {
                     <div className="relative h-full flex flex-col justify-end p-16">
                         <div className="mb-8">
                              <h2 className="text-2xl font-bold text-white leading-tight mb-4 tracking-tight">
-                                "The first step towards justice is creating a secure connection with your counsel."
+                                {t('signUp.rightQuote')}
                             </h2>
                              <div className="w-12 h-1 bg-blue-600 rounded-full mb-6"></div>
                         </div>

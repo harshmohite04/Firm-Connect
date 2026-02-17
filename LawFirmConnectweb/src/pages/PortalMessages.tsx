@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
-import { 
-    Search as SearchIcon, 
-    Send as SendIcon, 
+import {
+    Search as SearchIcon,
+    Send as SendIcon,
     UserPlus as UserPlusIcon,
     Paperclip as PaperClipIcon
 } from 'lucide-react';
 import { contactService } from '../services/contactService';
 import { messageService } from '../services/messageService';
 import { io, Socket } from 'socket.io-client';
+import TransliterateInput from '../components/TransliterateInput';
 
 interface Message {
     _id: string; 
@@ -40,6 +42,7 @@ interface PortalUser {
 }
 
 const PortalMessages: React.FC = () => {
+    const { t } = useTranslation();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'chats' | 'requests'>('chats');
@@ -398,13 +401,13 @@ const PortalMessages: React.FC = () => {
                     {/* Header */}
                     <div className="p-4 border-b border-slate-200 bg-white">
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-slate-900">Chat</h2>
+                            <h2 className="text-xl font-bold text-slate-900">{t('messages.chat')}</h2>
                             <button 
                                 onClick={() => setShowAddFriendModal(true)}
                                 className="p-2 hover:bg-blue-50 rounded-full transition-colors flex items-center gap-2 group"
                                 title="Add friend via email"
                             >
-                                <span className="text-xs font-bold text-blue-600 hidden group-hover:inline-block">Add Friend</span>
+                                <span className="text-xs font-bold text-blue-600 hidden group-hover:inline-block">{t('messages.addFriend')}</span>
                                 <UserPlusIcon className="w-5 h-5 text-blue-600" />
                             </button>
                         </div>
@@ -415,13 +418,13 @@ const PortalMessages: React.FC = () => {
                                 onClick={() => setActiveTab('chats')}
                                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeTab === 'chats' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                             >
-                                Chats
+                                {t('messages.chats')}
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setActiveTab('requests')}
                                 className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors relative ${activeTab === 'requests' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                             >
-                                Requests
+                                {t('messages.requests')}
                                 {pendingRequests.length > 0 && (
                                     <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] text-white ring-2 ring-white">
                                         {pendingRequests.length}
@@ -437,7 +440,7 @@ const PortalMessages: React.FC = () => {
                                 </div>
                                 <input 
                                     type="text" 
-                                    placeholder="Search chats..." 
+                                    placeholder={t('messages.searchChats')}
                                     className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
                                 />
                             </div>
@@ -449,7 +452,7 @@ const PortalMessages: React.FC = () => {
                         {activeTab === 'chats' ? (
                             <div className="divide-y divide-slate-100">
                                 {conversations.length === 0 && (
-                                    <div className="p-4 text-center text-slate-500 text-sm">No chats yet.</div>
+                                    <div className="p-4 text-center text-slate-500 text-sm">{t('messages.noChats')}</div>
                                 )}
 
                                 {conversations.map((convo) => {
@@ -489,7 +492,7 @@ const PortalMessages: React.FC = () => {
                                                             {convo.name}
                                                         </h4>
                                                         {!hasUnread && (
-                                                            <p className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit">Active</p>
+                                                            <p className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit">{t('messages.activeStatus')}</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -506,7 +509,7 @@ const PortalMessages: React.FC = () => {
                                                 </div>
                                             </div>
                                             <p className={`text-sm line-clamp-1 pl-12 ${hasUnread ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>
-                                                {convo.lastMessage ? convo.lastMessage.content : 'No messages yet'}
+                                                {convo.lastMessage ? convo.lastMessage.content : t('messages.noMessages')}
                                             </p>
                                         </div>
                                     );
@@ -519,12 +522,12 @@ const PortalMessages: React.FC = () => {
                                         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-400">
                                             <UserPlusIcon className="w-6 h-6" />
                                         </div>
-                                        <p className="text-slate-500 text-sm font-medium">No pending requests</p>
-                                        <button 
+                                        <p className="text-slate-500 text-sm font-medium">{t('messages.noPendingRequests')}</p>
+                                        <button
                                             onClick={() => setShowAddFriendModal(true)}
                                             className="mt-2 text-xs text-blue-600 font-bold hover:underline"
                                         >
-                                            Find people
+                                            {t('messages.findPeople')}
                                         </button>
                                     </div>
                                 )}
@@ -538,7 +541,7 @@ const PortalMessages: React.FC = () => {
                                             <div>
                                                 <h4 className="text-sm font-bold text-slate-900">{req.sender.firstName} {req.sender.lastName}</h4>
                                                 <p className="text-xs text-slate-500">{req.sender.email}</p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">Sent a friend request</p>
+                                                <p className="text-[10px] text-slate-400 mt-0.5">{t('messages.sentFriendRequest')}</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 pl-13">
@@ -546,13 +549,13 @@ const PortalMessages: React.FC = () => {
                                                 onClick={() => handleRespondToRequest(req._id, 'accept')}
                                                 className="flex-1 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                                             >
-                                                Accept
+                                                {t('messages.accept')}
                                             </button>
-                                            <button 
+                                            <button
                                                 onClick={() => handleRespondToRequest(req._id, 'reject')}
                                                 className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors"
                                             >
-                                                Reject
+                                                {t('messages.reject')}
                                             </button>
                                         </div>
                                     </div>
@@ -573,16 +576,16 @@ const PortalMessages: React.FC = () => {
                                         <h3 className="font-bold text-slate-900 text-lg">{selectedConversation.name}</h3>
                                         <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
                                             <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                                            Available
+                                            {t('messages.available')}
                                         </span>
                                     </div>
                                     <div className="flex gap-6 text-sm">
-                                        <button className="font-bold text-slate-900 border-b-2 border-blue-600 pb-2 px-1">Chat</button>
-                                        <button className="font-medium text-slate-500 hover:text-slate-700 pb-2 px-1 transition-colors">Shared</button>
+                                        <button className="font-bold text-slate-900 border-b-2 border-blue-600 pb-2 px-1">{t('messages.chat')}</button>
+                                        <button className="font-medium text-slate-500 hover:text-slate-700 pb-2 px-1 transition-colors">{t('messages.shared')}</button>
                                     </div>
                                 </div>
                             ) : (
-                                <h3 className="font-bold text-slate-900">Select a chat</h3>
+                                <h3 className="font-bold text-slate-900">{t('messages.selectChat')}</h3>
                             )}
                         </div>
                     </div>
@@ -661,11 +664,10 @@ const PortalMessages: React.FC = () => {
                             <button type="button" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                                 <PaperClipIcon className="w-5 h-5" />
                             </button>
-                            <input 
-                                type="text" 
+                            <TransliterateInput
                                 value={inputMessage}
-                                onChange={e => setInputMessage(e.target.value)}
-                                placeholder="Type your message here..." 
+                                onChangeText={setInputMessage}
+                                placeholder={t('messages.typePlaceholder')}
                                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
                             />
                             <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg shadow-sm transition-colors">
@@ -679,12 +681,12 @@ const PortalMessages: React.FC = () => {
                 {showAddFriendModal && (
                     <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">Find People</h3>
-                            <p className="text-sm text-slate-500 mb-6">Search for users by email to send a request.</p>
+                            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('messages.findPeople')}</h3>
+                            <p className="text-sm text-slate-500 mb-6">{t('messages.searchByEmail')}</p>
                             
                             <form onSubmit={handleSearchUser}>
                                 <div className="mb-4 relative">
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Email Address</label>
+                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">{t('messages.emailAddress')}</label>
                                     <input 
                                         type="email" 
                                         required
@@ -734,7 +736,7 @@ const PortalMessages: React.FC = () => {
                                         className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-xs font-bold px-3"
                                         title="Send Request"
                                     >
-                                        Send Request
+                                        {t('messages.sendRequest')}
                                     </button>
                                 </div>
                             )}
@@ -745,7 +747,7 @@ const PortalMessages: React.FC = () => {
                                     onClick={closeModal}
                                     className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
                                 >
-                                    Close
+                                    {t('messages.close')}
                                 </button>
                             </div>
                         </div>

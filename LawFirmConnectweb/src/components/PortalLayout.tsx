@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
 import { messageService } from '../services/messageService';
 import { io, Socket } from 'socket.io-client';
@@ -54,6 +56,7 @@ interface Notification {
 }
 
 const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
     const [user, setUser] = React.useState<any>(null);
@@ -321,21 +324,21 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 {/* Nav Links */}
                 <nav className="flex-1 px-3 py-6 space-y-1">
                     <Link to="/portal" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal') && location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <HomeIcon /> Home
+                        <HomeIcon /> {t('portal.sidebar.home')}
                     </Link>
                     <Link to="/portal/cases" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/cases') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <CaseIcon /> My Cases
+                        <CaseIcon /> {t('portal.sidebar.myCases')}
                     </Link>
 
                     <Link to="/portal/billing" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/billing') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <BillingIcon /> Billing
+                        <BillingIcon /> {t('portal.sidebar.billing')}
                     </Link>
                     <Link to="/portal/calendar" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <CalendarIcon /> Calendar
+                        <CalendarIcon /> {t('portal.sidebar.calendar')}
                     </Link>
                     <Link to="/portal/messages" className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/messages') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
                         <div className="flex items-center gap-3">
-                            <MessageIcon /> Messages
+                            <MessageIcon /> {t('portal.sidebar.messages')}
                         </div>
                         {unreadMessagesCount > 0 && (
                             <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
@@ -405,7 +408,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                         }
                                     }}
                                     onFocus={() => setShowResults(true)}
-                                    placeholder="Look for people, messages, files and more"
+                                    placeholder={t('portal.header.searchPlaceholder')}
                                     className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                                 />
                             </div>
@@ -420,7 +423,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
                                             {/* People Section */}
                                             <div className="mb-6">
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">People</div>
+                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{t('portal.header.people')}</div>
                                                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
                                                     {['Marcus Thorne', 'Sarah Jenkins', 'Jane Doe', 'Legal Team', 'Robert Johnson'].map((name, i) => (
                                                         <div
@@ -444,7 +447,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
                                             {/* Recent/Suggested Files */}
                                             <div>
-                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Suggestions</div>
+                                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('portal.header.suggestions')}</div>
                                                 <div className="space-y-1">
                                                     {dummyCases[0].documents?.slice(0, 2).map((doc: any, i: number) => (
                                                         <div
@@ -457,7 +460,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                             </div>
                                                             <div>
                                                                 <div className="text-sm font-medium text-slate-900 group-hover:text-blue-700">{doc.name}</div>
-                                                                <div className="text-xs text-slate-500">Recently modified</div>
+                                                                <div className="text-xs text-slate-500">{t('portal.header.recentlyModified')}</div>
                                                             </div>
                                                         </div>
                                                     ))}
@@ -469,8 +472,8 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                             <CalendarIcon />
                                                         </div>
                                                         <div>
-                                                            <div className="text-sm font-medium text-slate-900 group-hover:text-purple-700">Upcoming Hearings</div>
-                                                            <div className="text-xs text-slate-500">Check your calendar</div>
+                                                            <div className="text-sm font-medium text-slate-900 group-hover:text-purple-700">{t('portal.header.upcomingHearings')}</div>
+                                                            <div className="text-xs text-slate-500">{t('portal.header.checkCalendar')}</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -482,14 +485,14 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                         <>
                                             {Object.values(searchResults).every((arr: any) => arr.length === 0) ? (
                                                 <div className="p-8 text-center text-slate-500">
-                                                    No results found for "{searchQuery}"
+                                                    {t('portal.header.noResults')} "{searchQuery}"
                                                 </div>
                                             ) : (
                                                 <>
                                                     {/* Cases */}
                                                     {searchResults.cases.length > 0 && (
                                                         <div className="p-2">
-                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">Cases</div>
+                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">{t('portal.header.cases')}</div>
                                                             {searchResults.cases.map((c: any) => (
                                                                 <div
                                                                     key={c._id}
@@ -511,7 +514,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                     {/* Messages */}
                                                     {searchResults.messages.length > 0 && (
                                                         <div className="p-2">
-                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3   py-2">Messages</div>
+                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3   py-2">{t('portal.header.messagesLabel')}</div>
                                                             {searchResults.messages.map((m: any) => (
                                                                 <div
                                                                     key={m.id}
@@ -536,7 +539,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                     {/* Documents */}
                                                     {searchResults.documents.length > 0 && (
                                                         <div className="p-2">
-                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">Files</div>
+                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">{t('portal.header.files')}</div>
                                                             {searchResults.documents.map((d: any, idx: number) => (
                                                                 <div
                                                                     key={idx}
@@ -558,7 +561,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                     {/* Events */}
                                                     {searchResults.events.length > 0 && (
                                                         <div className="p-2">
-                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">Calendar</div>
+                                                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">{t('portal.header.calendarLabel')}</div>
                                                             {searchResults.events.map((e: any) => (
                                                                 <div
                                                                     key={e.id}
@@ -587,7 +590,10 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div>
 
                     {/* Notification Bell */}
-                    <div className="flex items-center gap-4 flex-none ml-4" ref={notificationRef}>
+                    <div className="flex items-center gap-4 flex-none ml-4">
+                        <LanguageSwitcher variant="portal" />
+                    </div>
+                    <div className="flex items-center gap-4 flex-none ml-2" ref={notificationRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
                             className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -605,13 +611,13 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                             <div className="absolute top-16 right-8 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
                                 {/* Header */}
                                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                    <h3 className="font-bold text-slate-900">Notifications</h3>
+                                    <h3 className="font-bold text-slate-900">{t('portal.notifications.title')}</h3>
                                     {unreadCount > 0 && (
                                         <button
                                             onClick={markAllAsRead}
                                             className="text-xs font-medium text-blue-600 hover:text-blue-700"
                                         >
-                                            Mark all as read
+                                            {t('portal.notifications.markAllRead')}
                                         </button>
                                     )}
                                 </div>
@@ -657,7 +663,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                         }}
                                         className="w-full text-center text-sm font-medium text-slate-600 hover:text-slate-900"
                                     >
-                                        View all notifications
+                                        {t('portal.notifications.viewAll')}
                                     </button>
                                 </div>
                             </div>

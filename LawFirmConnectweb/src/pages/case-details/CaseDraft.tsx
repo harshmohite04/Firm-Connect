@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import caseService from '../../services/caseService';
+import VirtualKeyboard from '../../components/VirtualKeyboard';
+import TransliterateInput from '../../components/TransliterateInput';
 
 // Icons
 const SparklesIcon = () => (
@@ -40,6 +43,12 @@ const ClockIcon = () => (
     </svg>
 );
 
+const KeyboardIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+    </svg>
+);
+
 interface Message {
     role: 'user' | 'assistant';
     content: string;
@@ -62,6 +71,7 @@ interface DraftSession {
 const CaseDraft: React.FC = () => {
     // @ts-ignore
     const { caseData } = useOutletContext<{ caseData: any }>();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
 
     const [templates, setTemplates] = useState<Template[]>([]);
@@ -82,6 +92,10 @@ const CaseDraft: React.FC = () => {
     const [isCustomDocument, setIsCustomDocument] = useState(false);
     const [customDocumentName, setCustomDocumentName] = useState('');
     
+    // Keyboard States
+    const [showChatKeyboard, setShowChatKeyboard] = useState(false);
+    const [showDocKeyboard, setShowDocKeyboard] = useState(false);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const documentEditorRef = useRef<HTMLTextAreaElement>(null);
 
@@ -309,15 +323,15 @@ const CaseDraft: React.FC = () => {
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h2 className="text-2xl font-bold text-slate-900">Document Drafts</h2>
-                            <p className="text-slate-600 mt-1">Create and manage legal documents with AI assistance</p>
+                            <h2 className="text-2xl font-bold text-slate-900">{t('portal.drafting.title')}</h2>
+                            <p className="text-slate-600 mt-1">{t('portal.drafting.subtitle')}</p>
                         </div>
                         <button
                             onClick={() => setShowAddDocumentModal(true)}
                             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg hover:shadow-xl transition-all"
                         >
                             <PlusIcon />
-                            Add Document
+                            {t('portal.drafting.addDocument')}
                         </button>
                     </div>
 
@@ -353,8 +367,8 @@ const CaseDraft: React.FC = () => {
                             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full border-2 border-slate-200 shadow-sm mb-6">
                                 <FileTextIcon />
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-2">No Draft Documents</h3>
-                            <p className="text-slate-600 mb-6">Start creating legal documents with AI assistance</p>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">{t('portal.drafting.noDrafts')}</h3>
+                            <p className="text-slate-600 mb-6">{t('portal.drafting.startCreating')}</p>
                         </div>
                     )}
 
@@ -367,9 +381,9 @@ const CaseDraft: React.FC = () => {
                                 </svg>
                             </div>
                             <div>
-                                <h4 className="font-bold text-blue-900 mb-1">AI-Powered Drafting with Case Context</h4>
+                                <h4 className="font-bold text-blue-900 mb-1">{t('portal.drafting.aiTitle')}</h4>
                                 <p className="text-sm text-blue-800">
-                                    The AI assistant has access to all documents uploaded for this case. It can automatically pull relevant information like names, dates, and facts to create accurate legal documents.
+                                    {t('portal.drafting.aiDesc')}
                                 </p>
                             </div>
                         </div>
@@ -381,8 +395,8 @@ const CaseDraft: React.FC = () => {
                     <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => { setShowAddDocumentModal(false); setIsCustomDocument(false); setCustomDocumentName(''); setSelectedTemplate(''); }}>
                         <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-slate-200">
-                                <h3 className="text-2xl font-bold text-slate-900">Add Legal Document</h3>
-                                <p className="text-sm text-slate-600 mt-1">Select a template or create your own</p>
+                                <h3 className="text-2xl font-bold text-slate-900">{t('portal.drafting.modalTitle')}</h3>
+                                <p className="text-sm text-slate-600 mt-1">{t('portal.drafting.modalSubtitle')}</p>
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6">
@@ -400,15 +414,14 @@ const CaseDraft: React.FC = () => {
                                             className="w-4 h-4 text-blue-600"
                                         />
                                         <label htmlFor="customDoc" className="font-bold text-slate-900 cursor-pointer">
-                                            Create Custom Document
+                                            {t('portal.drafting.customDoc')}
                                         </label>
                                     </div>
                                     {isCustomDocument && (
                                         <input
-                                            type="text"
                                             value={customDocumentName}
                                             onChange={(e) => setCustomDocumentName(e.target.value)}
-                                            placeholder="Enter document name (e.g., Partnership Agreement)"
+                                            placeholder={t('portal.drafting.docNamePlaceholder')}
                                             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
                                     )}
@@ -416,7 +429,7 @@ const CaseDraft: React.FC = () => {
 
                                 {/* Template Grid */}
                                 <div className="mb-4">
-                                    <h4 className="font-bold text-slate-700 mb-3">Or choose a template:</h4>
+                                    <h4 className="font-bold text-slate-700 mb-3">{t('portal.drafting.chooseTemplate')}</h4>
                                     <div className="grid grid-cols-2 gap-3">
                                         {templates.filter(t => t.id !== 'blank').map(template => (
                                             <button
@@ -461,13 +474,13 @@ const CaseDraft: React.FC = () => {
                                     }}
                                     className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
                                 >
-                                    Cancel
+                                    {t('portal.common.cancel')}
                                 </button>
                                 <button
                                     onClick={handleCreateDocument}
                                     className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors"
                                 >
-                                    Create Document
+                                    {t('portal.drafting.create')}
                                 </button>
                             </div>
                         </div>
@@ -496,7 +509,7 @@ const CaseDraft: React.FC = () => {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
-                        Back to Documents
+                        {t('portal.drafting.back')}
                     </button>
                     <span className="text-slate-300">|</span>
                     <span className="text-sm font-medium text-slate-700">{documentTitle}</span>
@@ -506,7 +519,7 @@ const CaseDraft: React.FC = () => {
                         onClick={() => setShowSaveModal(true)}
                         className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
                     >
-                        <SaveIcon /> Save to Documents
+                        <SaveIcon /> {t('portal.drafting.save')}
                     </button>
                 )}
             </div>
@@ -519,9 +532,9 @@ const CaseDraft: React.FC = () => {
                             <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
                                 <SparklesIcon />
                             </div>
-                            AI Assistant
+                            {t('portal.chat.title')}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1">Has access to all case documents</p>
+                        <p className="text-xs text-slate-500 mt-1">{t('portal.drafting.aiDesc')}</p>
                     </div>
 
                     {/* Messages */}
@@ -577,15 +590,21 @@ const CaseDraft: React.FC = () => {
                     {/* Input */}
                     <div className="p-4 border-t border-slate-200">
                         <div className="flex gap-2">
-                            <input
-                                type="text"
+                            <TransliterateInput
                                 value={inputMessage}
-                                onChange={(e) => setInputMessage(e.target.value)}
-                                onKeyPress={handleKeyPress}
-                                placeholder="Type your message..."
+                                onChangeText={setInputMessage}
+                                onKeyDown={handleKeyPress}
+                                placeholder={t('portal.chat.placeholder')}
                                 className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 disabled={isGenerating}
                             />
+                            <button 
+                                onClick={() => setShowChatKeyboard(!showChatKeyboard)}
+                                className={`px-3 py-2 rounded-lg border transition-colors ${showChatKeyboard ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-600'}`}
+                                title="Toggle Virtual Keyboard"
+                            >
+                                <KeyboardIcon />
+                            </button>
                             <button
                                 onClick={handleSendMessage}
                                 disabled={isGenerating || !inputMessage.trim()}
@@ -594,30 +613,62 @@ const CaseDraft: React.FC = () => {
                                 <SendIcon />
                             </button>
                         </div>
+                        {showChatKeyboard && (
+                            <div className="mt-2 relative z-10">
+                                <VirtualKeyboard 
+                                    onChange={setInputMessage}
+                                    value={inputMessage}
+                                    language={i18n.language as any || 'en'}
+                                    inputName="draftChatInput"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Right Panel: Document Editor */}
-                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col relative">
                     <div className="p-4 border-b border-slate-200">
-                        <h3 className="font-bold text-slate-800">Live Document</h3>
-                        <p className="text-xs text-slate-500 mt-1">The document updates in real-time as you chat. You can also edit it directly.</p>
+                        <h3 className="font-bold text-slate-800">{t('portal.drafting.liveDoc')}</h3>
+                        <p className="text-xs text-slate-500 mt-1">{t('portal.drafting.liveDocDesc')}</p>
                     </div>
 
                     {documentContent ? (
-                        <textarea
-                            ref={documentEditorRef}
-                            value={documentContent}
-                            onChange={(e) => setDocumentContent(e.target.value)}
-                            className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
-                            placeholder="Document content will appear here..."
-                        />
+                        <>
+                            <TransliterateInput
+                                value={documentContent}
+                                onChangeText={setDocumentContent}
+                                className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
+                                placeholder={t('portal.drafting.docContentPlaceholder')}
+                                type="textarea"
+                            />
+                            {/* Document Editor Keyboard Toggle */}
+                            <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
+                                <button 
+                                    onClick={() => setShowDocKeyboard(!showDocKeyboard)}
+                                    className={`p-3 rounded-full shadow-lg border transition-all ${showDocKeyboard ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-400 border-slate-200 hover:text-blue-600'}`}
+                                    title="Toggle Virtual Keyboard"
+                                >
+                                    <KeyboardIcon />
+                                </button>
+                            </div>
+                            {showDocKeyboard && (
+                                <div className="border-t border-slate-200 p-2 bg-slate-50 relative z-10">
+                                    <VirtualKeyboard 
+                                        onChange={setDocumentContent}
+                                        value={documentContent}
+                                        language={i18n.language as any || 'en'}
+                                        inputName="draftDocInput"
+                                    />
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-slate-300">
                                 <SparklesIcon />
                             </div>
-                            <p className="text-sm">Start chatting to generate your document</p>
+                            <p className="text-sm">{t('portal.drafting.startChatting')}</p>
                         </div>
                     )}
                 </div>
@@ -629,7 +680,7 @@ const CaseDraft: React.FC = () => {
                     <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                         <h3 className="text-xl font-bold text-slate-900 mb-4">Save Document</h3>
                         <div className="mb-6">
-                            <label className="block text-sm font-bold text-slate-700 mb-2">Filename</label>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">{t('portal.drafting.filename')}</label>
                             <input
                                 type="text"
                                 value={filename}
@@ -637,21 +688,21 @@ const CaseDraft: React.FC = () => {
                                 placeholder="e.g., NOC_Property_Transfer.txt"
                                 className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <p className="text-xs text-slate-500 mt-2">File will be saved to Documents and processed by AI.</p>
+                            <p className="text-xs text-slate-500 mt-2">{t('portal.drafting.saveDesc')}</p>
                         </div>
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setShowSaveModal(false)}
                                 className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
                             >
-                                Cancel
+                                {t('portal.common.cancel')}
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving}
                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-colors disabled:opacity-50"
                             >
-                                {isSaving ? 'Saving...' : 'Save Document'}
+                                {isSaving ? 'Saving...' : t('portal.drafting.save')}
                             </button>
                         </div>
                     </div>

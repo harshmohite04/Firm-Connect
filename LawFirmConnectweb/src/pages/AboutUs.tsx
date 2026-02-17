@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const ScaleIcon = () => (
@@ -23,6 +24,8 @@ const HeartIcon = () => (
 
 
 const AboutUs: React.FC = () => {
+    const { t } = useTranslation();
+
     return (
         <div className="bg-white min-h-screen">
             
@@ -38,10 +41,10 @@ const AboutUs: React.FC = () => {
                 </div>
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center text-center items-center">
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6">
-                        A Legacy of Legal <br/> Excellence
+                        {t('aboutUs.heroTitle')}
                     </h1>
                     <p className="text-blue-100 text-lg md:text-xl max-w-2xl font-light">
-                        Since 1998, we have provided unwavering advocacy and strategic counsel to individuals and businesses alike.
+                        {t('aboutUs.heroSubtitle')}
                     </p>
                 </div>
             </section>
@@ -51,14 +54,14 @@ const AboutUs: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                      <div className="grid md:grid-cols-2 gap-12 items-start">
                          <div>
-                             <div className="text-blue-600 font-bold uppercase tracking-widest text-sm mb-2">Our Mission</div>
+                             <div className="text-blue-600 font-bold uppercase tracking-widest text-sm mb-2">{t('aboutUs.missionLabel')}</div>
                              <h2 className="text-3xl font-bold text-slate-900 leading-tight">
-                                 Dedicated to Justice, Driven by Results.
+                                 {t('aboutUs.missionTitle')}
                              </h2>
                          </div>
                          <div>
                              <p className="text-slate-600 text-lg leading-relaxed">
-                                 We believe that everyone deserves high-quality legal representation. Our mission is to navigate the complexities of the law so our clients can focus on their future. We approach every case with integrity, preparation, and a relentless drive to win.
+                                 {t('aboutUs.missionDesc')}
                              </p>
                          </div>
                      </div>
@@ -66,17 +69,17 @@ const AboutUs: React.FC = () => {
                      {/* Values Cards */}
                      <div className="grid md:grid-cols-3 gap-8 mt-16">
                          {[
-                             { title: 'Integrity', icon: <ScaleIcon />, desc: 'Upholding the highest ethical standards in every case. We believe in total transparency with our clients.' },
-                             { title: 'Excellence', icon: <TrophyIcon />, desc: 'Striving for the best possible outcome through rigorous preparation and expert knowledge.' },
-                             { title: 'Client-Centric', icon: <HeartIcon />, desc: 'Putting your needs and goals at the center of our strategy. We listen first, then we act.' },
+                             { titleKey: 'integrity', icon: <ScaleIcon />, descKey: 'integrityDesc' },
+                             { titleKey: 'excellence', icon: <TrophyIcon />, descKey: 'excellenceDesc' },
+                             { titleKey: 'clientCentric', icon: <HeartIcon />, descKey: 'clientCentricDesc' },
                          ].map((value, idx) => (
                              <div key={idx} className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
                                  <div className="mb-6 bg-blue-50 w-16 h-16 rounded-full flex items-center justify-center">
                                     {value.icon}
                                  </div>
-                                 <h3 className="text-xl font-bold text-slate-900 mb-3">{value.title}</h3>
+                                 <h3 className="text-xl font-bold text-slate-900 mb-3">{t(`aboutUs.${value.titleKey}`)}</h3>
                                  <p className="text-slate-500 leading-relaxed text-sm">
-                                     {value.desc}
+                                     {t(`aboutUs.${value.descKey}`)}
                                  </p>
                              </div>
                          ))}
@@ -90,19 +93,19 @@ const AboutUs: React.FC = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-blue-500/50">
                         <div>
                             <div className="text-4xl md:text-5xl font-extrabold mb-2">25+</div>
-                            <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">Years of Experience</div>
+                            <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.yearsExperience')}</div>
                         </div>
                         <div>
                              <div className="text-4xl md:text-5xl font-extrabold mb-2">$50M+</div>
-                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">Recovered for Clients</div>
+                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.recovered')}</div>
                         </div>
                         <div>
                              <div className="text-4xl md:text-5xl font-extrabold mb-2">2k+</div>
-                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">Cases Won</div>
+                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.casesWon')}</div>
                         </div>
                          <div>
                              <div className="text-4xl md:text-5xl font-extrabold mb-2">15</div>
-                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">Expert Attorneys</div>
+                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.expertAttorneys')}</div>
                         </div>
                     </div>
                 </div>
@@ -114,7 +117,7 @@ const AboutUs: React.FC = () => {
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div className="order-2 lg:order-1">
                              <div className="relative">
-                                 <h2 className="text-3xl font-bold text-slate-900 mb-12">Our History</h2>
+                                 <h2 className="text-3xl font-bold text-slate-900 mb-12">{t('aboutUs.historyTitle')}</h2>
                                  
                                  <div className="space-y-12 border-l-2 border-slate-100 pl-8 ml-4 relative">
                                      
@@ -124,9 +127,9 @@ const AboutUs: React.FC = () => {
                                               <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
                                          <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">1998</div>
-                                         <h3 className="text-xl font-bold text-slate-900 mb-2">Firm Founded</h3>
+                                         <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year1998Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
-                                             Founded by Harsh Mohite with a focus on AI-driven legal solutions, starting in a small downtown office.
+                                             {t('aboutUs.year1998Desc')}
                                          </p>
                                      </div>
 
@@ -136,9 +139,9 @@ const AboutUs: React.FC = () => {
                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
                                          <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2010</div>
-                                         <h3 className="text-xl font-bold text-slate-900 mb-2">Major Expansion</h3>
+                                         <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year2010Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
-                                             Expanded practice areas to include Corporate Law and Intellectual Property, moving to our current headquarters.
+                                             {t('aboutUs.year2010Desc')}
                                          </p>
                                      </div>
 
@@ -148,9 +151,9 @@ const AboutUs: React.FC = () => {
                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
                                          <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2023</div>
-                                         <h3 className="text-xl font-bold text-slate-900 mb-2">Firm of the Year</h3>
+                                         <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year2023Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
-                                             Recognized as the "Top Legal Firm" in the state for our outstanding commitment to pro bono work and client satisfaction.
+                                             {t('aboutUs.year2023Desc')}
                                          </p>
                                      </div>
 
@@ -175,14 +178,14 @@ const AboutUs: React.FC = () => {
              {/* Team Section */}
              <section className="py-20 bg-slate-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                    <h2 className="text-3xl font-bold text-slate-900 mb-4">Meet Our Founders</h2>
+                    <h2 className="text-3xl font-bold text-slate-900 mb-4">{t('aboutUs.foundersTitle')}</h2>
                     <p className="text-slate-600 max-w-2xl mx-auto mb-16">
-                        Our team brings decades of combined experience across various practice areas. We are passionate about the law and compassionate towards our clients.
+                        {t('aboutUs.foundersSubtitle')}
                     </p>
 
                     <div className="grid md:grid-cols-1 max-w-sm mx-auto gap-8">
                          {[
-                             { name: 'Harsh Mohite', role: 'Founder', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=2000' },
+                             { name: t('aboutUs.founderName'), role: t('aboutUs.founderRole'), img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=2000' },
                          ].map((member, idx) => (
                              <div key={idx} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all text-left group">
                                  <div className="h-64 overflow-hidden">
@@ -192,10 +195,10 @@ const AboutUs: React.FC = () => {
                                      <h3 className="text-lg font-bold text-slate-900">{member.name}</h3>
                                      <div className="text-blue-600 text-sm font-medium mb-4">{member.role}</div>
                                      <p className="text-slate-500 text-xs leading-relaxed mb-4">
-                                         Specializing in complex litigation and corporate law. Dedicated to achieving the best results for clients.
+                                         {t('aboutUs.founderBio')}
                                      </p>
                                      <a href="#" className="text-blue-600 text-xs font-bold uppercase tracking-wider flex items-center hover:text-blue-800">
-                                         View Profile <span className="ml-1">→</span>
+                                         {t('aboutUs.viewProfile')} <span className="ml-1">→</span>
                                      </a>
                                  </div>
                              </div>
@@ -207,24 +210,24 @@ const AboutUs: React.FC = () => {
              {/* Bottom CTA */}
              <section className="py-16 mx-4">
                  <div className="max-w-7xl mx-auto bg-slate-50 border border-slate-200 rounded-3xl p-8 md:p-12 text-center shadow-sm">
-                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">Ready to discuss your case?</h2>
+                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">{t('aboutUs.ctaTitle')}</h2>
                      <p className="text-slate-600 mb-8 max-w-2xl mx-auto">
-                         Schedule a free, confidential consultation with one of our expert attorneys today. We are here to listen and help.
+                         {t('aboutUs.ctaSubtitle')}
                      </p>
-                     
+
                       <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-8">
                          <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                              <span className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">✓</span>
-                             Top Rated
+                             {t('aboutUs.topRated')}
                          </div>
                           <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                              <span className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">✓</span>
-                             No Win No Fee
+                             {t('aboutUs.noWinNoFee')}
                          </div>
                      </div>
 
                      <button className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                         Schedule Consultation
+                         {t('aboutUs.scheduleConsultation')}
                      </button>
                  </div>
              </section>

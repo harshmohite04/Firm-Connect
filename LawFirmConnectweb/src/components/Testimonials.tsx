@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const StarIcon = () => (
     <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -7,23 +8,25 @@ const StarIcon = () => (
 );
 
 const Testimonials: React.FC = () => {
+    const { t } = useTranslation();
+
     const testimonials = [
         {
-            text: "The team at LawfirmAI handled my corporate merger with incredible attention to detail. I felt supported every step of the way.",
-            author: "Michael Turner",
-            role: "CEO, TechStarter",
+            text: t('testimonials.testimonial1'),
+            author: t('testimonials.testimonial1Author'),
+            role: t('testimonials.testimonial1Role'),
             image: "https://randomuser.me/api/portraits/men/32.jpg"
         },
         {
-            text: "Facing a difficult family situation was hard, but their compassionate approach made all the difference. Highly recommended.",
-            author: "Sarah Jenkins",
-            role: "Private Client",
+            text: t('testimonials.testimonial2'),
+            author: t('testimonials.testimonial2Author'),
+            role: t('testimonials.testimonial2Role'),
             image: "https://randomuser.me/api/portraits/women/44.jpg"
         },
         {
-            text: "Professional, aggressive, and knowledgeable. They turned a hopeless situation into a victory. I can't thank them enough.",
-            author: "David Ross",
-            role: "Small Business Owner",
+            text: t('testimonials.testimonial3'),
+            author: t('testimonials.testimonial3Author'),
+            role: t('testimonials.testimonial3Role'),
             image: "https://randomuser.me/api/portraits/men/86.jpg"
         },
     ];
@@ -31,8 +34,8 @@ const Testimonials: React.FC = () => {
     return (
         <section className="py-20 bg-slate-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Client Testimonials</h2>
-                <p className="text-lg text-slate-600 mb-12">Don't just take our word for it. Here is what our clients have to say.</p>
+                <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{t('testimonials.title')}</h2>
+                <p className="text-lg text-slate-600 mb-12">{t('testimonials.subtitle')}</p>
 
                 <div className="grid md:grid-cols-3 gap-8">
                     {testimonials.map((testimonial, index) => (

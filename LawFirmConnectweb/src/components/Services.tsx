@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const BriefcaseIcon = () => (
@@ -26,25 +27,27 @@ const DocumentTextIcon = () => (
 )
 
 const Services: React.FC = () => {
+    const { t } = useTranslation();
+
     const services = [
         {
-            title: 'Corporate Law',
-            description: 'Expert guidance on mergers, acquisitions, and compliance for businesses of all sizes.',
+            title: t('services.corporateLaw'),
+            description: t('services.corporateLawDesc'),
             icon: <BriefcaseIcon />,
         },
         {
-            title: 'Family Law',
-            description: 'Compassionate support for divorce, custody, and adoption proceedings.',
+            title: t('services.familyLaw'),
+            description: t('services.familyLawDesc'),
             icon: <UserGroupIcon />,
         },
         {
-            title: 'Criminal Defense',
-            description: 'Aggressive defense strategies to protect your rights against all criminal charges.',
+            title: t('services.criminalDefense'),
+            description: t('services.criminalDefenseDesc'),
             icon: <ShieldExclamationIcon />,
         },
         {
-            title: 'Estate Planning',
-            description: 'Secure your legacy with comprehensive wills, trusts, and estate management.',
+            title: t('services.estatePlanning'),
+            description: t('services.estatePlanningDesc'),
             icon: <DocumentTextIcon />,
         },
     ];
@@ -53,13 +56,13 @@ const Services: React.FC = () => {
         <section id="practices" className="py-20 bg-slate-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="mb-12">
-                     <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">Specialized Legal Services</h2>
+                     <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{t('services.title')}</h2>
                      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <p className="text-lg text-slate-600 max-w-2xl">
-                            We offer comprehensive legal support across multiple disciplines, tailored to your unique situation.
+                            {t('services.subtitle')}
                         </p>
                         <a href="#" className="hidden md:flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
-                            View All Areas <span className="ml-1">+</span>
+                            {t('services.viewAll')} <span className="ml-1">+</span>
                         </a>
                      </div>
                 </div>
@@ -82,7 +85,7 @@ const Services: React.FC = () => {
 
                 <div className="mt-8 md:hidden text-center">
                     <a href="#" className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
-                         View All Areas <span className="ml-1">+</span>
+                         {t('services.viewAll')} <span className="ml-1">+</span>
                     </a>
                 </div>
             </div>

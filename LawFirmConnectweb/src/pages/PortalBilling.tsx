@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import PortalLayout from '../components/PortalLayout';
 import { dummyBilling, dummyCases } from '../data/dummyData';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const WalletIcon = () => (
@@ -85,6 +86,7 @@ const PortalBilling: React.FC = () => {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [selectedDateRange, setSelectedDateRange] = useState('all');
     const [showQuickPay, setShowQuickPay] = useState(false);
+    const { t } = useTranslation();
 
     // Keyboard: ESC to close billing modals
     React.useEffect(() => {
@@ -161,21 +163,21 @@ const PortalBilling: React.FC = () => {
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Billing & Invoices</h1>
-                        <p className="text-slate-500 text-sm mt-1">Manage invoices, track payments, and view billing history</p>
+                        <h1 className="text-2xl font-bold text-slate-900">{t('billing.title')}</h1>
+                        <p className="text-slate-500 text-sm mt-1">{t('billing.subtitle')}</p>
                     </div>
                     <div className="flex gap-3">
                         <button 
                             onClick={() => setShowQuickPay(true)}
                             className="px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2"
                         >
-                            <WalletIcon /> Quick Pay
+                            <WalletIcon /> {t('billing.quickPay')}
                         </button>
                         <button 
                             onClick={() => setShowCreateModal(true)}
                             className="px-4 py-2.5 bg-indigo-600 rounded-lg text-sm font-semibold text-white hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm"
                         >
-                            <PlusIcon /> New Invoice
+                            <PlusIcon /> {t('billing.newInvoice')}
                         </button>
                     </div>
                 </div>
@@ -189,12 +191,12 @@ const PortalBilling: React.FC = () => {
                                 <div className="text-red-500"><WalletIcon /></div>
                             </div>
                             {totalOutstanding > 0 && (
-                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">Action Required</span>
+                                <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded">{t('billing.actionRequired')}</span>
                             )}
                         </div>
-                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Outstanding</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t('billing.outstanding')}</p>
                         <p className="text-2xl font-bold text-slate-900 mt-1">{formatINR(totalOutstanding)}</p>
-                        <p className="text-xs text-slate-400 mt-2">{filteredData.filter(b => b.status !== 'Paid').length} pending invoices</p>
+                        <p className="text-xs text-slate-400 mt-2">{filteredData.filter(b => b.status !== 'Paid').length} {t('billing.pendingInvoices')}</p>
                     </div>
 
                     {/* Paid This Month */}
@@ -207,7 +209,7 @@ const PortalBilling: React.FC = () => {
                                 <TrendingUpIcon /> +12%
                             </span>
                         </div>
-                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Collected</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t('billing.collected')}</p>
                         <p className="text-2xl font-bold text-slate-900 mt-1">{formatINR(paidThisMonth)}</p>
                         <p className="text-xs text-slate-400 mt-2">Last: {lastPayment ? new Date(lastPayment.date).toLocaleDateString('en-IN') : 'N/A'}</p>
                     </div>
@@ -219,9 +221,9 @@ const PortalBilling: React.FC = () => {
                                 <div className="text-amber-500"><ClockIcon /></div>
                             </div>
                         </div>
-                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Unbilled WIP</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t('billing.unbilledWIP')}</p>
                         <p className="text-2xl font-bold text-slate-900 mt-1">{formatINR(unbilledWIP)}</p>
-                        <p className="text-xs text-slate-400 mt-2">{timeEntries.filter(t => t.status === 'Unbilled').length} time entries</p>
+                        <p className="text-xs text-slate-400 mt-2">{timeEntries.filter(t => t.status === 'Unbilled').length} {t('billing.timeEntries')}</p>
                     </div>
 
                     {/* Retainer Balance */}
@@ -231,9 +233,9 @@ const PortalBilling: React.FC = () => {
                                 <div className="text-indigo-500"><WalletIcon /></div>
                             </div>
                         </div>
-                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Retainer Balance</p>
+                        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{t('billing.retainerBalance')}</p>
                         <p className="text-2xl font-bold text-slate-900 mt-1">{formatINR(totalRetainerBalance)}</p>
-                        <p className="text-xs text-slate-400 mt-2">{retainerData.length} active retainers</p>
+                        <p className="text-xs text-slate-400 mt-2">{retainerData.length} {t('billing.activeRetainers')}</p>
                     </div>
                 </div>
 
@@ -243,10 +245,10 @@ const PortalBilling: React.FC = () => {
                     {/* Tabs */}
                     <div className="flex border-b border-slate-200 bg-slate-50/50 overflow-x-auto">
                         {[
-                            { id: 'open', label: 'Open Invoices', count: billingData.filter(b => b.status !== 'Paid').length },
-                            { id: 'history', label: 'Payment History', count: paidInvoices.length },
-                            { id: 'time', label: 'Time Entries', count: timeEntries.length },
-                            { id: 'retainer', label: 'Retainers', count: retainerData.length },
+                            { id: 'open', label: t('billing.openInvoices'), count: billingData.filter(b => b.status !== 'Paid').length },
+                            { id: 'history', label: t('billing.paymentHistory'), count: paidInvoices.length },
+                            { id: 'time', label: t('billing.timeEntriesTab'), count: timeEntries.length },
+                            { id: 'retainer', label: t('billing.retainers'), count: retainerData.length },
                         ].map(tab => (
                             <button 
                                 key={tab.id}
@@ -275,7 +277,7 @@ const PortalBilling: React.FC = () => {
                             </div>
                             <input 
                                 type="text" 
-                                placeholder="Search invoices, matters..." 
+                                placeholder={t('billing.searchPlaceholder')} 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-lg text-sm bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
@@ -287,16 +289,16 @@ const PortalBilling: React.FC = () => {
                                 onChange={(e) => setSelectedDateRange(e.target.value)}
                                 className="px-3 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
-                                <option value="all">All Time</option>
-                                <option value="month">This Month</option>
-                                <option value="quarter">This Quarter</option>
-                                <option value="year">This Year</option>
+                                <option value="all">{t('billing.allTime')}</option>
+                                <option value="month">{t('billing.thisMonth')}</option>
+                                <option value="quarter">{t('billing.thisQuarter')}</option>
+                                <option value="year">{t('billing.thisYear')}</option>
                             </select>
                             <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                <FilterIcon /> Filter
+                                <FilterIcon /> {t('billing.filter')}
                             </button>
                             <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2">
-                                <DownloadIcon /> Export
+                                <DownloadIcon /> {t('billing.export')}
                             </button>
                         </div>
                     </div>
@@ -307,13 +309,13 @@ const PortalBilling: React.FC = () => {
                             <table className="min-w-full divide-y divide-slate-200">
                                 <thead className="bg-slate-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Invoice #</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Due Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Description</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Amount</th>
-                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">Status</th>
-                                        <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">Actions</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.invoiceNo')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.date')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.dueDate')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.description')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.amount')}</th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">{t('billing.status')}</th>
+                                        <th className="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase">{t('billing.actions')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
@@ -337,7 +339,7 @@ const PortalBilling: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <p className="text-sm font-semibold text-slate-900">{bill.description}</p>
-                                                    <p className="text-xs text-slate-400 mt-0.5">{relatedCase?.title || 'General'}</p>
+                                                    <p className="text-xs text-slate-400 mt-0.5">{relatedCase?.title || t('billing.general')}</p>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <span className="text-sm font-bold text-slate-900">{formatINR(bill.amount)}</span>
@@ -348,7 +350,7 @@ const PortalBilling: React.FC = () => {
                                                         isOverdue ? 'bg-red-100 text-red-700' :
                                                         'bg-amber-100 text-amber-700'
                                                     }`}>
-                                                        {isOverdue && bill.status !== 'Paid' ? 'Overdue' : bill.status}
+                                                        {isOverdue && bill.status !== 'Paid' ? t('billing.overdue') : bill.status}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -364,7 +366,7 @@ const PortalBilling: React.FC = () => {
                                                                 onClick={() => handleQuickPay(bill.id)}
                                                                 className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
                                                             >
-                                                                Pay Now
+                                                                {t('billing.payNow')}
                                                             </button>
                                                         )}
                                                         {bill.status === 'Paid' && (
@@ -384,8 +386,8 @@ const PortalBilling: React.FC = () => {
                                                     <div className="p-4 bg-slate-100 rounded-full mb-4">
                                                         <WalletIcon />
                                                     </div>
-                                                    <p className="font-semibold text-slate-900">No invoices found</p>
-                                                    <p className="text-sm text-slate-400 mt-1">Try adjusting your filters</p>
+                                                    <p className="font-semibold text-slate-900">{t('billing.noInvoices')}</p>
+                                                    <p className="text-sm text-slate-400 mt-1">{t('billing.adjustFilters')}</p>
                                                 </div>
                                             </td>
                                         </tr>
@@ -401,13 +403,13 @@ const PortalBilling: React.FC = () => {
                             <table className="min-w-full divide-y divide-slate-200">
                                 <thead className="bg-slate-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Date</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Description</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Lawyer</th>
-                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">Hours</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Rate</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">Amount</th>
-                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">Status</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.date')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.description')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.lawyer')}</th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">{t('billing.hours')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.rate')}</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase">{t('billing.amount')}</th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold text-slate-500 uppercase">{t('billing.status')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-slate-100">
@@ -440,10 +442,10 @@ const PortalBilling: React.FC = () => {
                             </table>
                             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                                 <p className="text-sm text-slate-600">
-                                    Total Unbilled: <span className="font-bold text-slate-900">{formatINR(unbilledWIP)}</span>
+                                    {t('billing.totalUnbilled')}: <span className="font-bold text-slate-900">{formatINR(unbilledWIP)}</span>
                                 </p>
                                 <button className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors">
-                                    Generate Invoice from Time
+                                    {t('billing.generateInvoice')}
                                 </button>
                             </div>
                         </div>
@@ -458,21 +460,21 @@ const PortalBilling: React.FC = () => {
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
                                                 <h3 className="font-bold text-slate-900">{ret.client}</h3>
-                                                <p className="text-sm text-slate-500">Valid till {new Date(ret.validTill).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                                <p className="text-sm text-slate-500">{t('billing.validTill')} {new Date(ret.validTill).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                                             </div>
                                             <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">{ret.status}</span>
                                         </div>
                                         <div className="grid grid-cols-3 gap-4">
                                             <div>
-                                                <p className="text-xs text-slate-500">Monthly Retainer</p>
+                                                <p className="text-xs text-slate-500">{t('billing.monthlyRetainer')}</p>
                                                 <p className="text-lg font-bold text-slate-900">{formatINR(ret.monthlyAmount)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-slate-500">Available Balance</p>
+                                                <p className="text-xs text-slate-500">{t('billing.availableBalance')}</p>
                                                 <p className="text-lg font-bold text-emerald-600">{formatINR(ret.balance)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-slate-500">Usage</p>
+                                                <p className="text-xs text-slate-500">{t('billing.usage')}</p>
                                                 <div className="mt-1">
                                                     <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                                         <div 
@@ -480,7 +482,7 @@ const PortalBilling: React.FC = () => {
                                                             style={{ width: `${((ret.monthlyAmount - ret.balance) / ret.monthlyAmount) * 100}%` }}
                                                         />
                                                     </div>
-                                                    <p className="text-xs text-slate-500 mt-1">{Math.round(((ret.monthlyAmount - ret.balance) / ret.monthlyAmount) * 100)}% used</p>
+                                                    <p className="text-xs text-slate-500 mt-1">{Math.round(((ret.monthlyAmount - ret.balance) / ret.monthlyAmount) * 100)}% {t('billing.used')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -493,12 +495,12 @@ const PortalBilling: React.FC = () => {
                     {/* Pagination */}
                     <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
                         <p className="text-sm text-slate-600">
-                            Showing <span className="font-semibold">1</span> to <span className="font-semibold">{Math.min(10, filteredData.length)}</span> of <span className="font-semibold">{filteredData.length}</span> results
+                            {t('billing.showing')} <span className="font-semibold">1</span> {t('billing.to')} <span className="font-semibold">{Math.min(10, filteredData.length)}</span> {t('billing.of')} <span className="font-semibold">{filteredData.length}</span> {t('billing.results')}
                         </p>
                         <div className="flex gap-1">
-                            <button className="px-3 py-1.5 border border-slate-200 rounded-md text-sm text-slate-500 font-medium hover:bg-white transition-colors">Previous</button>
+                            <button className="px-3 py-1.5 border border-slate-200 rounded-md text-sm text-slate-500 font-medium hover:bg-white transition-colors">{t('billing.previous')}</button>
                             <button className="px-3 py-1.5 bg-indigo-600 text-white rounded-md text-sm font-medium">1</button>
-                            <button className="px-3 py-1.5 border border-slate-200 rounded-md text-sm text-slate-500 font-medium hover:bg-white transition-colors">Next</button>
+                            <button className="px-3 py-1.5 border border-slate-200 rounded-md text-sm text-slate-500 font-medium hover:bg-white transition-colors">{t('billing.next')}</button>
                         </div>
                     </div>
                 </div>

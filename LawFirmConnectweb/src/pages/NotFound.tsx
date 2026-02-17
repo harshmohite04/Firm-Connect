@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Home, ArrowLeft } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 const NotFound: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4 relative overflow-hidden">
@@ -22,11 +24,11 @@ const NotFound: React.FC = () => {
         </div>
 
         <h2 className="text-3xl font-bold text-slate-800 mb-4">
-          Page Not Found
+          {t('notFound.title')}
         </h2>
-        
+
         <p className="text-slate-600 mb-8 text-lg max-w-md mx-auto">
-          Oops! The page you are looking for might have been removed, had its name changed, or depends on a specific case ID.
+          {t('notFound.description')}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -35,15 +37,15 @@ const NotFound: React.FC = () => {
             className="group px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-700 font-medium hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 flex items-center gap-2 shadow-sm"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Go Back
+            {t('notFound.goBack')}
           </button>
 
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="group px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all duration-200 flex items-center gap-2 shadow-md"
           >
             <Home className="w-4 h-4" />
-            Back to Home
+            {t('notFound.backToHome')}
           </Link>
         </div>
       </div>

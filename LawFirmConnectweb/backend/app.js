@@ -3,6 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const hpp = require('hpp');
 
 // Middleware
 const { errorHandler, notFound } = require('./src/middlewares/errorMiddleware');
@@ -29,7 +33,10 @@ app.use(
 );
 
 // Enhanced Helmet configuration with Content Security Policy
-// Enhanced Helmet configuration with Content Security Policy
+// Sanitize data
+app.use(mongoSanitize());
+
+// Set security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -55,6 +62,20 @@ app.use(helmet({
   },
   xFrameOptions: false // Disable X-Frame-Options header to allow embedding
 }));
+
+// Prevent XSS attacks
+app.use(xss());
+
+// Prevent http param pollution
+app.use(hpp());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 mins
+  max: 100
+});
+app.use(limiter);
+
 app.use(morgan('dev'));
 app.use(express.json());
 

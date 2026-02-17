@@ -6,6 +6,7 @@ import {
   useNavigate,
   useParams,
 } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import AIIconLogo from "../assets/ai-logo.svg";
 import PortalLayout from "../components/PortalLayout";
@@ -13,6 +14,7 @@ import type { Case } from "../services/caseService";
 import caseService from "../services/caseService";
 
 const PortalCaseDetails: React.FC = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,13 +51,13 @@ const PortalCaseDetails: React.FC = () => {
   if (loading)
     return (
       <PortalLayout>
-        <div>Loading...</div>
+        <div>{t('caseDetails.loading')}</div>
       </PortalLayout>
     );
   if (!caseData)
     return (
       <PortalLayout>
-        <div>Case not found</div>
+        <div>{t('caseDetails.notFound')}</div>
       </PortalLayout>
     );
 
@@ -73,22 +75,22 @@ const PortalCaseDetails: React.FC = () => {
           <div className="flex justify-between items-start mb-6">
             <div>
               <div className="flex items-center gap-2 mb-1 text-sm text-slate-500">
-                <span>Cases</span>
+                <span>{t('caseDetails.cases')}</span>
                 <span>/</span>
                 <span>{caseData.title}</span>
               </div>
               <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                Case: {caseData.title}
+                {t('caseDetails.casePrefix')}{caseData.title}
               </h1>
             </div>
           </div>
 
           <div className="flex gap-8">
             <NavLink to="activity" className={getNavLinkClass}>
-              Activity
+              {t('caseDetails.activity')}
             </NavLink>
             <NavLink to="documents" className={getNavLinkClass}>
-              Documents
+              {t('caseDetails.documents')}
             </NavLink>
             <NavLink
               to="chat"
@@ -104,27 +106,27 @@ const PortalCaseDetails: React.FC = () => {
                     alt="AI"
                     className={`w-5 h-5 ${isActive ? "" : "grayscale opacity-50"}`}
                   />
-                  Ask AI
+                  {t('caseDetails.askAI')}
                 </>
               )}
             </NavLink>
             <NavLink to="draft" className={getNavLinkClass}>
-              Drafting
+              {t('caseDetails.drafting')}
             </NavLink>
-            <NavLink 
-                to="investigator" 
-                className={({ isActive }) => 
+            <NavLink
+                to="investigator"
+                className={({ isActive }) =>
                     `pb-3 text-sm font-medium transition-colors flex items-center gap-2 ${isActive ? "text-purple-600 border-b-2 border-purple-600 font-bold" : "text-slate-500 hover:text-slate-900"}`
                 }
             >
                {/* Use the new Purple color for Investigator */}
-               Investigator Agent
+               {t('caseDetails.investigatorAgent')}
             </NavLink>
             <NavLink to="billing" className={getNavLinkClass}>
-              Billing
+              {t('caseDetails.billing')}
             </NavLink>
             <NavLink to="settings" className={getNavLinkClass}>
-              Settings
+              {t('caseDetails.settings')}
             </NavLink>
           </div>
         </div>

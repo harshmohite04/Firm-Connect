@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PortalLayout from '../components/PortalLayout';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { useNavigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const UserIcon = () => (
@@ -26,6 +27,7 @@ const LogoutIcon = () => (
 )
 
 const PortalProfile: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState<any>({
@@ -62,9 +64,9 @@ const PortalProfile: React.FC = () => {
     const handleLogoutClick = () => {
         setConfirmation({
             isOpen: true,
-            title: "Sign Out",
-            message: "Are you sure you want to log out?",
-            confirmText: "Sign Out",
+            title: t('profile.signOutConfirmTitle'),
+            message: t('profile.signOutConfirmMessage'),
+            confirmText: t('profile.signOut'),
             onConfirm: confirmLogout,
             isDanger: false
         });
@@ -101,25 +103,25 @@ const PortalProfile: React.FC = () => {
                     {/* Left Col: Navigation / Actions */}
                     <div className="lg:col-span-1 space-y-4">
                         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
-                            <div className="p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-700">Account Settings</div>
+                            <div className="p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-700">{t('profile.accountSettings')}</div>
                             <nav className="flex flex-col p-2 space-y-1">
                                 <Link to="info" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('info') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                                    <UserIcon /> Profile Information
+                                    <UserIcon /> {t('profile.profileInfo')}
                                 </Link>
                                 <Link to="security" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('security') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                                    <LockIcon /> Security
+                                    <LockIcon /> {t('profile.security')}
                                 </Link>
                                 <Link to="notifications" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('notifications') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                                    <BellIcon /> Notifications
+                                    <BellIcon /> {t('profile.notifications')}
                                 </Link>
                             </nav>
                         </div>
 
-                        <button 
+                        <button
                             onClick={handleLogoutClick}
                             className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-colors shadow-sm"
                         >
-                            <LogoutIcon /> Sign Out
+                            <LogoutIcon /> {t('profile.signOut')}
                         </button>
                     </div>
 

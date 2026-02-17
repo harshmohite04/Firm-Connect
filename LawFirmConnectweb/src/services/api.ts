@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getAuthToken, clearAuthData } from "../utils/storage";
 
 // Create axios instance
 const api = axios.create({
@@ -8,12 +9,9 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const userInfo = localStorage.getItem("user");
-    if (userInfo) {
-      const { token } = JSON.parse(userInfo);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const token = getAuthToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -26,11 +24,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle 401 Unauthorized globally (optional)
     if (error.response && error.response.status === 401) {
-      // Could redirect to login or clear storage here
-      // localStorage.removeItem('userInfo');
-      // window.location.href = '/signin';
+      clearAuthData();
     }
     return Promise.reject(error);
   },

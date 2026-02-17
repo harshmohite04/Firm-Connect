@@ -4,6 +4,8 @@ import Footer from '../components/Footer';
 import { CheckCircle, Rocket, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { getAuthToken } from '../utils/storage';
 
 declare global {
     interface Window {
@@ -12,6 +14,7 @@ declare global {
 }
 
 const Pricing: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(false);
@@ -226,7 +229,7 @@ const Pricing: React.FC = () => {
                             {plan.recommended && (
                                 <div className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2">
                                     <span className="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wide">
-                                        Most Popular
+                                        {t('pricing.mostPopular')}
                                     </span>
                                 </div>
                             )}
@@ -234,7 +237,7 @@ const Pricing: React.FC = () => {
                             <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
                             <div className="mt-4 flex items-baseline text-slate-900">
                                 <span className="text-5xl font-extrabold tracking-tight">₹{plan.price.toLocaleString()}</span>
-                                <span className="ml-1 text-xl font-semibold text-slate-500">/month</span>
+                                <span className="ml-1 text-xl font-semibold text-slate-500">{t('pricing.perMonth')}</span>
                             </div>
                             
                             <ul className="mt-6 space-y-4 flex-1">
@@ -250,11 +253,11 @@ const Pricing: React.FC = () => {
                                 onClick={() => handleSubscribe(plan)}
                                 disabled={loading}
                                 className={`mt-8 block w-full py-3 px-6 border border-transparent rounded-xl shadow text-center font-bold text-lg text-white transition-colors ${
-                                    loading ? 'bg-slate-400 cursor-not-allowed' : 
+                                    loading ? 'bg-slate-400 cursor-not-allowed' :
                                     plan.recommended ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-800 hover:bg-slate-900'
                                 }`}
                             >
-                                {loading ? 'Processing...' : `Get Started with ${plan.name}`}
+                                {loading ? t('pricing.processing') : t('pricing.getStarted', { plan: plan.name })}
                             </button>
                         </div>
                     ))}
@@ -262,8 +265,8 @@ const Pricing: React.FC = () => {
                 
                 <div className="mt-12 text-center text-slate-500 text-sm">
                     <p>
-                        Are you an invitee with an <strong>@harsh.com</strong> email? <br/>
-                        <a href="/portal" className="text-indigo-600 hover:underline">Access is free for you.</a>
+                        {t('pricing.inviteeMessage')} <br/>
+                        <a href="/portal" className="text-indigo-600 hover:underline">{t('pricing.freeAccess')}</a>
                     </p>
                 </div>
             </div>
