@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
 import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';
@@ -48,6 +49,7 @@ const ClockIcon = () => (
 );
 
 const PortalCases: React.FC = () => {
+    const { t } = useTranslation();
     const [cases, setCases] = React.useState<Case[]>([]);
     const [loading, setLoading] = React.useState(true);
     const [filter, setFilter] = React.useState('All');
@@ -97,7 +99,7 @@ const PortalCases: React.FC = () => {
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
                         <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-600 font-medium">Loading your cases...</p>
+                        <p className="text-slate-600 font-medium">{t('cases.loading')}</p>
                     </div>
                 </div>
             </PortalLayout>
@@ -112,21 +114,21 @@ const PortalCases: React.FC = () => {
                 <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">My Legal Matters</h1>
-                            <p className="text-slate-500 mt-2">Overview of all your active and archived cases.</p>
+                            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">{t('cases.title')}</h1>
+                            <p className="text-slate-500 mt-2">{t('cases.subtitle')}</p>
                         </div>
                         <div className="flex gap-3">
                             <Link
                                 to="/portal"
                                 className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
                             >
-                                Dashboard
+                                {t('cases.dashboard')}
                             </Link>
                             <Link
                                 to="/portal/start-case"
                                 className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
                             >
-                                <PlusIcon /> New Case
+                                <PlusIcon /> {t('cases.newCase')}
                             </Link>
                         </div>
                     </div>
@@ -139,10 +141,10 @@ const PortalCases: React.FC = () => {
                             <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
                                 <CaseIcon />
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Active</span>
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{t('cases.active')}</span>
                         </div>
                         <p className="text-2xl font-bold text-slate-900">{activeCases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">Active Cases</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('cases.activeCases')}</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
@@ -152,7 +154,7 @@ const PortalCases: React.FC = () => {
                             </div>
                         </div>
                         <p className="text-2xl font-bold text-slate-900">{cases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">Total Cases</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('cases.totalCases')}</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group col-span-2 lg:col-span-1">
@@ -162,7 +164,7 @@ const PortalCases: React.FC = () => {
                             </div>
                         </div>
                         <p className="text-2xl font-bold text-slate-900">{closedCases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">Closed Cases</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('cases.closedCases')}</p>
                     </div>
                 </div>
 
@@ -175,14 +177,14 @@ const PortalCases: React.FC = () => {
                             </div>
                             <input
                                 type="text"
-                                placeholder="Search by case name..."
+                                placeholder={t('cases.searchPlaceholder')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-300 text-sm transition-all"
                             />
                         </div>
                         <div className="flex items-center gap-2">
-                            {['All', 'Active', 'Closed'].map((f) => (
+                            {(['All', 'Active', 'Closed'] as const).map((f) => (
                                 <button
                                     key={f}
                                     onClick={() => setFilter(f)}
@@ -191,7 +193,7 @@ const PortalCases: React.FC = () => {
                                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                         }`}
                                 >
-                                    {f}
+                                    {t(`cases.${f.toLowerCase()}`)}
                                 </button>
                             ))}
                         </div>
@@ -206,10 +208,10 @@ const PortalCases: React.FC = () => {
                                 <FolderIcon />
                             </div>
                             <h3 className="font-bold text-slate-900">
-                                {filter === 'All' ? 'All Cases' : filter === 'Active' ? 'Active Cases' : 'Closed Cases'}
+                                {filter === 'All' ? t('cases.allCases') : filter === 'Active' ? t('cases.activeCases') : t('cases.closedCases')}
                             </h3>
                         </div>
-                        <span className="text-sm text-slate-500">{filteredCases.length} {filteredCases.length === 1 ? 'case' : 'cases'}</span>
+                        <span className="text-sm text-slate-500">{filteredCases.length} {filteredCases.length === 1 ? t('cases.case') : t('cases.casesLabel')}</span>
                     </div>
 
                     <div className="divide-y divide-slate-100">
@@ -227,7 +229,7 @@ const PortalCases: React.FC = () => {
                                         <div className="flex-1 min-w-0">
                                             <h4 className="font-bold text-slate-900 truncate">{caseItem.title}</h4>
                                             <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">
-                                                {caseItem.description || 'No description provided'}
+                                                {caseItem.description || t('cases.noDescription')}
                                             </p>
                                             <div className="flex items-center gap-4 mt-2">
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusStyle(caseItem.status)}`}>
@@ -239,7 +241,7 @@ const PortalCases: React.FC = () => {
                                                 </span>
                                                 {caseItem.leadAttorney && (
                                                     <span className="text-xs text-slate-400">
-                                                        Attorney: {caseItem.leadAttorney.name}
+                                                        {t('cases.attorney')}: {caseItem.leadAttorney.name}
                                                     </span>
                                                 )}
                                             </div>
@@ -257,16 +259,16 @@ const PortalCases: React.FC = () => {
                                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <FolderIcon />
                                 </div>
-                                <p className="font-semibold text-slate-900">No cases found</p>
+                                <p className="font-semibold text-slate-900">{t('cases.noCasesFound')}</p>
                                 <p className="text-sm text-slate-500 mt-1">
-                                    {searchQuery ? 'Try adjusting your search' : 'Start by creating your first case'}
+                                    {searchQuery ? t('cases.adjustSearch') : t('cases.startCreating')}
                                 </p>
                                 {!searchQuery && (
                                     <Link
                                         to="/portal/start-case"
                                         className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors"
                                     >
-                                        <PlusIcon /> Create Case
+                                        <PlusIcon /> {t('cases.createCase')}
                                     </Link>
                                 )}
                             </div>

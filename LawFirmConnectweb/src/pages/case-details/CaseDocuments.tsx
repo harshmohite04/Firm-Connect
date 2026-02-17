@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService from '../../services/caseService';
@@ -67,6 +68,7 @@ const TrashIcon = () => (
 const CaseDocuments: React.FC = () => {
     // @ts-ignore
     const { caseData, setCaseData } = useOutletContext<{ caseData: any, setCaseData: any }>();
+    const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
 
     // Document Tab State
@@ -106,7 +108,22 @@ const CaseDocuments: React.FC = () => {
         }
     };
 
-    const uploadCategories = ['Case Filing', 'Evidence', 'Correspondence', 'General'];
+
+
+    const uploadCategories = [
+        { value: 'Case Filing', label: t('portal.documents.filter.case_filing') },
+        { value: 'Evidence', label: t('portal.documents.filter.evidence') },
+        { value: 'Correspondence', label: t('portal.documents.filter.correspondence') },
+        { value: 'General', label: t('portal.documents.filter.general') }
+    ];
+
+    const filterCategories = [
+        { value: 'All Files', label: t('portal.documents.filter.all') },
+        { value: 'Court Filings', label: t('portal.documents.filter.court_filings') },
+        { value: 'Evidence', label: t('portal.documents.filter.evidence') },
+        { value: 'Correspondence', label: t('portal.documents.filter.correspondence') },
+        { value: 'Drafts', label: t('portal.documents.filter.drafts') }
+    ];
 
     const handleOpenUploadModal = () => {
         setIsUploadModalOpen(true);
@@ -302,7 +319,7 @@ const CaseDocuments: React.FC = () => {
                     </div>
                     <input 
                         type="text" 
-                        placeholder="Search by file name..." 
+                        placeholder={t('portal.documents.search')}
                         value={docSearchQuery}
                         onChange={(e) => setDocSearchQuery(e.target.value)}
                         className="block w-full pl-11 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-white shadow-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
@@ -312,25 +329,25 @@ const CaseDocuments: React.FC = () => {
                     onClick={handleOpenUploadModal}
                     disabled={uploading}
                     className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold shadow-sm transition-colors disabled:opacity-50">
-                    <CloudUploadIcon /> {uploading ? 'Processing...' : 'Upload Document'}
+                    <CloudUploadIcon /> {uploading ? t('portal.documents.processing') : t('portal.documents.upload')}
                 </button>
             </div>
 
                 {/* Filter Categories & View Options */}
             <div className="flex flex-col md:flex-row justify-between gap-4 items-center">
                 <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
-                    {['All Files', 'Court Filings', 'Evidence', 'Correspondence', 'Drafts'].map((cat) => (
+                    {filterCategories.map((cat) => (
                         <button 
-                            key={cat}
-                            onClick={() => setDocCategoryFilter(cat)}
+                            key={cat.value}
+                            onClick={() => setDocCategoryFilter(cat.value)}
                             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shadow-sm ${
-                                docCategoryFilter === cat 
+                                docCategoryFilter === cat.value 
                                 ? 'bg-slate-800 text-white font-bold' 
                                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                             }`}
                         >
-                            {cat} 
-                            {cat === 'All Files' && <span className="bg-slate-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1">{caseData?.documents.length}</span>}
+                            {cat.label} 
+                            {cat.value === 'All Files' && <span className="bg-slate-600 text-white text-[10px] px-1.5 py-0.5 rounded ml-1">{caseData?.documents.length}</span>}
                         </button>
                     ))}
                 </div>
@@ -339,7 +356,7 @@ const CaseDocuments: React.FC = () => {
                     <button 
                         onClick={() => setDocSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')}
                         className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-wide">
-                        <SortIcon /> {docSortOrder === 'newest' ? 'Newest' : 'Oldest'}
+                        <SortIcon /> {docSortOrder === 'newest' ? t('portal.documents.sortNewest') : t('portal.documents.sortOldest')}
                     </button>
                     <div className="h-6 w-px bg-slate-300 mx-1"></div>
                     <div className="flex bg-slate-200 rounded-lg p-1">
@@ -426,12 +443,12 @@ const CaseDocuments: React.FC = () => {
                         <table className="min-w-full divide-y divide-slate-200">
                             <thead className="bg-slate-50">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Category</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{t('portal.documents.columns.name')}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{t('portal.documents.filter.general')}</th>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Uploaded By</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Date Added</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Size</th>
-                                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{t('portal.documents.columns.date')}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">{t('portal.documents.columns.size')}</th>
+                                    <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">{t('portal.documents.columns.action')}</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200">
@@ -505,8 +522,8 @@ const CaseDocuments: React.FC = () => {
                                                 <div className="bg-slate-100 p-4 rounded-full mb-3">
                                                     <CloudUploadIcon />
                                                 </div>
-                                                <p className="font-medium text-slate-900">No documents yet</p>
-                                                <p className="text-sm text-slate-400 max-w-xs mx-auto mt-1">Upload files to share them securely with your legal team.</p>
+                                                <p className="font-medium text-slate-900">{t('portal.documents.emptyTitle')}</p>
+                                                <p className="text-sm text-slate-400 max-w-xs mx-auto mt-1">{t('portal.documents.emptyDesc')}</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -521,14 +538,14 @@ const CaseDocuments: React.FC = () => {
             {/* Pagination */}
             <div className="flex items-center justify-between pt-2">
                 <p className="text-sm text-slate-500">
-                    Showing <span className="font-bold text-slate-900">1</span> to <span className="font-bold text-slate-900">{filteredDocuments.length}</span> of <span className="font-bold text-slate-900">{caseData?.documents.length}</span> results
+                    {t('portal.documents.pagination', { from: 1, to: filteredDocuments.length, total: caseData?.documents.length })}
                 </p>
                 <div className="flex gap-2">
                     <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" disabled>
-                        ← Previous
+                        ← {t('portal.common.previous')}
                     </button>
                     <button className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-900 hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50" disabled>
-                        Next →
+                        {t('portal.common.next')} →
                     </button>
                 </div>
             </div>
@@ -537,7 +554,7 @@ const CaseDocuments: React.FC = () => {
                 <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="text-xl font-bold text-slate-900">Upload Documents</h3>
+                            <h3 className="text-xl font-bold text-slate-900">{t('portal.documents.uploadModalTitle')}</h3>
                             <button 
                                 onClick={() => setIsUploadModalOpen(false)}
                                 className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors font-bold"
@@ -558,14 +575,14 @@ const CaseDocuments: React.FC = () => {
                                 <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
                                     <CloudUploadIcon />
                                 </div>
-                                <p className="text-slate-900 font-bold mb-1">Click to browse or drag files here</p>
+                                <p className="text-slate-900 font-bold mb-1">{t('portal.documents.dropzone')}</p>
                                 <p className="text-xs text-slate-500">Support for PDF, DOCX, JPG, PNG</p>
                             </div>
 
                             {/* Pending Files List */}
                             {pendingFiles.length > 0 && (
                                 <div className="mt-6 space-y-3">
-                                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Selected Files ({pendingFiles.length})</h4>
+                                    <h4 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">{t('portal.documents.selectedFiles')} ({pendingFiles.length})</h4>
                                     {pendingFiles.map((pf) => (
                                         <div key={pf.id} className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-lg shadow-sm">
                                             <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
@@ -584,7 +601,7 @@ const CaseDocuments: React.FC = () => {
                                                     className="w-full text-xs font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                 >
                                                     {uploadCategories.map(cat => (
-                                                        <option key={cat} value={cat}>{cat}</option>
+                                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
                                                     ))}
                                                 </select>
                                             </div>
@@ -607,7 +624,7 @@ const CaseDocuments: React.FC = () => {
                                 onClick={() => setIsUploadModalOpen(false)}
                                 className="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
                             >
-                                Cancel
+                                {t('portal.common.cancel')}
                             </button>
                             <button 
                                 onClick={handleUploadAll}
@@ -624,7 +641,7 @@ const CaseDocuments: React.FC = () => {
                                     </>
                                 ) : (
                                     <>
-                                        Upload {pendingFiles.length > 0 ? `${pendingFiles.length} Files` : ''}
+                                        {t('portal.documents.upload')} {pendingFiles.length > 0 ? `${pendingFiles.length} Files` : ''}
                                     </>
                                 )}
                             </button>
@@ -654,7 +671,7 @@ const CaseDocuments: React.FC = () => {
                                     onClick={() => handleDownload(selectedDocument)}
                                     className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2"
                                 >
-                                    <DownloadIcon /> Download
+                                    <DownloadIcon /> {t('portal.documents.download')}
                                 </button>
                                 <a 
                                     href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/${selectedDocument.filePath.replace(/^\//, '')}`}
@@ -662,7 +679,8 @@ const CaseDocuments: React.FC = () => {
                                     rel="noreferrer"
                                     className="px-4 py-2 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-2"
                                 >
-                                    Open in New Tab
+
+                                    {t('portal.documents.openTab')}
                                 </a>
                                 <button 
                                     onClick={() => setSelectedDocument(null)}
@@ -716,13 +734,13 @@ const CaseDocuments: React.FC = () => {
                                             <div className="w-16 h-16 mx-auto mb-4 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
                                                 <DocIcon />
                                             </div>
-                                            <h4 className="text-lg font-bold text-slate-900 mb-2">Preview not available</h4>
-                                            <p className="text-slate-500 mb-6">This file type cannot be previewed in the browser.</p>
+                                            <h4 className="text-lg font-bold text-slate-900 mb-2">{t('portal.documents.previewUnavailable')}</h4>
+                                            <p className="text-slate-500 mb-6">{t('portal.documents.previewError')}</p>
                                             <button 
                                                 onClick={() => handleDownload(selectedDocument)}
                                                 className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
                                             >
-                                                <DownloadIcon /> Download File
+                                                <DownloadIcon /> {t('portal.documents.download')}
                                             </button>
                                         </div>
                                     );
@@ -737,9 +755,9 @@ const CaseDocuments: React.FC = () => {
                 isOpen={isDeleteModalOpen}
                 onClose={() => setIsDeleteModalOpen(false)}
                 onConfirm={confirmDeleteDocument}
-                title="Delete Document"
-                message="Are you sure you want to delete this document? This action cannot be undone."
-                confirmText="Delete"
+                title={t('portal.documents.deleteTitle')}
+                message={t('portal.documents.deleteConfirm')}
+                confirmText={t('portal.documents.deleteTitle')} // Simplified for now
             />
         </div>
     );

@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import caseService from '../services/caseService';
 
+import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
+import TransliterateInput from '../components/TransliterateInput';
 
 // Icons
 const CheckIcon = () => (
@@ -66,6 +68,7 @@ interface TeamMember {
 
 const StartCase: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         title: '',
@@ -187,18 +190,18 @@ const StartCase: React.FC = () => {
     };
 
     const categories = [
-        { id: 'Family Law', label: 'Family Law', desc: 'Divorce, custody, adoption', icon: <FamilyIcon /> },
-        { id: 'Corporate', label: 'Corporate', desc: 'Incorporation, mergers, contracts', icon: <CorporateIcon /> },
-        { id: 'Real Estate', label: 'Real Estate', desc: 'Purchase, sale, lease disputes', icon: <RealEstateIcon /> },
-        { id: 'Litigation', label: 'Litigation', desc: 'Civil disputes, personal injury', icon: <LitigationIcon /> },
+        { id: 'Family Law', label: t('startCase.familyLaw'), desc: t('startCase.familyLawDesc'), icon: <FamilyIcon /> },
+        { id: 'Corporate', label: t('startCase.corporate'), desc: t('startCase.corporateDesc'), icon: <CorporateIcon /> },
+        { id: 'Real Estate', label: t('startCase.realEstate'), desc: t('startCase.realEstateDesc'), icon: <RealEstateIcon /> },
+        { id: 'Litigation', label: t('startCase.litigation'), desc: t('startCase.litigationDesc'), icon: <LitigationIcon /> },
     ];
 
     return (
         <PortalLayout>
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Start a New Case</h2>
-                    <p className="text-slate-500 mt-1">Please provide the initial details so we can assign the best attorney for your matter.</p>
+                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">{t('startCase.title')}</h2>
+                    <p className="text-slate-500 mt-1">{t('startCase.subtitle')}</p>
                 </div>
 
                 {/* Progress Steps */}
@@ -207,9 +210,9 @@ const StartCase: React.FC = () => {
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 transition-all duration-300 -z-10" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
 
                     {[
-                        { num: 1, label: 'Case Information' },
-                        { num: 2, label: 'Team Formation' },
-                        { num: 3, label: 'Review & Submit' }
+                        { num: 1, label: t('startCase.caseInfo') },
+                        { num: 2, label: t('startCase.teamFormation') },
+                        { num: 3, label: t('startCase.reviewSubmit') }
                     ].map((s) => (
                         <div key={s.num} className="flex items-center gap-3 bg-slate-50 px-2">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${step >= s.num ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
@@ -231,23 +234,22 @@ const StartCase: React.FC = () => {
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">i</div>
-                                        <h3 className="text-xl font-bold text-slate-900">Case Basics</h3>
+                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.caseBasics')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Case Name / Reference Title <span className="text-red-500">*</span></label>
-                                        <input
-                                            type="text"
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.caseName')} <span className="text-red-500">*</span></label>
+                                        <TransliterateInput
                                             value={formData.title}
-                                            onChange={e => setFormData({ ...formData, title: e.target.value })}
-                                            placeholder="e.g. Purchase of 123 Main St, or Jones Family Trust"
+                                            onChangeText={(text) => setFormData({ ...formData, title: text })}
+                                            placeholder={t('startCase.caseNamePlaceholder')}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                         />
-                                        <p className="text-xs text-slate-400 mt-1">A short name for you to identify this matter.</p>
+                                        <p className="text-xs text-slate-400 mt-1">{t('startCase.caseNameHint')}</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Legal Matter Type <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.legalMatterType')} <span className="text-red-500">*</span></label>
                                         <div className="grid sm:grid-cols-2 gap-4">
                                             {categories.map(cat => (
                                                 <div
@@ -266,14 +268,15 @@ const StartCase: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">Brief Description of the Issue <span className="text-red-500">*</span></label>
-                                        <textarea
-                                            rows={4}
+                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.briefDescription')} <span className="text-red-500">*</span></label>
+                                        <TransliterateInput
                                             value={formData.description}
-                                            onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                            placeholder="Please describe the situation, key events, and what outcome you are hoping to achieve..."
+                                            onChangeText={(text) => setFormData({ ...formData, description: text })}
+                                            placeholder={t('startCase.descriptionPlaceholder')}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
-                                        ></textarea>
+                                            type="textarea"
+                                            rows={4}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -285,13 +288,13 @@ const StartCase: React.FC = () => {
                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
                                             <UsersIcon />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900">Team Formation</h3>
+                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.teamFormation')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-4">Work Type</label>
+                                        <label className="block text-sm font-bold text-slate-700 mb-4">{t('startCase.workType')}</label>
                                         <div className="grid sm:grid-cols-2 gap-6">
-                                            <div 
+                                            <div
                                                 onClick={() => setFormData({...formData, teamType: 'solo'})}
                                                 className={`cursor-pointer border-2 rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center ${formData.teamType === 'solo' ? 'bg-white border-blue-500 ring-4 ring-blue-50/50' : 'bg-white border-slate-200 hover:border-slate-300'}`}
                                             >
@@ -299,12 +302,12 @@ const StartCase: React.FC = () => {
                                                     <UserIcon />
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>Single</h4>
-                                                    <p className="text-sm text-slate-500">Work on this case alone</p>
+                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.single')}</h4>
+                                                    <p className="text-sm text-slate-500">{t('startCase.singleDesc')}</p>
                                                 </div>
                                             </div>
 
-                                            <div 
+                                            <div
                                                 onClick={() => setFormData({...formData, teamType: 'team'})}
                                                 className={`cursor-pointer border-2 rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center ${formData.teamType === 'team' ? 'bg-blue-50 border-blue-500 ring-4 ring-blue-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}
                                             >
@@ -312,8 +315,8 @@ const StartCase: React.FC = () => {
                                                     <UsersIcon />
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>Team</h4>
-                                                    <p className="text-sm text-slate-500">Collaborate with others</p>
+                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.team')}</h4>
+                                                    <p className="text-sm text-slate-500">{t('startCase.teamDesc')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -321,11 +324,11 @@ const StartCase: React.FC = () => {
 
                                     {formData.teamType === 'team' && (
                                         <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-4">
-                                            <label className="block text-sm font-bold text-slate-700">Invite Team Members</label>
+                                            <label className="block text-sm font-bold text-slate-700">{t('startCase.inviteTeamMembers')}</label>
                                             <div className="flex gap-2">
-                                                <input 
-                                                    type="email" 
-                                                    placeholder="Enter email address..." 
+                                                <input
+                                                    type="email"
+                                                    placeholder={t('startCase.emailPlaceholder')}
                                                     value={emailInput}
                                                     onChange={(e) => setEmailInput(e.target.value)}
                                                     onKeyDown={(e) => {
@@ -341,11 +344,11 @@ const StartCase: React.FC = () => {
                                                     disabled={validatingEmail || !emailInput}
                                                     className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
                                                 >
-                                                    {validatingEmail ? 'Adding...' : 'Add'}
+                                                    {validatingEmail ? t('startCase.adding') : t('startCase.add')}
                                                 </button>
                                             </div>
                                             {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
-                                            <p className="text-xs text-slate-400">Only registered portal users can be added to the team</p>
+                                            <p className="text-xs text-slate-400">{t('startCase.registeredOnly')}</p>
 
                                             {formData.teamMembers.length > 0 && (
                                                 <div className="flex flex-wrap gap-2 mt-3">
@@ -368,7 +371,7 @@ const StartCase: React.FC = () => {
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                                 </div>
                                                 <p className="text-sm text-yellow-800">
-                                                    Team members will receive email invitations. Invitations expire after 3 days if not accepted.
+                                                    {t('startCase.inviteWarning')}
                                                 </p>
                                             </div>
                                         </div>
@@ -383,11 +386,11 @@ const StartCase: React.FC = () => {
                                         <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
                                             <TeamIcon />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900">Team Formation</h3>
+                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.teamFormation')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-3">Work Type</label>
+                                        <label className="block text-sm font-bold text-slate-700 mb-3">{t('startCase.workType')}</label>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div
                                                 onClick={() => setFormData({ ...formData, teamType: 'solo', teamMembers: [] })}
@@ -398,8 +401,8 @@ const StartCase: React.FC = () => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                     </svg>
                                                 </div>
-                                                <h4 className={`font-bold text-sm ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>Single</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Work on this case alone</p>
+                                                <h4 className={`font-bold text-sm ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.single')}</h4>
+                                                <p className="text-xs text-slate-500 mt-1">{t('startCase.singleDesc')}</p>
                                             </div>
                                             <div
                                                 onClick={() => setFormData({ ...formData, teamType: 'team' })}
@@ -408,8 +411,8 @@ const StartCase: React.FC = () => {
                                                 <div className="flex justify-center mb-3">
                                                     <TeamIcon />
                                                 </div>
-                                                <h4 className={`font-bold text-sm ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>Team</h4>
-                                                <p className="text-xs text-slate-500 mt-1">Collaborate with others</p>
+                                                <h4 className={`font-bold text-sm ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.team')}</h4>
+                                                <p className="text-xs text-slate-500 mt-1">{t('startCase.teamDesc')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -417,7 +420,7 @@ const StartCase: React.FC = () => {
                                     {formData.teamType === 'team' && (
                                         <>
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 mb-2">Invite Team Members</label>
+                                                <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.inviteTeamMembers')}</label>
                                                 <div className="flex gap-2">
                                                     <input
                                                         type="email"
@@ -427,7 +430,7 @@ const StartCase: React.FC = () => {
                                                             setEmailError('');
                                                         }}
                                                         onKeyPress={e => e.key === 'Enter' && validateEmail()}
-                                                        placeholder="Enter email address..."
+                                                        placeholder={t('startCase.emailPlaceholder')}
                                                         className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                                                     />
                                                     <button
@@ -435,7 +438,7 @@ const StartCase: React.FC = () => {
                                                         disabled={validatingEmail || !emailInput.trim()}
                                                         className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        {validatingEmail ? 'Checking...' : 'Add'}
+                                                        {validatingEmail ? t('startCase.checking') : t('startCase.add')}
                                                     </button>
                                                 </div>
                                                 {emailError && (
@@ -446,13 +449,13 @@ const StartCase: React.FC = () => {
                                                         {emailError}
                                                     </p>
                                                 )}
-                                                <p className="text-xs text-slate-400 mt-1">Only registered portal users can be added to the team</p>
+                                                <p className="text-xs text-slate-400 mt-1">{t('startCase.registeredOnly')}</p>
                                             </div>
 
                                             {formData.teamMembers.length > 0 && (
                                                 <>
                                                     <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-3">Team Members ({formData.teamMembers.length})</label>
+                                                        <label className="block text-sm font-bold text-slate-700 mb-3">{t('startCase.teamMembers')} ({formData.teamMembers.length})</label>
                                                         <div className="space-y-2">
                                                             {formData.teamMembers.map((member, index) => (
                                                                 <div key={index} className="flex items-center justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
@@ -467,13 +470,13 @@ const StartCase: React.FC = () => {
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
                                                                         <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">
-                                                                            Pending Invitation
+                                                                            {t('startCase.pendingInvitation')}
                                                                         </span>
                                                                         <button
                                                                             onClick={() => removeTeamMember(member.email)}
                                                                             className="text-red-500 hover:text-red-700 font-bold text-xs"
                                                                         >
-                                                                            Remove
+                                                                            {t('startCase.remove')}
                                                                         </button>
                                                                     </div>
                                                                 </div>

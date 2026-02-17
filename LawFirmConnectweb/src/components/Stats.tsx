@@ -1,11 +1,14 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 const Stats: React.FC = () => {
+  const { t } = useTranslation();
+
   const stats = [
-    { value: '25+', label: 'Years of Experience' },
-    { value: '1k+', label: 'Cases Won' },
-    { value: '50+', label: 'Expert Attorneys' },
-    { value: '24/7', label: 'Client Support' },
+    { value: '10x', label: t('stats.experience') },
+    { value: '90%', label: t('stats.casesWon') },
+    { value: 'Instant', label: t('stats.attorneys') },
+    { value: '24/7', label: t('stats.support') },
   ];
 
   return (

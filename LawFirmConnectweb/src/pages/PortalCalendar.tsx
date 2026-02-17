@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
 import scheduleService from '../services/scheduleService';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -68,6 +69,7 @@ const eventColors: Record<string, { bg: string; border: string; text: string; li
 };
 
 const PortalCalendar: React.FC = () => {
+    const { t } = useTranslation();
     const [viewDate, setViewDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'WorkWeek'>('WorkWeek');
     const [bookings, setBookings] = useState<any[]>([]);
@@ -198,7 +200,7 @@ const PortalCalendar: React.FC = () => {
             const endDateTime = new Date(`${endDate}T${endTime}`);
 
             const eventData: any = {
-                title: eventTitle || '(No Title)',
+                title: eventTitle || t('calendar.noTitle'),
                 startDate: startDateTime.toISOString(),
                 startTime,
                 endDate: endDateTime.toISOString(),
@@ -214,17 +216,17 @@ const PortalCalendar: React.FC = () => {
 
             if (selectedEvent && !isCreating) {
                 await scheduleService.updateEvent(selectedEvent.id, eventData);
-                toast.success("Event updated successfully");
+                toast.success(t('calendar.eventUpdated'));
             } else {
                 await scheduleService.createEvent(eventData);
-                toast.success("Event created successfully");
+                toast.success(t('calendar.eventCreated'));
             }
 
             await fetchEvents();
             closeSidePanel();
         } catch (error) {
             console.error("Failed to save event", error);
-            toast.error("Failed to save event");
+            toast.error(t('calendar.eventSaveFailed'));
         }
     };
 
@@ -233,13 +235,13 @@ const PortalCalendar: React.FC = () => {
 
         try {
             await scheduleService.deleteEvent(selectedEvent.id);
-            toast.success("Event deleted successfully");
+            toast.success(t('calendar.eventDeleted'));
             await fetchEvents();
             closeSidePanel();
             setIsDeleteModalOpen(false);
         } catch (error) {
             console.error("Failed to delete event", error);
-            toast.error("Failed to delete event");
+            toast.error(t('calendar.eventDeleteFailed'));
             setIsDeleteModalOpen(false);
         }
     };
@@ -314,7 +316,7 @@ const PortalCalendar: React.FC = () => {
                                 onClick={openNewEventPanel}
                                 className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-colors"
                             >
-                                <PlusIcon /> New meeting
+                                <PlusIcon /> {t('calendar.newMeeting')}
                             </button>
                             
                             <div className="h-6 w-px bg-slate-300" />
@@ -323,7 +325,7 @@ const PortalCalendar: React.FC = () => {
                                 onClick={() => setViewDate(new Date())}
                                 className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded transition-colors"
                             >
-                                Today
+                                {t('calendar.today')}
                             </button>
                             
                             <div className="flex items-center">
@@ -352,7 +354,7 @@ const PortalCalendar: React.FC = () => {
                                     }`}
                                     onClick={() => setViewMode(mode)}
                                 >
-                                    {mode === 'WorkWeek' ? 'Work week' : mode}
+                                    {mode === 'Day' ? t('calendar.day') : mode === 'WorkWeek' ? t('calendar.workWeek') : t('calendar.week')}
                                 </button>
                             ))}
                         </div>
@@ -459,7 +461,7 @@ const PortalCalendar: React.FC = () => {
                         {/* Panel Header */}
                         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
                             <h3 className="font-semibold text-slate-800 text-lg">
-                                {isCreating ? 'New meeting' : 'Edit meeting'}
+                                {isCreating ? t('calendar.newMeeting') : t('calendar.editMeeting')}
                             </h3>
                             <button onClick={closeSidePanel} className="p-1 hover:bg-slate-200 rounded-full transition-colors">
                                 <XIcon />
@@ -472,7 +474,7 @@ const PortalCalendar: React.FC = () => {
                             <div>
                                 <input
                                     type="text"
-                                    placeholder="Add a title"
+                                    placeholder={t('calendar.addTitle')}
                                     value={eventTitle}
                                     onChange={(e) => setEventTitle(e.target.value)}
                                     className="w-full text-xl font-semibold border-0 border-b-2 border-slate-200 focus:border-indigo-500 pb-2 outline-none transition-colors placeholder-slate-400"
@@ -484,7 +486,7 @@ const PortalCalendar: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 text-slate-600">
                                     <ClockIcon />
-                                    <span className="font-medium">Date & time</span>
+                                    <span className="font-medium">{t('calendar.dateTime')}</span>
                                 </div>
                                 <div className="ml-8 space-y-2">
                                     <div className="flex gap-2">
@@ -502,7 +504,7 @@ const PortalCalendar: React.FC = () => {
                                         />
                                     </div>
                                     <div className="flex gap-2 items-center">
-                                        <span className="flex-1 text-center text-slate-400">to</span>
+                                        <span className="flex-1 text-center text-slate-400">{t('calendar.to')}</span>
                                     </div>
                                     <div className="flex gap-2">
                                         <input
@@ -524,7 +526,7 @@ const PortalCalendar: React.FC = () => {
                             {/* Online Meeting Toggle */}
                             <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg">
                                 <VideoIcon />
-                                <span className="flex-1 text-sm font-medium text-slate-700">Add online meeting</span>
+                                <span className="flex-1 text-sm font-medium text-slate-700">{t('calendar.addOnlineMeeting')}</span>
                                 <button
                                     type="button"
                                     onClick={() => setIsOnlineMeeting(!isOnlineMeeting)}
@@ -538,11 +540,11 @@ const PortalCalendar: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 text-slate-600">
                                     <UserGroupIcon />
-                                    <span className="font-medium">Attendees</span>
+                                    <span className="font-medium">{t('calendar.attendees')}</span>
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Add attendees (comma separated)"
+                                    placeholder={t('calendar.attendeesPlaceholder')}
                                     value={attendees}
                                     onChange={(e) => setAttendees(e.target.value)}
                                     className="w-full ml-8 px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -553,11 +555,11 @@ const PortalCalendar: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 text-slate-600">
                                     <LocationIcon />
-                                    <span className="font-medium">Location</span>
+                                    <span className="font-medium">{t('calendar.location')}</span>
                                 </div>
                                 <input
                                     type="text"
-                                    placeholder="Add a location"
+                                    placeholder={t('calendar.locationPlaceholder')}
                                     value={location}
                                     onChange={(e) => setLocation(e.target.value)}
                                     className="w-full ml-8 px-3 py-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -568,7 +570,7 @@ const PortalCalendar: React.FC = () => {
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3 text-slate-600">
                                     <CalendarIcon />
-                                    <span className="font-medium">Category</span>
+                                    <span className="font-medium">{t('calendar.category')}</span>
                                 </div>
                                 <select
                                     value={eventType}
@@ -584,7 +586,7 @@ const PortalCalendar: React.FC = () => {
                             {/* Description */}
                             <div className="space-y-3">
                                 <textarea
-                                    placeholder="Add a description or attach documents"
+                                    placeholder={t('calendar.descriptionPlaceholder')}
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     rows={4}
@@ -601,7 +603,7 @@ const PortalCalendar: React.FC = () => {
                                     onClick={handleDeleteClick}
                                     className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-md text-sm font-medium transition-colors flex items-center gap-2"
                                 >
-                                    <TrashIcon /> Delete
+                                    <TrashIcon /> {t('calendar.deleteLabel')}
                                 </button>
                             )}
                             <div className="flex-1" />
@@ -611,13 +613,13 @@ const PortalCalendar: React.FC = () => {
                                     onClick={closeSidePanel}
                                     className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-md text-sm font-medium transition-colors"
                                 >
-                                    Cancel
+                                    {t('calendar.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSaveEvent}
                                     className="px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-semibold hover:bg-indigo-700 transition-colors"
                                 >
-                                    Save
+                                    {t('calendar.save')}
                                 </button>
                             </div>
                         </div>
@@ -637,9 +639,9 @@ const PortalCalendar: React.FC = () => {
                     isOpen={isDeleteModalOpen}
                     onClose={() => setIsDeleteModalOpen(false)}
                     onConfirm={confirmDeleteEvent}
-                    title="Delete Event"
-                    message="Are you sure you want to delete this event? This action cannot be undone."
-                    confirmText="Delete"
+                    title={t('calendar.deleteEvent')}
+                    message={t('calendar.deleteConfirm')}
+                    confirmText={t('calendar.deleteLabel')}
                     isDanger={true}
                 />
             </div>

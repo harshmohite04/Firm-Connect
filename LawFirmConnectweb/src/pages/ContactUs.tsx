@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 
 // Icons
@@ -40,6 +41,7 @@ const InfoIcon = () => (
 )
 
 const ContactUs: React.FC = () => {
+    const { t } = useTranslation();
     const [openFaq, setOpenFaq] = useState<number | null>(null);
     const [formData, setFormData] = useState({
         name: '',
@@ -74,16 +76,16 @@ const ContactUs: React.FC = () => {
 
     const faqs = [
         {
-            question: "Do you offer free consultations?",
-            answer: "Yes, we offer a complimentary 30-minute initial consultation for all new clients to discuss their legal needs and options."
+            question: t('contactUs.faq1q'),
+            answer: t('contactUs.faq1a')
         },
         {
-            question: "What documents should I bring?",
-            answer: "For your initial consultation, please bring any existing legal notices, contracts, correspondence, or police reports related to your case."
+            question: t('contactUs.faq2q'),
+            answer: t('contactUs.faq2a')
         },
         {
-            question: "How do you bill for your services?",
-            answer: "We offer various billing structures including hourly rates, flat fees, and contingency fees, depending on the nature of your case."
+            question: t('contactUs.faq3q'),
+            answer: t('contactUs.faq3a')
         }
     ];
 
@@ -100,9 +102,9 @@ const ContactUs: React.FC = () => {
                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-slate-50 to-transparent"></div>
                 </div>
                 <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center items-center text-center">
-                    <h1 className="text-4xl font-bold text-white mb-4">Get in Touch</h1>
+                    <h1 className="text-4xl font-bold text-white mb-4">{t('contactUs.heroTitle')}</h1>
                     <p className="text-blue-100 max-w-xl text-lg">
-                        We are here to help with your legal needs. Schedule a consultation or ask a general question. Our team is ready to assist you.
+                        {t('contactUs.heroSubtitle')}
                     </p>
                 </div>
             </section>
@@ -114,13 +116,13 @@ const ContactUs: React.FC = () => {
                     <div className="lg:col-span-1 space-y-8">
                         {/* Contact Card */}
                         <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-100">
-                             <h2 className="text-xl font-bold text-slate-900 mb-6">Contact Information</h2>
+                             <h2 className="text-xl font-bold text-slate-900 mb-6">{t('contactUs.contactInfo')}</h2>
                              
                              <div className="space-y-6">
                                  <div className="flex gap-4">
                                      <div className="pt-1"><LocationIcon /></div>
                                      <div>
-                                         <div className="font-bold text-slate-900 text-sm">Visit Us</div>
+                                         <div className="font-bold text-slate-900 text-sm">{t('contactUs.visitUs')}</div>
                                          <div className="text-slate-500 text-sm">Pune, Maharashtra, India</div>
                                      </div>
                                  </div>
@@ -128,7 +130,7 @@ const ContactUs: React.FC = () => {
                                  <div className="flex gap-4">
                                      <div className="pt-1"><PhoneIcon /></div>
                                      <div>
-                                         <div className="font-bold text-slate-900 text-sm">Call Us</div>
+                                         <div className="font-bold text-slate-900 text-sm">{t('contactUs.callUs')}</div>
                                          <div className="text-slate-500 text-sm">+91 93568 36581</div>
                                      </div>
                                  </div>
@@ -143,8 +145,8 @@ const ContactUs: React.FC = () => {
                                   <div className="flex gap-4">
                                      <div className="pt-1"><ClockIcon /></div>
                                      <div>
-                                         <div className="font-bold text-slate-900 text-sm">Business Hours</div>
-                                         <div className="text-slate-500 text-sm">Mon-Fri: 9:00 AM - 6:00 PM<br/>Sat-Sun: Closed</div>
+                                         <div className="font-bold text-slate-900 text-sm">{t('contactUs.businessHours')}</div>
+                                         <div className="text-slate-500 text-sm">{t('contactUs.hours')}<br/>{t('contactUs.hoursClosed')}</div>
                                      </div>
                                  </div>
                              </div>
@@ -158,7 +160,7 @@ const ContactUs: React.FC = () => {
                                 className="w-full h-full object-cover rounded-lg opacity-80"
                              />
                              <div className="relative -mt-10 mb-2 ml-2 inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-sm text-xs font-bold text-blue-600">
-                                 <LocationIcon /> Get Directions
+                                 <LocationIcon /> {t('contactUs.getDirections')}
                              </div>
                          </div>
                     </div>
@@ -166,24 +168,24 @@ const ContactUs: React.FC = () => {
                     {/* Right Column: Form */}
                     <div className="lg:col-span-2">
                         <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-100 h-full">
-                            <h2 className="text-2xl font-bold text-slate-900 mb-2">Send us a Message</h2>
-                             <p className="text-slate-500 mb-8">Please fill out the form below and we will get back to you shortly.</p>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-2">{t('contactUs.sendMessage')}</h2>
+                             <p className="text-slate-500 mb-8">{t('contactUs.formSubtitle')}</p>
                              
                              {status === 'success' && (
                                 <div className="mb-6 bg-green-50 text-green-700 p-4 rounded-lg text-sm font-medium">
-                                    Thank you! Your message has been sent successfully. We will contact you soon.
+                                    {t('contactUs.successMessage')}
                                 </div>
                              )}
                              {status === 'error' && (
                                 <div className="mb-6 bg-red-50 text-red-700 p-4 rounded-lg text-sm font-medium">
-                                    Something went wrong. Please try again later.
+                                    {t('contactUs.errorMessage')}
                                 </div>
                              )}
 
                              <form onSubmit={handleSubmit} className="space-y-6">
                                  <div className="grid md:grid-cols-2 gap-6">
                                      <div>
-                                         <label className="block text-xs font-bold text-slate-700 mb-2">Full Name</label>
+                                         <label className="block text-xs font-bold text-slate-700 mb-2">{t('contactUs.fullName')}</label>
                                          <input 
                                             name="name" 
                                             type="text" 
@@ -195,7 +197,7 @@ const ContactUs: React.FC = () => {
                                         />
                                      </div>
                                      <div>
-                                         <label className="block text-xs font-bold text-slate-700 mb-2">Email Address</label>
+                                         <label className="block text-xs font-bold text-slate-700 mb-2">{t('contactUs.emailAddress')}</label>
                                          <input 
                                             name="email" 
                                             type="email" 
@@ -210,7 +212,7 @@ const ContactUs: React.FC = () => {
 
                                   <div className="grid md:grid-cols-2 gap-6">
                                      <div>
-                                         <label className="block text-xs font-bold text-slate-700 mb-2">Phone Number (Optional)</label>
+                                         <label className="block text-xs font-bold text-slate-700 mb-2">{t('contactUs.phone')}</label>
                                          <input 
                                             name="phone" 
                                             type="tel" 
@@ -221,29 +223,29 @@ const ContactUs: React.FC = () => {
                                         />
                                      </div>
                                      <div>
-                                         <label className="block text-xs font-bold text-slate-700 mb-2">Legal Matter</label>
+                                         <label className="block text-xs font-bold text-slate-700 mb-2">{t('contactUs.legalMatter')}</label>
                                          <select 
                                             name="subject" 
                                             value={formData.subject}
                                             onChange={handleChange}
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
                                         >
-                                             <option value="">Select a subject</option>
-                                             <option value="Corporate Law">Corporate Law</option>
-                                             <option value="Family Law">Family Law</option>
-                                             <option value="Criminal Defense">Criminal Defense</option>
-                                             <option value="Other">Other</option>
+                                             <option value="">{t('contactUs.selectSubject')}</option>
+                                             <option value="Corporate Law">{t('contactUs.corporateLaw')}</option>
+                                             <option value="Family Law">{t('contactUs.familyLaw')}</option>
+                                             <option value="Criminal Defense">{t('contactUs.criminalDefense')}</option>
+                                             <option value="Other">{t('contactUs.other')}</option>
                                          </select>
                                      </div>
                                  </div>
 
                                  <div>
-                                     <label className="block text-xs font-bold text-slate-700 mb-2">How can we help?</label>
+                                     <label className="block text-xs font-bold text-slate-700 mb-2">{t('contactUs.howCanWeHelp')}</label>
                                      <textarea 
                                         name="message" 
                                         required
                                         rows={6} 
-                                        placeholder="Please describe your legal issue briefly..." 
+                                        placeholder={t('contactUs.messagePlaceholder')} 
                                         value={formData.message}
                                         onChange={handleChange}
                                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
@@ -254,13 +256,13 @@ const ContactUs: React.FC = () => {
                                  <div className="bg-blue-50 rounded-lg p-4 flex gap-3">
                                      <div className="pt-0.5"><InfoIcon /></div>
                                      <p className="text-xs text-blue-800 leading-relaxed">
-                                         <span className="font-bold">Attorney-Client Privilege:</span> Please do not include sensitive confidential information in this form. The use of the Internet or this form for communication with the firm or any individual member of the firm does not establish an attorney-client relationship.
+                                         <span className="font-bold">{t('contactUs.disclaimerTitle')}</span> {t('contactUs.disclaimerText')}
                                      </p>
                                  </div>
 
                                  <div className="flex items-start gap-3">
                                      <input type="checkbox" id="privacy" required className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
-                                     <label htmlFor="privacy" className="text-sm text-slate-500">I agree to the terms and privacy policy.</label>
+                                     <label htmlFor="privacy" className="text-sm text-slate-500">{t('contactUs.privacyAgreement')}</label>
                                  </div>
 
                                  <button 
@@ -268,7 +270,7 @@ const ContactUs: React.FC = () => {
                                     disabled={loading}
                                     className={`bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
-                                    {loading ? 'Sending...' : 'Submit Inquiry'}
+                                    {loading ? t('contactUs.sending') : t('contactUs.submitInquiry')}
                                      {!loading && <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" /></svg>}
                                  </button>
                              </form>
@@ -279,7 +281,7 @@ const ContactUs: React.FC = () => {
 
                 {/* FAQ Section */}
                 <div className="mt-20 max-w-3xl mx-auto">
-                    <h2 className="text-2xl font-bold text-slate-900 mb-8 text-center">Common Questions</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 mb-8 text-center">{t('contactUs.commonQuestions')}</h2>
                     <div className="space-y-4">
                         {faqs.map((faq, index) => (
                             <div key={index} className="bg-white rounded-lg border border-slate-200 overflow-hidden">

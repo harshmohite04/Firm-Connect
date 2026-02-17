@@ -1,4 +1,5 @@
 import api from './api';
+import { setAuthData, clearAuthData } from '../utils/storage';
 
 // Types based on backend/models/User.js and authController.js response
 export interface User {
@@ -27,10 +28,10 @@ export interface RegisterResponse {
     msg: string;
 }
 
-const login = async (email: string, password: string): Promise<LoginResponse> => {
+const login = async (email: string, password: string, rememberMe: boolean = true): Promise<LoginResponse> => {
     const response = await api.post('/auth/login', { email, password });
     if (response.data) {
-        localStorage.setItem('user', JSON.stringify(response.data));
+        setAuthData(response.data, rememberMe);
     }
     return response.data;
 };
@@ -39,7 +40,7 @@ const register = async (userData: { firstName: string; lastName: string; email: 
     return response.data;
 };
 const logout = () => {
-    localStorage.removeItem('user');
+    clearAuthData();
 };
 
 const getCurrentUser = async (): Promise<User> => {

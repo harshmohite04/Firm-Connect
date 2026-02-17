@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const ShieldCheckIcon = () => (
@@ -23,6 +24,8 @@ const HeartIcon = () => (
 
 
 const WhyChooseUs: React.FC = () => {
+    const { t } = useTranslation();
+
     return (
         <section className="py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -40,10 +43,10 @@ const WhyChooseUs: React.FC = () => {
                             {/* Quote Overlay */}
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-8 pt-24 text-white">
                                 <blockquote className="font-serif text-xl sm:text-2xl italic leading-relaxed mb-4">
-                                    "Justice consists not in being neutral between right and wrong, but in finding out the right and upholding it."
+                                    {t('whyChooseUs.quote')}
                                 </blockquote>
                                 <cite className="text-sm font-semibold tracking-wider uppercase not-italic text-slate-300">
-                                    — Theodore Roosevelt
+                                    {t('whyChooseUs.quoteAuthor')}
                                 </cite>
                             </div>
                         </div>
@@ -52,10 +55,10 @@ const WhyChooseUs: React.FC = () => {
                     {/* Content Side */}
                     <div className="order-1 lg:order-2">
                         <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">
-                            Why Choose LawfirmAI?
+                            {t('whyChooseUs.title')}
                         </h2>
                         <p className="text-lg text-slate-600 mb-10 leading-relaxed">
-                            We bring a unique combination of deep legal expertise and a personal commitment to every client's well-being.
+                            {t('whyChooseUs.subtitle')}
                         </p>
 
                         <div className="space-y-8">
@@ -66,9 +69,9 @@ const WhyChooseUs: React.FC = () => {
                                     <ShieldCheckIcon />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900 mb-2">Unwavering Integrity</h3>
+                                    <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.integrity')}</h3>
                                     <p className="text-slate-600 leading-relaxed">
-                                        We operate with complete transparency and ethical standards in every case we handle.
+                                        {t('whyChooseUs.integrityDesc')}
                                     </p>
                                 </div>
                             </div>
@@ -79,9 +82,9 @@ const WhyChooseUs: React.FC = () => {
                                     <TrophyRealIcon />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900 mb-2">Proven Track Record</h3>
+                                    <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.trackRecord')}</h3>
                                     <p className="text-slate-600 leading-relaxed">
-                                        Our history of successful settlements and verdicts speaks for itself.
+                                        {t('whyChooseUs.trackRecordDesc')}
                                     </p>
                                 </div>
                             </div>
@@ -92,9 +95,9 @@ const WhyChooseUs: React.FC = () => {
                                     <HeartIcon />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900 mb-2">Client-Centric Approach</h3>
+                                    <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.clientCentric')}</h3>
                                     <p className="text-slate-600 leading-relaxed">
-                                        You are not just a case number. We provide personalized attention to your unique needs.
+                                        {t('whyChooseUs.clientCentricDesc')}
                                     </p>
                                 </div>
                             </div>

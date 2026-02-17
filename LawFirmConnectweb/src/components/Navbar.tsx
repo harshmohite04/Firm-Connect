@@ -1,6 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Logo from '../assets/logo.svg';
+import LanguageSwitcher from './LanguageSwitcher';
+
 // Simple SVG Icons
 const LogoIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
@@ -9,6 +12,8 @@ const LogoIcon = () => (
 );
 
 const Navbar: React.FC = () => {
+  const { t } = useTranslation();
+
   return (
     <nav className="w-full bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -25,14 +30,16 @@ const Navbar: React.FC = () => {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Home</Link>
-            <Link to="/practice-areas" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Practice Areas</Link>
-            <Link to="/pricing" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Pricing</Link>
-            <Link to="/contact" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Contact</Link>
-            <Link to="/about-us" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">About Us</Link>
+            <Link to="/" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.home')}</Link>
+            <Link to="/practice-areas" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.practiceAreas')}</Link>
+            <Link to="/pricing" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.pricing')}</Link>
+            <Link to="/contact" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.contact')}</Link>
+            <Link to="/about-us" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.aboutUs')}</Link>
             
+            <LanguageSwitcher variant="navbar" />
+
             <Link to="/signin" className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-              Sign In
+              {t('nav.signIn')}
             </Link>
           </div>
 

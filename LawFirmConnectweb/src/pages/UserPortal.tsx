@@ -6,6 +6,7 @@ import type { Case, ActivityLog } from '../services/caseService';
 import scheduleService from '../services/scheduleService';
 import type { CalendarEvent } from '../services/scheduleService';
 import { messageService } from '../services/messageService';
+import { useTranslation } from 'react-i18next';
 
 // Icons
 const CaseIcon = () => (
@@ -72,6 +73,7 @@ const UserPortal: React.FC = () => {
     const [userName, setUserName] = useState('');
     const [error, setError] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
+    const { t } = useTranslation();
 
     // Update time every minute
     useEffect(() => {
@@ -187,9 +189,9 @@ const UserPortal: React.FC = () => {
 
     const getGreeting = () => {
         const hour = currentTime.getHours();
-        if (hour < 12) return 'Good Morning';
-        if (hour < 17) return 'Good Afternoon';
-        return 'Good Evening';
+        if (hour < 12) return t('userPortal.greeting.morning');
+        if (hour < 17) return t('userPortal.greeting.afternoon');
+        return t('userPortal.greeting.evening');
     };
 
     const getStatusColor = (status: string) => {
@@ -213,7 +215,7 @@ const UserPortal: React.FC = () => {
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
                         <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-600 font-medium">Loading your dashboard...</p>
+                        <p className="text-slate-600 font-medium">{t('userPortal.loading')}</p>
                     </div>
                 </div>
             </PortalLayout>
@@ -229,7 +231,7 @@ const UserPortal: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2">Something went wrong</h3>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2">{t('userPortal.error')}</h3>
                     <p className="text-slate-600">{error}</p>
                 </div>
             </PortalLayout>
@@ -250,20 +252,20 @@ const UserPortal: React.FC = () => {
                             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
                                 {getGreeting()}, {userName}! 👋
                             </h1>
-                            <p className="text-slate-500 mt-2">Here's what's happening with your cases today.</p>
+                            <p className="text-slate-500 mt-2">{t('userPortal.subtitle')}</p>
                         </div>
                         <div className="flex gap-3">
                             <Link 
                                 to="/portal/cases"
                                 className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
                             >
-                                <CaseIcon /> View Cases
+                                <CaseIcon /> {t('userPortal.viewCases')}
                             </Link>
                             <Link 
                                 to="/portal/messages"
                                 className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
                             >
-                                <MessageIcon /> Messages
+                                <MessageIcon /> {t('userPortal.messagesBtn')}
                                 {stats?.unreadMessages > 0 && (
                                     <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">{stats.unreadMessages}</span>
                                 )}
@@ -279,10 +281,10 @@ const UserPortal: React.FC = () => {
                             <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
                                 <CaseIcon />
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Active</span>
+                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{t('userPortal.active')}</span>
                         </div>
                         <p className="text-2xl font-bold text-slate-900">{stats?.activeCases || 0}</p>
-                        <p className="text-sm text-slate-500 mt-1">Active Cases</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.activeCases')}</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
@@ -291,11 +293,11 @@ const UserPortal: React.FC = () => {
                                 <MessageIcon />
                             </div>
                             {stats?.unreadMessages > 0 && (
-                                <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">New</span>
+                                <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">{t('userPortal.new')}</span>
                             )}
                         </div>
                         <p className="text-2xl font-bold text-slate-900">{stats?.unreadMessages || 0}</p>
-                        <p className="text-sm text-slate-500 mt-1">Unread Messages</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.unreadMessages')}</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
@@ -309,7 +311,7 @@ const UserPortal: React.FC = () => {
                                 ? upcomingBooking.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
                                 : '—'}
                         </p>
-                        <p className="text-sm text-slate-500 mt-1">Next Hearing</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.nextHearing')}</p>
                     </div>
 
                     <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
@@ -319,7 +321,7 @@ const UserPortal: React.FC = () => {
                             </div>
                         </div>
                         <p className="text-2xl font-bold text-slate-900">₹0</p>
-                        <p className="text-sm text-slate-500 mt-1">Due Amount</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.dueAmount')}</p>
                     </div>
                 </div>
 
@@ -333,10 +335,10 @@ const UserPortal: React.FC = () => {
                                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
                                     <FolderIcon />
                                 </div>
-                                <h3 className="font-bold text-slate-900">Active Matters</h3>
+                                <h3 className="font-bold text-slate-900">{t('userPortal.activeMatters')}</h3>
                             </div>
                             <Link to="/portal/cases" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-                                View All <ArrowRightIcon />
+                                {t('userPortal.viewAll')} <ArrowRightIcon />
                             </Link>
                         </div>
                         <div className="divide-y divide-slate-100">
@@ -396,8 +398,8 @@ const UserPortal: React.FC = () => {
                                     <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                         <FolderIcon />
                                     </div>
-                                    <p className="font-semibold text-slate-900">No active cases</p>
-                                    <p className="text-sm text-slate-500 mt-1">Your active cases will appear here</p>
+                                    <p className="font-semibold text-slate-900">{t('userPortal.noActiveCases')}</p>
+                                    <p className="text-sm text-slate-500 mt-1">{t('userPortal.noActiveCasesDesc')}</p>
                                 </div>
                             )}
                         </div>
@@ -411,9 +413,9 @@ const UserPortal: React.FC = () => {
                             <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                 <div className="flex items-center gap-2">
                                     <CalendarIcon />
-                                    <h3 className="font-bold text-slate-900">Upcoming</h3>
+                                    <h3 className="font-bold text-slate-900">{t('userPortal.upcoming')}</h3>
                                 </div>
-                                <Link to="/portal/calendar" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">VIEW ALL</Link>
+                                <Link to="/portal/calendar" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">{t('userPortal.viewAll')}</Link>
                             </div>
                             <div className="p-5">
                                 {upcomingBooking && !isNaN(upcomingBooking.getTime()) ? (
@@ -439,7 +441,7 @@ const UserPortal: React.FC = () => {
                                         <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                             <CalendarIcon />
                                         </div>
-                                        <p className="text-sm text-slate-500">No upcoming appointments</p>
+                                        <p className="text-sm text-slate-500">{t('userPortal.noUpcoming')}</p>
                                     </div>
                                 )}
                             </div>
@@ -449,7 +451,7 @@ const UserPortal: React.FC = () => {
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                             <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
                                 <BellIcon />
-                                <h3 className="font-bold text-slate-900">Recent Activity</h3>
+                                <h3 className="font-bold text-slate-900">{t('userPortal.recentActivity')}</h3>
                             </div>
                             <div className="p-5">
                                 <div className="space-y-4">
@@ -468,7 +470,7 @@ const UserPortal: React.FC = () => {
                                     ))}
                                     {activities.length === 0 && (
                                         <div className="text-center py-4">
-                                            <p className="text-sm text-slate-500">No recent activity</p>
+                                            <p className="text-sm text-slate-500">{t('userPortal.noRecentActivity')}</p>
                                         </div>
                                     )}
                                 </div>
@@ -477,7 +479,7 @@ const UserPortal: React.FC = () => {
 
                         {/* Quick Actions */}
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                            <h3 className="font-bold text-slate-900 mb-4">Quick Actions</h3>
+                            <h3 className="font-bold text-slate-900 mb-4">{t('userPortal.quickActions')}</h3>
                             <div className="grid grid-cols-2 gap-3">
                                 <Link 
                                     to="/portal/billing"
@@ -486,7 +488,7 @@ const UserPortal: React.FC = () => {
                                     <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
                                         <WalletIcon />
                                     </div>
-                                    <p className="text-xs font-semibold text-slate-700">Billing</p>
+                                    <p className="text-xs font-semibold text-slate-700">{t('userPortal.billing')}</p>
                                 </Link>
                                 <Link 
                                     to="/portal/calendar"
@@ -495,7 +497,7 @@ const UserPortal: React.FC = () => {
                                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
                                         <CalendarIcon />
                                     </div>
-                                    <p className="text-xs font-semibold text-slate-700">Schedule</p>
+                                    <p className="text-xs font-semibold text-slate-700">{t('userPortal.schedule')}</p>
                                 </Link>
                             </div>
                         </div>

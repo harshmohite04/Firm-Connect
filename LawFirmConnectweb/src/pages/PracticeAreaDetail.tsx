@@ -1,9 +1,11 @@
 import React from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { practices } from '../data/practices';
 import { trackEvent } from '../utils/analytics';
 
 const PracticeAreaDetail: React.FC = () => {
+    const { t } = useTranslation();
     const { id } = useParams<{ id: string }>();
     const practice = practices.find(p => p.id === id);
 
@@ -20,7 +22,7 @@ const PracticeAreaDetail: React.FC = () => {
                     <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Back to Practice Areas
+                    {t('practiceAreaDetail.backLink')}
                 </Link>
 
                 <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -50,33 +52,33 @@ const PracticeAreaDetail: React.FC = () => {
                     {/* Content */}
                     <div className="p-8 md:p-12">
                         <div className="prose prose-slate max-w-none">
-                            <h2 className="text-2xl font-bold text-slate-900 mb-4">Overview</h2>
+                            <h2 className="text-2xl font-bold text-slate-900 mb-4">{t('practiceAreaDetail.overview')}</h2>
                             <p className="text-lg text-slate-600 leading-relaxed mb-8">
                                 {practice.fullDescription}
                             </p>
-                            
-                            <h3 className="text-xl font-bold text-slate-900 mb-4">How We Can Help</h3>
+
+                            <h3 className="text-xl font-bold text-slate-900 mb-4">{t('practiceAreaDetail.howWeCanHelp')}</h3>
                             <ul className="list-disc pl-5 space-y-2 text-slate-600 mb-8">
-                                <li>Comprehensive legal analysis and strategy development</li>
-                                <li>Representation in negotiations, mediation, and litigation</li>
-                                <li>Drafting and review of all necessary legal documentation</li>
-                                <li>Personalized guidance through every step of the process</li>
+                                <li>{t('practiceAreaDetail.help1')}</li>
+                                <li>{t('practiceAreaDetail.help2')}</li>
+                                <li>{t('practiceAreaDetail.help3')}</li>
+                                <li>{t('practiceAreaDetail.help4')}</li>
                             </ul>
                         </div>
 
                         {/* CTA Section */}
                         <div className="bg-blue-50 rounded-xl p-8 mt-12 border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-6">
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 mb-2">Ready to discuss your case?</h3>
-                                <p className="text-slate-600">Schedule a free consultation with our experts in {practice.title}.</p>
+                                <h3 className="text-xl font-bold text-slate-900 mb-2">{t('practiceAreaDetail.ctaTitle')}</h3>
+                                <p className="text-slate-600">{t('practiceAreaDetail.ctaSubtitle', { area: practice.title })}</p>
                             </div>
                             <div className="flex gap-4">
-                                <Link 
-                                    to="/contact" 
+                                <Link
+                                    to="/contact"
                                     onClick={() => trackEvent({ category: 'PracticeDetail', action: 'Click', label: 'Schedule Consultation' })}
                                     className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
                                 >
-                                    Schedule Consultation
+                                    {t('practiceAreaDetail.scheduleConsultation')}
                                 </Link>
                             </div>
                         </div>

@@ -1,5 +1,7 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import Logo from '../assets/logo.svg';
+
 const LogoIcon = () => (
     <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-white" stroke="currentColor" strokeWidth="2">
         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
@@ -7,6 +9,8 @@ const LogoIcon = () => (
 );
 
 const Footer: React.FC = () => {
+    const { t } = useTranslation();
+
     return (
         <footer className="bg-slate-900 text-slate-300 py-16 text-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -21,7 +25,7 @@ const Footer: React.FC = () => {
                              <span className="font-bold text-lg">LawfirmAI</span>
                          </div>
                          <p className="text-slate-400 leading-relaxed max-w-xs mb-6">
-                             Dedicated to providing exceptional legal representation with a personal touch. Your justice is our priority.
+                             {t('footer.tagline')}
                          </p>
                          <div className="flex gap-4">
                              {/* Social Placeholder Icons */}
@@ -32,29 +36,29 @@ const Footer: React.FC = () => {
                      </div>
 
                      <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Practice Areas</h4>
+                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.practiceAreas')}</h4>
                          <ul className="space-y-4">
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Corporate Law</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Real Estate</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Family Law</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Criminal Defense</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Intellectual Property</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.corporateLaw')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.realEstate')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.familyLaw')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.criminalDefense')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.intellectualProperty')}</a></li>
                          </ul>
                      </div>
 
                       <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Company</h4>
+                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.company')}</h4>
                          <ul className="space-y-4">
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">About Us</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Attorneys</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Careers</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Blog</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">Contact</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.aboutUs')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.attorneys')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.careers')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.blog')}</a></li>
+                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.contact')}</a></li>
                          </ul>
                      </div>
 
                       <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">Contact Us</h4>
+                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.contactUs')}</h4>
                          <ul className="space-y-4">
                             <li className="flex gap-3">
                                  <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -73,14 +77,14 @@ const Footer: React.FC = () => {
                 </div>
 
                 <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                        &copy; 2026 LawfirmAI. All rights reserved.
+                        {t('footer.copyright')}
                     <div className="flex gap-6 text-slate-500 text-xs">
-                        <a href="#" className="hover:text-slate-300">Privacy Policy</a>
-                        <a href="#" className="hover:text-slate-300">Terms of Service</a>
+                        <a href="#" className="hover:text-slate-300">{t('footer.privacyPolicy')}</a>
+                        <a href="#" className="hover:text-slate-300">{t('footer.termsOfService')}</a>
                     </div>
                 </div>
                 <div className="mt-8 text-center text-xs text-slate-600">
-                    Attorney Advertising. Prior results do not guarantee a similar outcome.
+                    {t('footer.disclaimer')}
                 </div>
             </div>
         </footer>

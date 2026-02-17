@@ -1,7 +1,16 @@
 {
   "permissions": {
     "allow": [
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(cd:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(node -e:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite build)",
+      "Bash(npm run build:*)"
     ]
   }
 }

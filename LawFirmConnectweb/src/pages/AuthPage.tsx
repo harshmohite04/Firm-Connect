@@ -1,0 +1,365 @@
+import React, { useState } from 'react';
+import toast from 'react-hot-toast';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import authService from '../services/authService';
+import Logo from '../assets/logo.svg';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+
+const EyeIcon = () => (
+    <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    </svg>
+)
+
+const LockIcon = () => (
+    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+    </svg>
+)
+
+const ShieldIcon = () => (
+    <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+    </svg>
+)
+
+interface AuthPageProps {
+    initialMode: 'signin' | 'signup';
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const from = location.state?.from;
+    const redirectPath = from?.pathname || '/portal';
+
+    const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+    const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Shared state
+    const [email, setEmail] = useState('');
+
+    // Sign in state
+    const [password, setPassword] = useState('');
+
+    // Sign up state
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [signUpPassword, setSignUpPassword] = useState('');
+
+    const toggleMode = () => {
+        setError('');
+        setShowPassword(false);
+        setMode(mode === 'signin' ? 'signup' : 'signin');
+    };
+
+    const getPasswordErrors = (pwd: string): string[] => {
+        const errors: string[] = [];
+        if (pwd.length < 8) errors.push(t('signUp.pwdMinChars'));
+        if (!/[A-Z]/.test(pwd)) errors.push(t('signUp.pwdUppercase'));
+        if (!/[a-z]/.test(pwd)) errors.push(t('signUp.pwdLowercase'));
+        if (!/[0-9]/.test(pwd)) errors.push(t('signUp.pwdNumber'));
+        if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) errors.push(t('signUp.pwdSpecial'));
+        return errors;
+    };
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setIsLoading(true);
+        try {
+            await authService.login(email, password, rememberMe);
+            navigate(redirectPath, { replace: true });
+        } catch (err: any) {
+            setError(err.response?.data?.message || 'Invalid email or password');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRegister = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        const passwordErrors = getPasswordErrors(signUpPassword);
+        if (passwordErrors.length > 0) {
+            setError(`${t('signUp.pwdRequirements')} ${passwordErrors.join(', ')}`);
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await authService.register({ firstName, lastName, email, phone, password: signUpPassword });
+            toast.success(t('signUp.successMessage'));
+            setMode('signin');
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('signUp.errorDefault'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const rightImage = mode === 'signin'
+        ? 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=2069'
+        : 'https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=2070';
+
+    return (
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-14">
+            <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden grid lg:grid-cols-2 min-h-[600px]">
+
+                {/* Left Side: Form */}
+                <div className="flex flex-col p-8 sm:p-12 lg:p-16 overflow-y-auto">
+                    {/* Branding */}
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                            <div className="rounded-lg">
+                                <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }} />
+                            </div>
+                            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
+                        </div>
+                        <LanguageSwitcher variant="navbar" />
+                    </div>
+
+                    <div className="flex-grow flex flex-col justify-center w-full mx-auto">
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">
+                            {mode === 'signin' ? t('signIn.title') : t('signUp.title')}
+                        </h1>
+                        <p className="text-slate-500 text-sm leading-relaxed mb-8">
+                            {mode === 'signin' ? t('signIn.subtitle') : t('signUp.subtitle')}
+                        </p>
+
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                                {error}
+                            </div>
+                        )}
+
+                        {mode === 'signin' ? (
+                            <form className="space-y-5" onSubmit={handleLogin}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signIn.emailLabel')}</label>
+                                        <input
+                                            id="email"
+                                            type="email"
+                                            autoComplete="email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                            placeholder={t('signIn.emailPlaceholder')}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signIn.passwordLabel')}</label>
+                                        <div className="relative">
+                                            <input
+                                                id="password"
+                                                type={showPassword ? "text" : "password"}
+                                                autoComplete="current-password"
+                                                required
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12"
+                                                placeholder={t('signIn.passwordPlaceholder')}
+                                            />
+                                            <div
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                            >
+                                                <EyeIcon />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        <input
+                                            id="remember-me"
+                                            type="checkbox"
+                                            checked={rememberMe}
+                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-500">
+                                            {t('signIn.rememberDevice')}
+                                        </label>
+                                    </div>
+                                    <div className="text-sm">
+                                        <a href="#" className="font-semibold text-blue-600 hover:text-blue-700">
+                                            {t('signIn.forgotPassword')}
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? t('signIn.loggingIn') : (
+                                        <>
+                                            <LockIcon /> {t('signIn.secureLogin')}
+                                        </>
+                                    )}
+                                </button>
+
+                                <div className="text-center mt-6">
+                                    <p className="text-sm text-slate-500">
+                                        {t('signIn.firstTime')}{' '}
+                                        <button type="button" onClick={toggleMode} className="font-bold text-blue-600 hover:text-blue-700">
+                                            {t('signIn.activateAccount')}
+                                        </button>
+                                    </p>
+                                </div>
+                            </form>
+                        ) : (
+                            <form className="space-y-4" onSubmit={handleRegister}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label htmlFor="firstName" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.firstName')}</label>
+                                        <input
+                                            id="firstName" type="text" required
+                                            value={firstName} onChange={(e) => setFirstName(e.target.value)}
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            placeholder={t('signUp.firstNamePlaceholder')}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label htmlFor="lastName" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.lastName')}</label>
+                                        <input
+                                            id="lastName" type="text" required
+                                            value={lastName} onChange={(e) => setLastName(e.target.value)}
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                            placeholder={t('signUp.lastNamePlaceholder')}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="signup-email" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.emailLabel')}</label>
+                                    <input
+                                        id="signup-email" type="email" required
+                                        value={email} onChange={(e) => setEmail(e.target.value)}
+                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        placeholder={t('signUp.emailPlaceholder')}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="phone" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.phoneLabel')}</label>
+                                    <input
+                                        id="phone" type="tel" required
+                                        value={phone} onChange={(e) => setPhone(e.target.value)}
+                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        placeholder={t('signUp.phonePlaceholder')}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="signup-password" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signUp.passwordLabel')}</label>
+                                    <div className="relative">
+                                        <input
+                                            id="signup-password"
+                                            type={showPassword ? "text" : "password"}
+                                            required
+                                            value={signUpPassword} onChange={(e) => setSignUpPassword(e.target.value)}
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none pr-12"
+                                            placeholder={t('signUp.passwordPlaceholder')}
+                                        />
+                                        <div
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                        >
+                                            <EyeIcon />
+                                        </div>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-400">{t('signUp.passwordHint')}</p>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? t('signUp.processing') : (
+                                        <>
+                                            <LockIcon /> {t('signUp.createAccount')}
+                                        </>
+                                    )}
+                                </button>
+
+                                <div className="text-center mt-6">
+                                    <p className="text-sm text-slate-500">
+                                        {t('signUp.alreadyHaveAccount')}{' '}
+                                        <button type="button" onClick={toggleMode} className="font-bold text-blue-600 hover:text-blue-700">
+                                            {t('signUp.logIn')}
+                                        </button>
+                                    </p>
+                                </div>
+                            </form>
+                        )}
+
+                        <hr className="my-8 border-slate-100" />
+
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 tracking-wider">
+                                <ShieldIcon />
+                                {mode === 'signin' ? t('signIn.sslSecure') : t('signUp.sslSecure')}
+                            </div>
+                            {mode === 'signin' && (
+                                <p className="text-[10px] text-slate-400 leading-normal">
+                                    {t('signIn.sslDisclaimer')} <a href="#" className="underline hover:text-slate-500">{t('signIn.termsOfService')}</a> {t('signIn.and')} <a href="#" className="underline hover:text-slate-500">{t('signIn.privacyPolicy')}</a>.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side: Image/Branding */}
+                <div className="hidden lg:relative lg:block bg-slate-900 overflow-hidden">
+                    <div className="absolute inset-0">
+                        <img
+                            src={rightImage}
+                            alt={mode === 'signin' ? 'Modern Office' : 'Legal Documents'}
+                            className="w-full h-full object-cover opacity-40"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+                    </div>
+
+                    <div className="relative h-full flex flex-col justify-end p-16">
+                        <div className="mb-8">
+                            {mode === 'signin' && (
+                                <span className="inline-block px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-300 mb-4 backdrop-blur-sm">
+                                    {t('signIn.portalVersion')}
+                                </span>
+                            )}
+                            <h2 className="text-2xl font-bold text-white leading-tight mb-4 tracking-tight">
+                                {mode === 'signin' ? t('signIn.rightQuote') : t('signUp.rightQuote')}
+                            </h2>
+                            <div className="w-12 h-1 bg-blue-600 rounded-full mb-6"></div>
+                            {mode === 'signin' && (
+                                <div>
+                                    <p className="text-white font-semibold">{t('signIn.expertSupport')}</p>
+                                    <p className="text-slate-400 text-sm">{t('signIn.expertSupportDesc')}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
+};
+
+export default AuthPage;

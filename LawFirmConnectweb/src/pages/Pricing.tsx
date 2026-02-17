@@ -4,6 +4,8 @@ import Footer from '../components/Footer';
 import { CheckCircle } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { getAuthToken } from '../utils/storage';
 
 declare global {
     interface Window {
@@ -12,6 +14,7 @@ declare global {
 }
 
 const Pricing: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     const [loading, setLoading] = useState(false);
@@ -58,9 +61,7 @@ const Pricing: React.FC = () => {
             setLoading(true);
             setError(null);
             
-            const userStr = localStorage.getItem('user');
-            const user = userStr ? JSON.parse(userStr) : null;
-            const token = user?.token;
+            const token = getAuthToken();
 
             if (!token) {
                 // Redirect to login with return path
@@ -150,7 +151,7 @@ const Pricing: React.FC = () => {
                             </div>
                             <div className="ml-3 flex-1">
                                 <p className="text-sm font-medium text-red-800">
-                                    Access Denied
+                                    {t('pricing.accessDenied')}
                                 </p>
                                 <p className="mt-1 text-sm text-red-700">
                                     {error}
@@ -163,7 +164,7 @@ const Pricing: React.FC = () => {
                                         onClick={() => setError(null)}
                                         className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
                                     >
-                                        <span className="sr-only">Dismiss</span>
+                                        <span className="sr-only">{t('pricing.dismiss')}</span>
                                         <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                             <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                         </svg>
@@ -175,10 +176,10 @@ const Pricing: React.FC = () => {
                 )}
                 <div className="max-w-7xl mx-auto text-center">
                     <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
-                        Simple, Transparent Pricing
+                        {t('pricing.title')}
                     </h2>
                     <p className="mt-4 text-xl text-slate-600">
-                        Choose the plan that fits your firm's size and needs.
+                        {t('pricing.subtitle')}
                     </p>
                 </div>
 
@@ -188,7 +189,7 @@ const Pricing: React.FC = () => {
                             {plan.recommended && (
                                 <div className="absolute top-0 right-1/2 transform translate-x-1/2 -translate-y-1/2">
                                     <span className="bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-bold uppercase tracking-wide">
-                                        Most Popular
+                                        {t('pricing.mostPopular')}
                                     </span>
                                 </div>
                             )}
@@ -196,7 +197,7 @@ const Pricing: React.FC = () => {
                             <h3 className="text-2xl font-bold text-slate-900">{plan.name}</h3>
                             <div className="mt-4 flex items-baseline text-slate-900">
                                 <span className="text-5xl font-extrabold tracking-tight">₹{plan.price.toLocaleString()}</span>
-                                <span className="ml-1 text-xl font-semibold text-slate-500">/month</span>
+                                <span className="ml-1 text-xl font-semibold text-slate-500">{t('pricing.perMonth')}</span>
                             </div>
                             
                             <ul className="mt-6 space-y-4 flex-1">
@@ -212,11 +213,11 @@ const Pricing: React.FC = () => {
                                 onClick={() => handleSubscribe(plan)}
                                 disabled={loading}
                                 className={`mt-8 block w-full py-3 px-6 border border-transparent rounded-xl shadow text-center font-bold text-lg text-white transition-colors ${
-                                    loading ? 'bg-slate-400 cursor-not-allowed' : 
+                                    loading ? 'bg-slate-400 cursor-not-allowed' :
                                     plan.recommended ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-800 hover:bg-slate-900'
                                 }`}
                             >
-                                {loading ? 'Processing...' : `Get Started with ${plan.name}`}
+                                {loading ? t('pricing.processing') : t('pricing.getStarted', { plan: plan.name })}
                             </button>
                         </div>
                     ))}
@@ -224,8 +225,8 @@ const Pricing: React.FC = () => {
                 
                 <div className="mt-12 text-center text-slate-500 text-sm">
                     <p>
-                        Are you an invitee with an <strong>@harsh.com</strong> email? <br/>
-                        <a href="/portal" className="text-indigo-600 hover:underline">Access is free for you.</a>
+                        {t('pricing.inviteeMessage')} <br/>
+                        <a href="/portal" className="text-indigo-600 hover:underline">{t('pricing.freeAccess')}</a>
                     </p>
                 </div>
             </div>

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 // ... icons ...
 
-const LogoIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" className="w-8 h-8 text-blue-600" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-  </svg>
-);
+
 
 const EyeIcon = () => (
     <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -31,7 +29,9 @@ const ShieldIcon = () => (
 )
 
 const SignIn: React.FC = () => {
+    const { t } = useTranslation();
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
         email: '',
@@ -54,7 +54,7 @@ const SignIn: React.FC = () => {
         setIsLoading(true);
 
         try {
-            await authService.login(formData.email, formData.password);
+            await authService.login(formData.email, formData.password, rememberMe);
             // Redirect to previous page or portal
             navigate(from, { replace: true });
         } catch (err: any) {
@@ -71,18 +71,21 @@ const SignIn: React.FC = () => {
                 {/* Left Side: Form */}
                  <div className="flex flex-col p-8 sm:p-12 lg:p-16 overflow-y-auto">
                     {/* Branding */}
-                    <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => navigate('/')}>
-                        <div className="rounded-lg">
-                           {/* <LogoIcon /> */}
-                           <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
+                    <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                            <div className="rounded-lg">
+                               {/* <LogoIcon /> */}
+                               <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
+                            </div>
+                            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                         </div>
-                        <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
+                        <LanguageSwitcher variant="navbar" />
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Secure Client Access</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">{t('signIn.title')}</h1>
                         <p className="text-slate-500 text-sm leading-relaxed mb-8">
-                            Welcome back. Please log in to access your case files, secure messaging, and billing information.
+                            {t('signIn.subtitle')}
                         </p>
 
                         {error && (
@@ -94,7 +97,7 @@ const SignIn: React.FC = () => {
                         <form className="space-y-5" onSubmit={handleLogin}>
                             <div className="space-y-4">
                                 <div>
-                                    <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">Email Address / Username</label>
+                                    <label htmlFor="email" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signIn.emailLabel')}</label>
                                     <input 
                                         id="email" 
                                         name="email" 
@@ -104,12 +107,12 @@ const SignIn: React.FC = () => {
                                         value={formData.email}
                                         onChange={handleInputChange}
                                         className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                        placeholder="e.g. name@example.com"
+                                        placeholder={t('signIn.emailPlaceholder')}
                                     />
                                 </div>
 
                                 <div>
-                                    <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">Password</label>
+                                    <label htmlFor="password" className="block text-xs font-bold text-slate-900 mb-1.5">{t('signIn.passwordLabel')}</label>
                                     <div className="relative">
                                         <input 
                                             id="password" 
@@ -120,7 +123,7 @@ const SignIn: React.FC = () => {
                                             value={formData.password}
                                             onChange={handleInputChange}
                                             className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all pr-12"
-                                            placeholder="Enter your password"
+                                            placeholder={t('signIn.passwordPlaceholder')}
                                         />
                                         <div 
                                             className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
@@ -134,20 +137,22 @@ const SignIn: React.FC = () => {
 
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center">
-                                    <input 
-                                        id="remember-me" 
-                                        name="remember-me" 
-                                        type="checkbox" 
-                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" 
+                                    <input
+                                        id="remember-me"
+                                        name="remember-me"
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                     />
                                     <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-500">
-                                        Remember my device
+                                        {t('signIn.rememberDevice')}
                                     </label>
                                 </div>
 
                                 <div className="text-sm">
                                     <a href="#" className="font-semibold text-blue-600 hover:text-blue-700">
-                                        Forgot Password?
+                                        {t('signIn.forgotPassword')}
                                     </a>
                                 </div>
                             </div>
@@ -157,16 +162,16 @@ const SignIn: React.FC = () => {
                                 disabled={isLoading}
                                 className="w-full flex items-center justify-center gap-2 py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-700 hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? 'Logging In...' : (
+                                {isLoading ? t('signIn.loggingIn') : (
                                     <>
-                                        <LockIcon /> Secure Login
+                                        <LockIcon /> {t('signIn.secureLogin')}
                                     </>
                                 )}
                             </button>
                             
                             <div className="text-center mt-6">
                                 <p className="text-sm text-slate-500">
-                                    First time here? <a href="/signup" className="font-bold text-blue-600 hover:text-blue-700">Activate your account</a>
+                                    {t('signIn.firstTime')} <Link to="/signup" state={{ from: location.state?.from }} className="font-bold text-blue-600 hover:text-blue-700">{t('signIn.activateAccount')}</Link>
                                 </p>
                             </div>
                         </form>
@@ -176,10 +181,10 @@ const SignIn: React.FC = () => {
                         <div className="flex flex-col gap-2">
                              <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 tracking-wider">
                                 <ShieldIcon />
-                                 256-BIT SSL SECURE CONNECTION
+                                 {t('signIn.sslSecure')}
                              </div>
                              <p className="text-[10px] text-slate-400 leading-normal">
-                                 Unauthorized access is prohibited. All activity is monitored and logged for security purposes. By logging in, you agree to our <a href="#" className="underline hover:text-slate-500">Terms of Service</a> and <a href="#" className="underline hover:text-slate-500">Privacy Policy</a>.
+                                 {t('signIn.sslDisclaimer')} <a href="#" className="underline hover:text-slate-500">{t('signIn.termsOfService')}</a> {t('signIn.and')} <a href="#" className="underline hover:text-slate-500">{t('signIn.privacyPolicy')}</a>.
                              </p>
                         </div>
 
@@ -200,15 +205,15 @@ const SignIn: React.FC = () => {
                     <div className="relative h-full flex flex-col justify-end p-16">
                         <div className="mb-8">
                             <span className="inline-block px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-300 mb-4 backdrop-blur-sm">
-                                CLIENT PORTAL V2.0
+                                {t('signIn.portalVersion')}
                             </span>
                             <h2 className="text-2xl font-bold text-white leading-tight mb-4 tracking-tight">
-                                "Dedicated to protecting what matters most to you through secure and transparent legal counsel."
+                                {t('signIn.rightQuote')}
                             </h2>
                              <div className="w-12 h-1 bg-blue-600 rounded-full mb-6"></div>
                              <div>
-                                 <p className="text-white font-semibold">Expert Legal Support</p>
-                                 <p className="text-slate-400 text-sm">Available 24/7 for critical case updates</p>
+                                 <p className="text-white font-semibold">{t('signIn.expertSupport')}</p>
+                                 <p className="text-slate-400 text-sm">{t('signIn.expertSupportDesc')}</p>
                              </div>
                         </div>
                     </div>

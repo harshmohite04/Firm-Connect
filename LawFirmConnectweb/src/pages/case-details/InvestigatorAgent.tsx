@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import caseService from '../../services/caseService';
 import type {
@@ -56,11 +57,7 @@ const AlertIcon = () => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
     </svg>
 );
-const CheckCircleIcon = () => (
-    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-    </svg>
-);
+
 const PrintIcon = () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -395,6 +392,7 @@ const RiskCard: React.FC<{ risk: Record<string, any>; index: number }> = ({ risk
 
 // --- Intel Feed (loading terminal) ---
 const IntelFeed: React.FC<{ label: string; step: string }> = ({ label, step }) => {
+    const { t } = useTranslation();
     const [lines, setLines] = useState<string[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -402,11 +400,12 @@ const IntelFeed: React.FC<{ label: string; step: string }> = ({ label, step }) =
         if (label) {
             setLines(prev => {
                 const ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                const next = [...prev, `[${ts}] ${step ? `[${step}] ` : ''}${label}`];
+                const stepLabel = step ? t(`portal.investigator.pipeline.${step}`) : '';
+                const next = [...prev, `[${ts}] ${stepLabel ? `[${stepLabel}] ` : ''}${label}`];
                 return next.slice(-12);
             });
         }
-    }, [label, step]);
+    }, [label, step, t]);
 
     useEffect(() => {
         if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
@@ -427,7 +426,9 @@ const IntelFeed: React.FC<{ label: string; step: string }> = ({ label, step }) =
 };
 
 // --- Radar Empty State ---
-const RadarEmpty: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ onRun, loadingHistory }) => (
+const RadarEmpty: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ onRun, loadingHistory }) => {
+    const { t } = useTranslation();
+    return (
     <div className="flex flex-col items-center justify-center h-full py-24 px-6" style={{ background: '#0a0f1e' }}>
         <div className="max-w-sm text-center">
             {/* Radar SVG */}
@@ -451,9 +452,9 @@ const RadarEmpty: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ 
                 <circle cx="80" cy="80" r="3" fill="#22d3ee" />
             </svg>
 
-            <h3 className="text-sm font-mono uppercase tracking-[0.2em] font-bold mb-3" style={{ color: '#e2e8f0' }}>AWAITING ORDERS</h3>
+            <h3 className="text-sm font-mono uppercase tracking-[0.2em] font-bold mb-3" style={{ color: '#e2e8f0' }}>{t('portal.investigator.awaitingOrders')}</h3>
             <p className="text-xs leading-relaxed mb-6" style={{ color: '#94a3b8' }}>
-                Initiate the investigator agent to analyze all case documents. The AI will extract facts, identify contradictions, assess risks, and produce a comprehensive intelligence report.
+                {t('portal.investigator.initialDescription')}
             </p>
             {loadingHistory ? (
                 <div className="inline-flex items-center gap-2 text-xs" style={{ color: '#94a3b8' }}>
@@ -463,12 +464,13 @@ const RadarEmpty: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ 
                 <button onClick={onRun}
                     className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-mono font-bold uppercase tracking-wider rounded-lg transition-all hover:shadow-lg hover:shadow-cyan-500/20"
                     style={{ color: '#22d3ee', border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.05)' }}>
-                    <PlayIcon /> INITIATE OPERATION
+                    <PlayIcon /> {t('portal.investigator.initiate')}
                 </button>
             )}
         </div>
     </div>
-);
+    );
+};
 
 // ============================================================
 //  MAIN COMPONENT
@@ -480,6 +482,7 @@ interface CaseContextType {
 }
 
 const InvestigatorAgent: React.FC = () => {
+    const { t } = useTranslation();
     const { caseData } = useOutletContext<CaseContextType>();
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState<string | null>(null);
@@ -553,7 +556,7 @@ const InvestigatorAgent: React.FC = () => {
         setStats(null);
         setProgressPercent(0);
         setActiveStep('');
-        setProgressLabel('Initializing pipeline...');
+        setProgressLabel(t('portal.investigator.status.ready'));
         setCompletedSteps(new Set());
         setSelectedReportId(null);
         setShowAllFacts(false);
@@ -577,7 +580,7 @@ const InvestigatorAgent: React.FC = () => {
                         });
                     } else if (event.type === 'complete') {
                         setProgressPercent(100);
-                        setProgressLabel('Investigation complete');
+                        setProgressLabel(t('portal.investigator.status.completed'));
                         setCompletedSteps(new Set(PIPELINE_STEPS.map(s => s.key)));
                         if (event.structured_data) setStructuredData(event.structured_data);
                         if (event.stats) setStats(event.stats);
@@ -587,7 +590,7 @@ const InvestigatorAgent: React.FC = () => {
                             loadReportHistory();
                         }, 600);
                     } else if (event.type === 'error') {
-                        setError(event.detail || 'Investigation failed');
+                        setError(event.detail || t('portal.investigator.status.error'));
                         setLoading(false);
                     }
                 },
@@ -598,7 +601,7 @@ const InvestigatorAgent: React.FC = () => {
             );
             abortRef.current = controller;
         } catch (err: any) {
-            setError(err.response?.data?.detail || "Failed to start investigation.");
+            setError(err.response?.data?.detail || t('portal.investigator.status.error'));
             setLoading(false);
         }
     };
@@ -657,8 +660,8 @@ const InvestigatorAgent: React.FC = () => {
                             <FileSearchIcon />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold" style={{ color: viewMode === 'intel' && (report || loading) ? '#e2e8f0' : '#0f172a' }}>Investigator Agent</h2>
-                            <p className="text-xs" style={{ color: viewMode === 'intel' && (report || loading) ? '#94a3b8' : '#94a3b8' }}>AI-powered multi-agent document analysis</p>
+                            <h2 className="text-lg font-bold" style={{ color: viewMode === 'intel' && (report || loading) ? '#e2e8f0' : '#0f172a' }}>{t('portal.investigator.title')}</h2>
+                            <p className="text-xs" style={{ color: viewMode === 'intel' && (report || loading) ? '#94a3b8' : '#94a3b8' }}>{t('portal.investigator.subtitle')}</p>
                         </div>
                     </div>
 
@@ -673,7 +676,7 @@ const InvestigatorAgent: React.FC = () => {
                                     style={viewMode === 'intel'
                                         ? { background: 'rgba(34,211,238,0.15)', color: '#22d3ee' }
                                         : { background: 'transparent', color: '#94a3b8' }}>
-                                    Intelligence Board
+                                    {t('portal.investigator.intelBoard')}
                                 </button>
                                 <button
                                     onClick={() => setViewMode('report')}
@@ -681,7 +684,7 @@ const InvestigatorAgent: React.FC = () => {
                                     style={viewMode === 'report'
                                         ? { background: '#8b5cf6', color: '#fff' }
                                         : { background: 'transparent', color: '#94a3b8' }}>
-                                    Report
+                                    {t('portal.investigator.report')}
                                 </button>
                             </div>
                         )}
@@ -695,7 +698,7 @@ const InvestigatorAgent: React.FC = () => {
                                     ? { color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }
                                     : { color: '#475569', background: '#f1f5f9' }}>
                                 <ClockIcon />
-                                <span className="hidden sm:inline">History</span>
+                                <span className="hidden sm:inline">{t('portal.investigator.history')}</span>
                                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
                                     style={viewMode === 'intel' && (report || loading)
                                         ? { color: '#e2e8f0', background: 'rgba(255,255,255,0.1)' }
@@ -722,12 +725,12 @@ const InvestigatorAgent: React.FC = () => {
                                 style={viewMode === 'intel' && report
                                     ? { color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.1)' }
                                     : { color: '#fff', background: 'linear-gradient(to right, #8b5cf6, #7c3aed)' }}>
-                                <PlayIcon /> Run Investigation
+                                <PlayIcon /> {t('portal.investigator.runInvestigation')}
                             </button>
                         ) : (
                             <button disabled className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg cursor-not-allowed"
                                 style={viewMode === 'intel' ? { color: '#22d3ee', background: 'rgba(34,211,238,0.1)' } : { color: '#7c3aed', background: '#f5f3ff' }}>
-                                <SpinnerIcon /> Running...
+                                <SpinnerIcon /> {t('portal.investigator.status.running')}...
                             </button>
                         )}
                     </div>
@@ -739,7 +742,7 @@ const InvestigatorAgent: React.FC = () => {
                         className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
                         style={{ color: viewMode === 'intel' && (report || loading) ? '#22d3ee' : '#7c3aed' }}>
                         <TargetIcon />
-                        {showFocus ? 'Hide focus options' : 'Add investigation focus'}
+                        {showFocus ? t('portal.investigator.hideFocus') : t('portal.investigator.addFocus')}
                         {showFocus ? <ChevronUpIcon /> : <ChevronDownIcon />}
                     </button>
                     {showFocus && (
@@ -747,7 +750,7 @@ const InvestigatorAgent: React.FC = () => {
                             <textarea
                                 value={focusText}
                                 onChange={(e) => setFocusText(e.target.value)}
-                                placeholder={"Enter questions to focus the investigation (one per line):\n\u2022 Was there a breach of contract?\n\u2022 What are the payment discrepancies?"}
+                                placeholder={t('portal.investigator.focusPlaceholder')}
                                 className="w-full rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2"
                                 style={viewMode === 'intel' && (report || loading)
                                     ? { background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.2)', color: '#e2e8f0' }
@@ -803,7 +806,7 @@ const InvestigatorAgent: React.FC = () => {
                         style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
                         <div className="mt-0.5" style={{ color: '#f87171' }}><AlertIcon /></div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold" style={{ color: '#f87171' }}>Investigation Failed</p>
+                            <p className="text-sm font-semibold" style={{ color: '#f87171' }}>{t('portal.investigator.status.error')}</p>
                             <p className="text-sm mt-0.5" style={{ color: '#fca5a5' }}>{error}</p>
                         </div>
                         <button onClick={() => setError(null)} className="text-lg leading-none" style={{ color: '#f87171' }}>&times;</button>
@@ -858,7 +861,7 @@ const InvestigatorAgent: React.FC = () => {
                                                 <circle cx={x} cy={20} r={6} fill={status === 'pending' ? '#1e293b' : `${color}33`} stroke={color} strokeWidth="1.5" />
                                                 {status === 'done' && <circle cx={x} cy={20} r={2.5} fill={color} />}
                                                 <text x={x} y={48} textAnchor="middle" fill={color} fontSize="8" fontFamily="monospace" fontWeight="500">
-                                                    {step.short}
+                                                    {t(`portal.investigator.pipeline.${step.key}`)}
                                                 </text>
                                             </g>
                                         );
