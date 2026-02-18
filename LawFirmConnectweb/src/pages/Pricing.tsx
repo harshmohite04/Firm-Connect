@@ -5,7 +5,7 @@ import { CheckCircle, Rocket, X } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { getAuthToken } from '../utils/storage';
+
 
 declare global {
     interface Window {

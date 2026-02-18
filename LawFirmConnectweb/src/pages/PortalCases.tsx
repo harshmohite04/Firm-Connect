@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
 import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';

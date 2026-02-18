@@ -138,7 +138,20 @@ const CaseDocuments: React.FC = () => {
         }
     };
 
-    const uploadCategories = ['Case Filing', 'Evidence', 'Correspondence', 'General'];
+    const uploadCategories = [
+        { value: 'Case Filing', label: 'Case Filing' },
+        { value: 'Evidence', label: 'Evidence' },
+        { value: 'Correspondence', label: 'Correspondence' },
+        { value: 'General', label: 'General' },
+    ];
+
+    const filterCategories = [
+        { value: 'All Files', label: 'All Files' },
+        { value: 'Case Filing', label: 'Case Filing' },
+        { value: 'Evidence', label: 'Evidence' },
+        { value: 'Correspondence', label: 'Correspondence' },
+        { value: 'General', label: 'General' },
+    ];
 
     // Polling for AI Status
     useEffect(() => {

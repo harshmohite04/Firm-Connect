@@ -54,7 +54,7 @@ const SignIn: React.FC = () => {
         setIsLoading(true);
 
         try {
-            await authService.login(formData.email, formData.password, rememberMe);
+            await authService.login(formData.email, formData.password);
             // Redirect to previous page or portal
             navigate(from, { replace: true });
         } catch (err: any) {

@@ -97,7 +97,7 @@ const CaseDraft: React.FC = () => {
     const [showDocKeyboard, setShowDocKeyboard] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const documentEditorRef = useRef<HTMLTextAreaElement>(null);
+
 
     // Load templates and draft sessions on mount
     useEffect(() => {

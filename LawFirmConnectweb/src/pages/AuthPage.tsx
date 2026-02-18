@@ -75,7 +75,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         setError('');
         setIsLoading(true);
         try {
-            await authService.login(email, password, rememberMe);
+            await authService.login(email, password);
             navigate(redirectPath, { replace: true });
         } catch (err: any) {
             setError(err.response?.data?.message || 'Invalid email or password');
