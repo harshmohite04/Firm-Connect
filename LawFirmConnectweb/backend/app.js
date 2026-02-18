@@ -67,6 +67,7 @@ app.use('/messages', messageRoutes);
 app.use('/contact', contactRoutes);
 app.use('/team', teamRoutes);
 app.use('/payments', require('./src/routes/paymentRoutes'));
+app.use('/contact-submissions', require('./src/routes/contactSubmissionRoutes'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health Check

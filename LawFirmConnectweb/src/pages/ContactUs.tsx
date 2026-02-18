@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 
 
 // Icons
@@ -64,12 +65,21 @@ const ContactUs: React.FC = () => {
         setLoading(true);
         setStatus('idle');
         
-        // Mock Form Submission
-        setTimeout(() => {
+        try {
+            await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/contact-submissions`, {
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                subject: formData.subject,
+                message: formData.message
+            });
             setStatus('success');
             setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        } catch (err) {
+            setStatus('error');
+        } finally {
             setLoading(false);
-        }, 1500);
+        }
     };
 
     const faqs = [

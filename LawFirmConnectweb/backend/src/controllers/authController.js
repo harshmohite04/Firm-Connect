@@ -185,6 +185,7 @@ const getCurrentUser = async (req, res, next) => {
             email: user.email,
             phone: user.phone,
             role: user.role,
+            isAdmin: user.isAdmin,
             subscriptionStatus: user.subscriptionStatus,
             subscriptionPlan: user.subscriptionPlan,
             subscriptionExpiresAt: user.subscriptionExpiresAt
