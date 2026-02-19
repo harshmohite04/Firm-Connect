@@ -1,25 +1,75 @@
 import os
-import io
-from typing import Optional
-
-import shutil
+import tempfile
+import zipfile
 
 # Parsers
 import pypdf
 from docx import Document
 from PIL import Image
-import pytesseract
+from sarvamai import SarvamAI
 
-# Configure Tesseract Path for Windows if not in PATH
-TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-if not shutil.which("tesseract") and os.path.exists(TESSERACT_CMD):
-    pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
+def _get_sarvam_key():
+    return os.getenv("SARVAM_API_KEY", "")
 
 def load_text_file(file_path: str) -> str:
     with open(file_path, "r", encoding="utf-8") as f:
         return f.read()
 
+def _sarvam_ocr(file_path: str) -> str:
+    """Extract text from an image or scanned PDF using Sarvam Document Intelligence."""
+    api_key = _get_sarvam_key()
+    if not api_key:
+        return "OCR Failed: SARVAM_API_KEY is not set. Please add it to your .env file."
+
+    tmp_pdf_path = None
+    try:
+        client = SarvamAI(api_subscription_key=api_key)
+
+        # Convert image files to PDF since Sarvam only accepts PDF/ZIP
+        upload_path = file_path
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff"]:
+            img = Image.open(file_path).convert("RGB")
+            fd, tmp_pdf_path = tempfile.mkstemp(suffix=".pdf")
+            os.close(fd)
+            img.save(tmp_pdf_path, "PDF")
+            upload_path = tmp_pdf_path
+
+        # Create a document intelligence job
+        job = client.document_intelligence.create_job(
+            language="en-IN",
+            output_format="md",
+        )
+
+        # Upload the file, start, and wait for completion
+        job.upload_file(upload_path)
+        job.start()
+        job.wait_until_complete()
+
+        # Download output to a temp directory
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            output_path = os.path.join(tmp_dir, "output.zip")
+            job.download_output(output_path)
+
+            # Extract markdown text from the ZIP
+            text = ""
+            with zipfile.ZipFile(output_path, "r") as zf:
+                for name in sorted(zf.namelist()):
+                    if name.endswith(".md"):
+                        text += zf.read(name).decode("utf-8") + "\n"
+
+            return text.strip() if text.strip() else ""
+
+    except Exception as e:
+        print(f"Sarvam OCR error for {file_path}: {e}")
+        return f"OCR Failed: {e}"
+    finally:
+        if tmp_pdf_path and os.path.exists(tmp_pdf_path):
+            os.unlink(tmp_pdf_path)
+
+
 def load_pdf_file(file_path: str) -> str:
+    # First try pypdf for digital/text-based PDFs
     text = ""
     try:
         reader = pypdf.PdfReader(file_path)
@@ -29,8 +79,14 @@ def load_pdf_file(file_path: str) -> str:
                 text += page_text + "\n"
     except Exception as e:
         print(f"Error reading PDF {file_path}: {e}")
-        return ""
-    return text
+
+    # If pypdf got meaningful text, return it
+    if text.strip() and len(text.strip()) > 50:
+        return text
+
+    # Otherwise fall back to Sarvam for scanned PDFs
+    print(f"PDF appears to be scanned, falling back to Sarvam OCR: {file_path}")
+    return _sarvam_ocr(file_path)
 
 
 def load_pdf_with_pages(file_path: str) -> list[dict]:
@@ -58,18 +114,8 @@ def load_docx_file(file_path: str) -> str:
     return text
 
 def load_image_file(file_path: str) -> str:
-    """
-    Requires Tesseract to be installed on the system and in PATH.
-    """
-    try:
-        image = Image.open(file_path)
-        text = pytesseract.image_to_string(image)
-        return text
-    except Exception as e:
-        print(f"Error performing OCR on {file_path}: {e}")
-        if "tesseract is not installed" in str(e).lower() or "not found" in str(e).lower():
-            return "OCR Failed: Tesseract binary not found on server. Please install Tesseract-OCR."
-        return ""
+    """Extract text from an image file using Sarvam Document Intelligence."""
+    return _sarvam_ocr(file_path)
 
 def parse_file(file_path: str) -> str:
     ext = os.path.splitext(file_path)[1].lower()

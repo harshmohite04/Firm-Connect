@@ -10,7 +10,11 @@
       "Bash(node -e:*)",
       "Bash(npm install:*)",
       "Bash(npx vite build)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:docs.sarvam.ai)",
+      "Bash(find:*)",
+      "Bash(docker ps:*)",
+      "Bash(.venv/Scripts/python:*)"
     ]
   }
 }
