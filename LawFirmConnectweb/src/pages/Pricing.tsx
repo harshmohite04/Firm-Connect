@@ -263,12 +263,12 @@ const Pricing: React.FC = () => {
                     ))}
                 </div>
                 
-                <div className="mt-12 text-center text-slate-500 text-sm">
+                {/* <div className="mt-12 text-center text-slate-500 text-sm">
                     <p>
                         {t('pricing.inviteeMessage')} <br/>
                         <a href="/portal" className="text-indigo-600 hover:underline">{t('pricing.freeAccess')}</a>
                     </p>
-                </div>
+                </div> */}
             </div>
 
             <Footer />
