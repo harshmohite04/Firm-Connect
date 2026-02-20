@@ -600,19 +600,24 @@ async def ingest_file(
                             text = "\n".join(p.get("text", "") for p in page_data)
 
                             if text.strip():
+                                # Cache extracted text for fast retrieval
+                                document_status_collection.update_one(
+                                    {"case_id": caseId, "filename": extracted_safe_name},
+                                    {"$set": {"extracted_pages": page_data}}
+                                )
                                 # Start background ingestion
                                 asyncio.create_task(_run_ingestion_background(
-                                    ingest_document, 
-                                    caseId, 
-                                    extracted_safe_name, 
-                                    document_status_collection, 
+                                    ingest_document,
+                                    caseId,
+                                    extracted_safe_name,
+                                    document_status_collection,
                                     logger,
-                                    text=text, 
-                                    source_name=extracted_safe_name, 
-                                    case_id=caseId, 
+                                    text=text,
+                                    source_name=extracted_safe_name,
+                                    case_id=caseId,
                                     page_metadata=page_data
                                 ))
-                                
+
                                 ingested_files.append(extracted_safe_name)
                                 logger.info(f"Started background ingestion for zip entry: {extracted_safe_name}")
                             else:
@@ -674,20 +679,26 @@ async def ingest_file(
                     detail="Could not extract text from file or file is empty."
                 )
 
+            # Cache extracted text in document_status for fast retrieval later
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": safe_filename},
+                {"$set": {"extracted_pages": page_data}}
+            )
+
             # Ingest with page metadata
             # Ingest with page metadata in BACKGROUND
             # We already set status to "Processing" above.
-            
+
             # Start background task
             asyncio.create_task(_run_ingestion_background(
-                ingest_document, 
-                caseId, 
-                safe_filename, 
-                document_status_collection, 
+                ingest_document,
+                caseId,
+                safe_filename,
+                document_status_collection,
                 logger,
-                text=text, 
-                source_name=safe_filename, 
-                case_id=caseId, 
+                text=text,
+                source_name=safe_filename,
+                case_id=caseId,
                 page_metadata=page_data
             ))
             
@@ -1489,12 +1500,26 @@ async def get_document_text(
         if not doc_status:
             raise HTTPException(status_code=404, detail="Document not found")
 
+        # Serve from cached extracted_pages if available (avoids re-running OCR)
+        if doc_status.get("extracted_pages"):
+            return {
+                "filename": safe_filename,
+                "pages": doc_status["extracted_pages"]
+            }
+
+        # Fallback: re-parse (for documents ingested before caching was added)
         file_path = f"documents/{safe_filename}"
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found on server")
 
         from ingestion.loader import parse_file_with_pages
         pages = parse_file_with_pages(file_path)
+
+        # Cache for future requests
+        document_status_collection.update_one(
+            {"case_id": caseId, "filename": safe_filename},
+            {"$set": {"extracted_pages": pages}}
+        )
 
         return {
             "filename": safe_filename,

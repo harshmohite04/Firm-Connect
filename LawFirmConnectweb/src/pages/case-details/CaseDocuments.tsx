@@ -84,6 +84,10 @@ const CaseDocuments: React.FC = () => {
     
     // Viewer State
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
+    const [viewerMode, setViewerMode] = useState<'original' | 'text'>('original');
+    const [viewerDocText, setViewerDocText] = useState<{ text: string; page_number?: number; file_type?: string }[]>([]);
+    const [viewerDocLoading, setViewerDocLoading] = useState(false);
+    const [viewerDocError, setViewerDocError] = useState<string>('');
     const [aiStatuses, setAiStatuses] = useState<Record<string, string>>({});
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [documentToDelete, setDocumentToDelete] = useState<string | null>(null);
@@ -250,6 +254,53 @@ const CaseDocuments: React.FC = () => {
     const handleDeleteClick = (docId: string) => {
         setDocumentToDelete(docId);
         setIsDeleteModalOpen(true);
+    };
+
+    const handleOpenDocument = (doc: any) => {
+        setSelectedDocument(doc);
+        setViewerMode('original');
+        setViewerDocText([]);
+        setViewerDocError('');
+    };
+
+    const fetchExtractedText = async (doc: any) => {
+        if (!id) return;
+        const filename = doc.fileName;
+        console.log('[ExtractedText] Fetching for caseId:', id, 'filename:', filename);
+        setViewerDocLoading(true);
+        setViewerDocError('');
+        try {
+            const data = await ragService.getDocumentText(id, filename);
+            console.log('[ExtractedText] Got pages:', data.pages?.length);
+            setViewerDocText(data.pages || []);
+        } catch (err: any) {
+            console.error("Failed to load extracted text", err);
+            const status = err?.response?.status;
+            if (status === 404) {
+                // Check AI status to give a better message
+                const sanitized = sanitizeFilename(doc.filePath);
+                const aiStatus = aiStatuses[sanitized] || aiStatuses[sanitizeFilename(doc.fileName)];
+                if (aiStatus === 'Processing') {
+                    setViewerDocError('AI is still processing this document. Please try again shortly.');
+                } else if (aiStatus === 'Failed') {
+                    setViewerDocError('AI processing failed for this document. Try retrying from the documents list.');
+                } else {
+                    setViewerDocError('Extracted text not available. The document may not have been processed by AI yet.');
+                }
+            } else {
+                setViewerDocError('Failed to load extracted text. Please try again.');
+            }
+            setViewerDocText([]);
+        } finally {
+            setViewerDocLoading(false);
+        }
+    };
+
+    const handleViewerModeSwitch = (mode: 'original' | 'text', doc: any) => {
+        setViewerMode(mode);
+        if (mode === 'text') {
+            fetchExtractedText(doc);
+        }
     };
 
     const handleDownload = async (doc: any) => {
@@ -429,7 +480,7 @@ const CaseDocuments: React.FC = () => {
                             const isPdf = fileName.toLowerCase().endsWith('.pdf');
                             const isImage = fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif)$/);
                             return (
-                                <div key={doc._id || index} onClick={() => setSelectedDocument(doc)} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow group flex flex-col cursor-pointer">
+                                <div key={doc._id || index} onClick={() => handleOpenDocument(doc)} className="bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow group flex flex-col cursor-pointer">
                                     <div className="flex justify-between items-start mb-3">
                                         <div className={`p-3 rounded-xl ${isPdf ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'}`}>
                                             {isPdf ? <PDFIcon /> : isImage ? <ImageIcon /> : <DocIcon />}
@@ -539,7 +590,7 @@ const CaseDocuments: React.FC = () => {
                                          `${doc.uploadedBy.firstName[0]}${doc.uploadedBy.lastName[0]}` : 'U';
 
                                     return (
-                                        <tr key={doc._id || index} onClick={() => setSelectedDocument(doc)} className="hover:bg-slate-50 transition-colors group cursor-pointer">
+                                        <tr key={doc._id || index} onClick={() => handleOpenDocument(doc)} className="hover:bg-slate-50 transition-colors group cursor-pointer">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`p-3 rounded-xl ${isPdf ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-500'} group-hover:scale-110 transition-transform`}>
@@ -768,13 +819,35 @@ const CaseDocuments: React.FC = () => {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                <button 
+                                {/* Original / Extracted Text toggle for visual files */}
+                                {(() => {
+                                    const ext = selectedDocument.fileName.split('.').pop()?.toLowerCase() || '';
+                                    const isVisualFile = ['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'gif', 'webp', 'pdf'].includes(ext);
+                                    if (!isVisualFile) return null;
+                                    return (
+                                        <div className="flex items-center bg-slate-200 rounded-lg p-0.5 mr-2">
+                                            <button
+                                                onClick={() => handleViewerModeSwitch('original', selectedDocument)}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewerMode === 'original' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Original
+                                            </button>
+                                            <button
+                                                onClick={() => handleViewerModeSwitch('text', selectedDocument)}
+                                                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${viewerMode === 'text' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Extracted Text
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+                                <button
                                     onClick={() => handleDownload(selectedDocument)}
                                     className="px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors flex items-center gap-2"
                                 >
                                     <DownloadIcon /> {t('portal.documents.download')}
                                 </button>
-                                <a 
+                                <a
                                     href={selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/${selectedDocument.filePath.replace(/^\//, '')}`}
                                     target="_blank"
                                     rel="noreferrer"
@@ -783,7 +856,7 @@ const CaseDocuments: React.FC = () => {
 
                                     {t('portal.documents.openTab')}
                                 </a>
-                                <button 
+                                <button
                                     onClick={() => setSelectedDocument(null)}
                                     className="w-10 h-10 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center text-slate-600 transition-colors font-bold text-xl"
                                     aria-label="Close modal"
@@ -794,26 +867,65 @@ const CaseDocuments: React.FC = () => {
                         </div>
                         
                         <div className="flex-1 bg-slate-100 p-4 flex items-center justify-center overflow-auto relative">
-                            {(() => {
+                            {viewerMode === 'text' ? (
+                                <div className="w-full h-full bg-white rounded-lg shadow-sm overflow-y-auto">
+                                    {viewerDocLoading ? (
+                                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                            <div className="w-10 h-10 border-3 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                            <p className="text-sm text-slate-400 font-medium">Loading extracted text...</p>
+                                        </div>
+                                    ) : viewerDocText.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400 px-8">
+                                            <svg className="w-12 h-12 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <p className="text-sm font-medium text-center">{viewerDocError || 'No extracted text available for this document.'}</p>
+                                            <button
+                                                onClick={() => fetchExtractedText(selectedDocument)}
+                                                className="mt-2 px-4 py-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-slate-100">
+                                            {viewerDocText.map((page, pageIdx) => (
+                                                <div key={pageIdx} className="relative">
+                                                    {page.page_number != null && (
+                                                        <div className="sticky top-0 z-10 bg-white/90 backdrop-blur-sm border-b border-slate-100 px-5 py-1.5 flex items-center justify-between">
+                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Page {page.page_number}</span>
+                                                            {page.file_type && (
+                                                                <span className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium">{page.file_type}</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div className="px-6 py-4 text-sm leading-7 text-slate-700 whitespace-pre-wrap break-words">
+                                                        {page.text}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                            (() => {
                                 const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
                                 const path = selectedDocument.filePath.startsWith('/') ? selectedDocument.filePath : `/${selectedDocument.filePath}`;
                                 const url = selectedDocument.filePath.startsWith('http') ? selectedDocument.filePath : `${apiUrl}${path}`;
-                                
+
                                 const ext = selectedDocument.fileName.split('.').pop().toLowerCase();
-                                
+
                                 if (['pdf'].includes(ext)) {
                                     return (
-                                        <iframe 
-                                            src={url} 
-                                            className="w-full h-full rounded-lg shadow-sm bg-white" 
+                                        <iframe
+                                            src={url}
+                                            className="w-full h-full rounded-lg shadow-sm bg-white"
                                             title="Document Preview"
                                         />
                                     );
                                 } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
                                     return (
-                                        <img 
-                                            src={url} 
-                                            alt={selectedDocument.fileName} 
+                                        <img
+                                            src={url}
+                                            alt={selectedDocument.fileName}
                                             className="max-w-full max-h-full object-contain rounded-lg shadow-sm"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).style.display = 'none';
@@ -823,9 +935,9 @@ const CaseDocuments: React.FC = () => {
                                     );
                                 } else if (['txt'].includes(ext)) {
                                     return (
-                                        <iframe 
-                                            src={url} 
-                                            className="w-full h-full rounded-lg shadow-sm bg-white" 
+                                        <iframe
+                                            src={url}
+                                            className="w-full h-full rounded-lg shadow-sm bg-white"
                                             title="Text Preview"
                                         />
                                     );
@@ -837,7 +949,7 @@ const CaseDocuments: React.FC = () => {
                                             </div>
                                             <h4 className="text-lg font-bold text-slate-900 mb-2">{t('portal.documents.previewUnavailable')}</h4>
                                             <p className="text-slate-500 mb-6">{t('portal.documents.previewError')}</p>
-                                            <button 
+                                            <button
                                                 onClick={() => handleDownload(selectedDocument)}
                                                 className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors"
                                             >
@@ -846,7 +958,8 @@ const CaseDocuments: React.FC = () => {
                                         </div>
                                     );
                                 }
-                            })()}
+                            })()
+                            )}
                         </div>
                     </div>
                 </div>

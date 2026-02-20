@@ -682,7 +682,7 @@ const StartCase: React.FC = () => {
                             </p>
                             <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
                                 <PhoneIcon />
-                                +1 (555) 123-4567
+                                +91 93568 36581
                             </div>
                         </div>
 

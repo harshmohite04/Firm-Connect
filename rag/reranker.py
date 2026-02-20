@@ -1,8 +1,8 @@
 import os
 from sentence_transformers import CrossEncoder
 
-# Cross-encoder model for re-ranking (precision over speed)
-RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
+# Multilingual cross-encoder for re-ranking (supports Hindi and other languages)
+RERANKER_MODEL = os.getenv("RERANKER_MODEL", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
 
 _cross_encoder = CrossEncoder(RERANKER_MODEL)
 

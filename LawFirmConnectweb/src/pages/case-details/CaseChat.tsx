@@ -91,6 +91,7 @@ const CaseChat: React.FC = () => {
     const [highlightChunks, setHighlightChunks] = useState<string[]>([]);
     const [selectionHighlight, setSelectionHighlight] = useState<string>(''); // user's mouse selection
     const [activeHighlightIdx, setActiveHighlightIdx] = useState(0);
+    const [sourceViewMode, setSourceViewMode] = useState<'text' | 'original'>('text');
     const highlightRefs = useRef<(HTMLElement | null)[]>([]);
     const selectionRef = useRef<HTMLElement | null>(null); // ref for blue selection highlight
     const docViewerRef = useRef<HTMLDivElement>(null);
@@ -99,7 +100,7 @@ const CaseChat: React.FC = () => {
 
     // Jaccard similarity
     const computeJaccard = (textA: string, textB: string): number => {
-        const tokenize = (t: string) => new Set(t.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+        const tokenize = (t: string) => new Set(t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean));
         const setA = tokenize(textA);
         const setB = tokenize(textB);
         if (setA.size === 0 || setB.size === 0) return 0;
@@ -236,6 +237,9 @@ const CaseChat: React.FC = () => {
     const openSourcesPanel = useCallback(async (contexts: ContextItem[]) => {
         setSourcesPanelOpen(true);
         setSelectedContexts(contexts);
+        setSourceViewMode('text');
+        setDocLoading(false);
+        setDocumentText([]);
         // Store the user's mouse-selected text for blue highlighting
         setSelectionHighlight(selectedText);
 
@@ -268,6 +272,7 @@ const CaseChat: React.FC = () => {
     const switchSourceTab = useCallback(async (source: string) => {
         setActiveSourceTab(source);
         setActiveHighlightIdx(0);
+        setSourceViewMode('text');
 
         const chunks = (selectedContexts || []).filter(c => c.source === source).map(c => c.content);
         setHighlightChunks(chunks);
@@ -359,7 +364,7 @@ const CaseChat: React.FC = () => {
         if (positions.length > 0) return positions[0];
 
         // Fuzzy: slide a window over the document and find the best word-overlap
-        const selWords = selection.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+        const selWords = selection.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean);
         if (selWords.length < 2) return null;
         const selSet = new Set(selWords);
 
@@ -382,7 +387,7 @@ const CaseChat: React.FC = () => {
             const end = Math.min(i + windowSize, words.length);
             let overlap = 0;
             for (let j = i; j < end; j++) {
-                if (selSet.has(words[j].toLowerCase().replace(/[^\w]/g, ''))) overlap++;
+                if (selSet.has(words[j].toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) overlap++;
             }
             const score = overlap / (selSet.size + (end - i) - overlap); // Jaccard
             if (score > bestScore && score > 0.15) {
@@ -854,6 +859,29 @@ const CaseChat: React.FC = () => {
                             </a>
                         )}
 
+                        {/* Text / Original toggle */}
+                        {(() => {
+                            const ext = activeSourceTab?.split('.').pop()?.toLowerCase() || '';
+                            const isVisualFile = ['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'pdf'].includes(ext);
+                            if (!isVisualFile || !activeSourceTab) return null;
+                            return (
+                                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                                    <button
+                                        onClick={() => setSourceViewMode('text')}
+                                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${sourceViewMode === 'text' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Text
+                                    </button>
+                                    <button
+                                        onClick={() => setSourceViewMode('original')}
+                                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${sourceViewMode === 'original' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Original
+                                    </button>
+                                </div>
+                            );
+                        })()}
+
                         {/* Close */}
                         <button
                             onClick={() => setSourcesPanelOpen(false)}
@@ -911,7 +939,23 @@ const CaseChat: React.FC = () => {
 
                     {/* Document content */}
                     <div ref={docViewerRef} className="flex-1 overflow-y-auto">
-                        {docLoading ? (
+                        {sourceViewMode === 'original' && activeSourceTab ? (
+                            (() => {
+                                const ext = activeSourceTab.split('.').pop()?.toLowerCase() || '';
+                                const downloadUrl = `${import.meta.env.VITE_RAG_API_URL || 'http://localhost:8000'}/download/${caseData._id}/${encodeURIComponent(activeSourceTab)}`;
+                                const isImage = ['jpg', 'jpeg', 'png', 'bmp', 'tiff'].includes(ext);
+                                if (isImage) {
+                                    return (
+                                        <div className="p-4 flex items-center justify-center">
+                                            <img src={downloadUrl} alt={activeSourceTab} className="max-w-full h-auto rounded-lg shadow-sm border border-slate-200" />
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <iframe src={downloadUrl} title={activeSourceTab} className="w-full h-full border-0" />
+                                );
+                            })()
+                        ) : docLoading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-4">
                                 <div className="w-10 h-10 border-3 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
                                 <p className="text-sm text-slate-400 font-medium">Loading document...</p>

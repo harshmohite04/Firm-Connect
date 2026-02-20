@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import AboutUs from './pages/AboutUs';
+import PlatformOverview from './pages/PlatformOverview';
 import ContactUs from './pages/ContactUs';
 import Home from './pages/Home';
 import PortalBilling from './pages/PortalBilling';
@@ -62,6 +63,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/practice-areas" element={<PracticeAreas />} />
             <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/platform" element={<PlatformOverview />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/practice-areas/:id" element={<PracticeAreaDetail />} />
             <Route path="/signin" element={<AuthPage initialMode="signin" />} />

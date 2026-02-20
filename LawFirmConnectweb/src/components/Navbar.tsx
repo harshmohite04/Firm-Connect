@@ -30,6 +30,7 @@ const Navbar: React.FC = () => {
             <Link to="/practice-areas" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.practiceAreas')}</Link>
             <Link to="/pricing" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.pricing')}</Link>
             <Link to="/contact" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.contact')}</Link>
+            <Link to="/platform" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.platform')}</Link>
             <Link to="/about-us" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.aboutUs')}</Link>
             
             <LanguageSwitcher variant="navbar" />

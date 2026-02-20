@@ -14,7 +14,8 @@
       "WebFetch(domain:docs.sarvam.ai)",
       "Bash(find:*)",
       "Bash(docker ps:*)",
-      "Bash(.venv/Scripts/python:*)"
+      "Bash(.venv/Scripts/python:*)",
+      "Bash(python -m py_compile:*)"
     ]
   }
 }
