@@ -4,8 +4,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-
 const EyeIcon = () => (
     <svg className="w-5 h-5 text-slate-400 cursor-pointer hover:text-blue-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -124,7 +122,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                             </div>
                             <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                         </div>
-                        <LanguageSwitcher variant="navbar" />
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">

@@ -643,7 +643,13 @@
     "notifications": "Notifications",
     "signOut": "Sign Out",
     "signOutConfirmTitle": "Sign Out",
-    "signOutConfirmMessage": "Are you sure you want to log out?"
+    "signOutConfirmMessage": "Are you sure you want to log out?",
+    "languageTitle": "Language",
+    "languageSubtitle": "Choose your preferred language for the interface.",
+    "emailNotifications": "Email Notifications",
+    "emailNotificationsDesc": "Receive updates about your cases via email.",
+    "smsNotifications": "SMS Notifications",
+    "smsNotificationsDesc": "Get text messages for urgent updates."
   },
   "practiceAreas": {
     "title": "Comprehensive Legal Solutions",

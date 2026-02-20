@@ -643,7 +643,13 @@
     "notifications": "सूचनाएँ",
     "signOut": "साइन आउट",
     "signOutConfirmTitle": "साइन आउट",
-    "signOutConfirmMessage": "क्या आप वाकई लॉग आउट करना चाहते हैं?"
+    "signOutConfirmMessage": "क्या आप वाकई लॉग आउट करना चाहते हैं?",
+    "languageTitle": "भाषा",
+    "languageSubtitle": "इंटरफ़ेस के लिए अपनी पसंदीदा भाषा चुनें।",
+    "emailNotifications": "ईमेल सूचनाएँ",
+    "emailNotificationsDesc": "ईमेल के माध्यम से अपने मामलों के बारे में अपडेट प्राप्त करें।",
+    "smsNotifications": "एसएमएस सूचनाएँ",
+    "smsNotificationsDesc": "तत्काल अपडेट के लिए टेक्स्ट संदेश प्राप्त करें।"
   },
   "practiceAreas": {
     "title": "व्यापक कानूनी समाधान",

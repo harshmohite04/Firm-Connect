@@ -15,7 +15,9 @@
       "Bash(find:*)",
       "Bash(docker ps:*)",
       "Bash(.venv/Scripts/python:*)",
-      "Bash(python -m py_compile:*)"
+      "Bash(python -m py_compile:*)",
+      "Bash(git log:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }

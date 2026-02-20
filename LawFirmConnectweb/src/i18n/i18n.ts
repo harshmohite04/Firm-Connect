@@ -19,8 +19,9 @@ i18n
     interpolation: {
       escapeValue: false, // React already escapes
     },
+    lng: localStorage.getItem("i18nextLng") || "en",
     detection: {
-      order: ["localStorage", "navigator"],
+      order: ["localStorage"],
       caches: ["localStorage"],
     },
   });

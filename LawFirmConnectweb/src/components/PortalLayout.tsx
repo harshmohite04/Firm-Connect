@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import LanguageSwitcher from './LanguageSwitcher';
 import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
 import { messageService } from '../services/messageService';
 import { io, Socket } from 'socket.io-client';
@@ -590,9 +589,6 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div>
 
                     {/* Notification Bell */}
-                    <div className="flex items-center gap-4 flex-none ml-4">
-                        <LanguageSwitcher variant="portal" />
-                    </div>
                     <div className="flex items-center gap-4 flex-none ml-2" ref={notificationRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
@@ -671,7 +667,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div>
                 </header>
 
-                <div className="p-8 max-w-7xl mx-auto space-y-8">
+                <div className="p-8 space-y-8">
                     {children}
                 </div>
             </main>

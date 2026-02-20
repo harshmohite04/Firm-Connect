@@ -5,6 +5,7 @@ import { useOutletContext, useParams } from 'react-router-dom';
 import caseService from '../../services/caseService';
 import ragService from '../../services/ragService';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import TransliterateInput from '../../components/TransliterateInput';
 import { saveAs } from 'file-saver';
 
 // Icons
@@ -412,11 +413,10 @@ const CaseDocuments: React.FC = () => {
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                         <SearchIcon />
                     </div>
-                    <input 
-                        type="text" 
-                        placeholder={t('portal.documents.search')}
+                    <TransliterateInput
                         value={docSearchQuery}
-                        onChange={(e) => setDocSearchQuery(e.target.value)}
+                        onChangeText={(text) => setDocSearchQuery(text)}
+                        placeholder={t('portal.documents.search')}
                         className="block w-full pl-11 pr-3 py-3 border border-slate-200 rounded-xl leading-5 bg-white shadow-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                     />
                 </div>

@@ -2,8 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Logo from '../assets/logo.svg';
-import LanguageSwitcher from './LanguageSwitcher';
-
 // Simple SVG Icons
 
 
@@ -33,8 +31,6 @@ const Navbar: React.FC = () => {
             <Link to="/platform" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.platform')}</Link>
             <Link to="/about-us" className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">{t('nav.aboutUs')}</Link>
             
-            <LanguageSwitcher variant="navbar" />
-
             <Link to="/signin" className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
               {t('nav.signIn')}
             </Link>

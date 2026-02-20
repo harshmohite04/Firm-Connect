@@ -643,7 +643,13 @@
     "notifications": "सूचना",
     "signOut": "साइन आउट",
     "signOutConfirmTitle": "साइन आउट",
-    "signOutConfirmMessage": "तुम्हाला नक्की लॉग आउट करायचे आहे का?"
+    "signOutConfirmMessage": "तुम्हाला नक्की लॉग आउट करायचे आहे का?",
+    "languageTitle": "भाषा",
+    "languageSubtitle": "इंटरफेससाठी तुमची पसंतीची भाषा निवडा.",
+    "emailNotifications": "ईमेल सूचना",
+    "emailNotificationsDesc": "ईमेलद्वारे तुमच्या केसबद्दल अपडेट मिळवा.",
+    "smsNotifications": "एसएमएस सूचना",
+    "smsNotificationsDesc": "तातडीच्या अपडेटसाठी मजकूर संदेश मिळवा."
   },
   "practiceAreas": {
     "title": "सर्वसमावेशक कायदेशीर उपाय",

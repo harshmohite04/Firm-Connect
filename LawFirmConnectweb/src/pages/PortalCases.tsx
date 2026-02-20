@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import PortalLayout from '../components/PortalLayout';
 import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';
+import TransliterateInput from '../components/TransliterateInput';
 
 // Icons - matching UserPortal style
 const CaseIcon = () => (
@@ -113,7 +114,7 @@ const PortalCases: React.FC = () => {
 
     return (
         <PortalLayout>
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="space-y-6">
 
                 {/* Header - Matching UserPortal style */}
                 <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
@@ -200,11 +201,10 @@ const PortalCases: React.FC = () => {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <SearchIcon />
                             </div>
-                            <input
-                                type="text"
-                                placeholder={t('cases.searchPlaceholder')}
+                            <TransliterateInput
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChangeText={(text) => setSearchQuery(text)}
+                                placeholder={t('cases.searchPlaceholder')}
                                 className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-300 text-sm transition-all"
                             />
                         </div>

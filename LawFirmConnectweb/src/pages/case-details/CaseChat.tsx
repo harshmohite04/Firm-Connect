@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useOutletContext } from 'react-router-dom';
 import ragService from '../../services/ragService';
 import ReactMarkdown from 'react-markdown';
-import VirtualKeyboard from '../../components/VirtualKeyboard';
+
 import TransliterateInput from '../../components/TransliterateInput';
 
 // Icons
@@ -15,11 +15,6 @@ const LockIcon = () => (
 const PaperClipIcon = () => (
     <svg className="w-5 h-5 text-slate-400 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-    </svg>
-);
-const KeyboardIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </svg>
 );
 
@@ -67,7 +62,7 @@ const CaseChat: React.FC = () => {
     const { t, i18n } = useTranslation();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
-    const [showKeyboard, setShowKeyboard] = useState(false);
+
     const [isLoading, setIsLoading] = useState(false);
 
     // Session State
@@ -765,13 +760,6 @@ const CaseChat: React.FC = () => {
                                 <button className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center">
                                     <PaperClipIcon />
                                 </button>
-                                <button 
-                                    onClick={() => setShowKeyboard(!showKeyboard)}
-                                    className={`p-3 rounded-full transition-colors self-center ${showKeyboard ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                                    title="Toggle Virtual Keyboard"
-                                >
-                                    <KeyboardIcon />
-                                </button>
                                 <TransliterateInput
                                     value={inputValue}
                                     onChangeText={setInputValue}
@@ -796,17 +784,6 @@ const CaseChat: React.FC = () => {
                                 </button>
                             </div>
                             
-                            {/* Virtual Keyboard */}
-                            {showKeyboard && (
-                                <div className="mt-4 animate-in slide-in-from-bottom-2 duration-300">
-                                    <VirtualKeyboard 
-                                        onChange={setInputValue}
-                                        value={inputValue}
-                                        language={i18n.language as any || 'en'}
-                                        inputName="chatInput"
-                                    />
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>

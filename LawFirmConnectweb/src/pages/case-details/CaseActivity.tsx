@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useOutletContext, useParams } from 'react-router-dom';
 import caseService, { type ActivityLog } from '../../services/caseService';
+import TransliterateInput from '../../components/TransliterateInput';
 
 // Icons defined inline for now to ensure self-containment
 const SearchIconImpl = () => (
@@ -151,11 +152,10 @@ const CaseActivity: React.FC = () => {
                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                             <SearchIconImpl />
                         </div>
-                        <input 
-                            type="text" 
-                            placeholder="Search activity..." 
+                        <TransliterateInput
                             value={activitySearchQuery}
-                            onChange={(e) => setActivitySearchQuery(e.target.value)}
+                            onChangeText={(text) => setActivitySearchQuery(text)}
+                            placeholder="Search activity..."
                             className="block w-full pl-11 pr-4 py-3 border border-slate-200 rounded-xl leading-5 bg-white shadow-sm placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                         />
                     </div>
@@ -271,10 +271,9 @@ const CaseActivity: React.FC = () => {
                         <form onSubmit={handleActivitySubmit} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Title (Optional)</label>
-                                <input 
-                                    type="text" 
+                                <TransliterateInput
                                     value={activityForm.title}
-                                    onChange={e => setActivityForm({...activityForm, title: e.target.value})}
+                                    onChangeText={(text) => setActivityForm({...activityForm, title: text})}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                                     placeholder="e.g. Call Summary"
                                 />
@@ -282,13 +281,13 @@ const CaseActivity: React.FC = () => {
                             
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                                <textarea 
-                                    rows={3}
-                                    required
+                                <TransliterateInput
                                     value={activityForm.description}
-                                    onChange={e => setActivityForm({...activityForm, description: e.target.value})}
+                                    onChangeText={(text) => setActivityForm({...activityForm, description: text})}
                                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                                     placeholder="Add details..."
+                                    type="textarea"
+                                    rows={3}
                                 />
                             </div>
                             
