@@ -19,7 +19,7 @@ const Navbar: React.FC = () => {
                {/* <LogoIcon /> */}
                <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">LawFirmAI</span>
           </Link>
 
           {/* Desktop Menu */}

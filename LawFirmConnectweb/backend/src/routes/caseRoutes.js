@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    getCases, createCase, getCaseById, deleteCase, 
+const {
+    getCases, createCase, getCaseById, deleteCase,
     getCaseDocuments, uploadDocument, deleteDocument,
     getCaseActivity, addCaseActivity,
-    getCaseBilling, addCaseBilling,
     updateCaseSettings
 } = require('../controllers/caseController');
 const {
@@ -42,11 +41,6 @@ router.delete('/:id/documents/:documentId', protect, verifyCaseAccess, deleteDoc
 router.route('/:id/activity')
     .get(protect, verifyCaseAccess, getCaseActivity)
     .post(protect, verifyCaseAccess, addCaseActivity);
-
-// Tab: Billing
-router.route('/:id/billing')
-    .get(protect, verifyCaseAccess, getCaseBilling)
-    .post(protect, verifyCaseAccess, fileUpload.single('file'), addCaseBilling);
 
 // Tab: Settings
 router.route('/:id/settings')

@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
                                  {/* <LogoIcon /> */}
                                 <img src={Logo} alt="" style={{width:"10rem",height:"10rem"}}/> 
                              </div>
-                             <span className="font-bold text-lg">LawfirmAI</span>
+                             <span className="font-bold text-lg">LawFirmAI</span>
                          </div>
                          <p className="text-slate-400 leading-relaxed max-w-xs mb-6">
                              {t('footer.tagline')}

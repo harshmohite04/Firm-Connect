@@ -156,7 +156,7 @@ const FirmConnect: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.order.amount,
                 currency: 'INR',
-                name: 'LawfirmAI',
+                name: 'LawFirmAI',
                 description: `Add ${seatCount} seat(s) to your plan`,
                 order_id: orderData.order.id,
                 handler: async function (response: any) {

@@ -53,12 +53,14 @@ const CaseLawDocViewer: React.FC<CaseLawDocViewerProps> = ({ docId, title, onClo
             const anchor = target.closest('a');
             if (!anchor) return;
 
+            // Always prevent default — no link inside the doc should navigate our app
+            e.preventDefault();
+            e.stopPropagation();
+
             const href = anchor.getAttribute('href') || '';
-            // Match IK doc links: /doc/12345/ or /doc/12345
+            // Match IK doc links: /doc/12345/ or indiankanoon.org/doc/12345
             const match = href.match(/\/doc\/(\d+)\/?/);
             if (match) {
-                e.preventDefault();
-                e.stopPropagation();
                 const newDocId = parseInt(match[1], 10);
                 const linkTitle = anchor.textContent || `Document ${newDocId}`;
                 // Push current to history
@@ -70,9 +72,14 @@ const CaseLawDocViewer: React.FC<CaseLawDocViewerProps> = ({ docId, title, onClo
                     fetchDoc(newDocId);
                 }
             } else if (href.startsWith('http')) {
-                // External links open in new tab
-                e.preventDefault();
+                // Absolute URLs (including rewritten IK links) — open in new tab
                 window.open(href, '_blank', 'noopener,noreferrer');
+            } else if (href.startsWith('/')) {
+                // Relative links that weren't rewritten — open on Indian Kanoon
+                window.open(`https://indiankanoon.org${href}`, '_blank', 'noopener,noreferrer');
+            } else if (href && !href.startsWith('#') && !href.startsWith('javascript')) {
+                // Any other relative link (no leading slash) — open on Indian Kanoon
+                window.open(`https://indiankanoon.org/${href}`, '_blank', 'noopener,noreferrer');
             }
         };
 
@@ -129,10 +136,21 @@ const CaseLawDocViewer: React.FC<CaseLawDocViewerProps> = ({ docId, title, onClo
         if (!html) return '';
         let processed = html;
 
-        // Convert IK relative links to absolute
-        processed = processed.replace(/href="\/doc\//g, 'href="/doc/');
+        // Convert ALL relative href links to absolute Indian Kanoon URLs.
+        // Matches href="/" or href="/doc/..." or href="/search?..." etc.
+        processed = processed.replace(
+            /href="(\/[^"]*?)"/g,
+            'href="https://indiankanoon.org$1"'
+        );
 
-        // Add target blank to all external links that aren't IK doc links
+        // Also catch relative links without leading slash (e.g. href="search?..." or href="doc/123")
+        // but skip http/https, mailto:, javascript:, and # anchors
+        processed = processed.replace(
+            /href="(?!https?:\/\/|mailto:|javascript:|#)([^"]+)"/g,
+            'href="https://indiankanoon.org/$1"'
+        );
+
+        // Add target blank to all external links so they open in new tabs
         processed = processed.replace(
             /href="(https?:\/\/[^"]+)"/g,
             'href="$1" target="_blank" rel="noopener noreferrer"'

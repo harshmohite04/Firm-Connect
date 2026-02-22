@@ -108,7 +108,7 @@ const Pricing: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.order.amount,
                 currency: "INR",
-                name: "LawfirmAI",
+                name: "LawFirmAI",
                 description: `Subscription for ${plan.name} Plan`,
                 order_id: orderData.order.id,
                 handler: async function (response: any) {
@@ -177,7 +177,7 @@ const Pricing: React.FC = () => {
                                 You're almost there! 🎉
                             </h3>
                             <p className="mt-3 text-base text-slate-600 max-w-lg leading-relaxed">
-                                Your account is all set up. Choose a plan below to unlock the full power of <strong>LawfirmAI</strong> — AI-driven investigations, secure case management, and more.
+                                Your account is all set up. Choose a plan below to unlock the full power of <strong>LawFirmAI</strong> — AI-driven investigations, secure case management, and more.
                             </p>
                             <div className="mt-4 flex items-center gap-6 text-xs text-slate-500">
                                 <span className="flex items-center gap-1.5">

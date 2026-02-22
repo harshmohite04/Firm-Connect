@@ -71,6 +71,7 @@ const CaseChat: React.FC = () => {
     const [isSidebarOpen, setSidebarOpen] = useState(true);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const creatingSessionRef = useRef(false); // Guard against double session creation
 
     // File upload state
@@ -522,15 +523,29 @@ const CaseChat: React.FC = () => {
         return <>{parts}</>;
     };
 
-    // ---- Messaging ----
+    // ---- Messaging & Scroll ----
+    // Only auto-scroll if the user is already near the bottom.
+    // No flags, no scroll listeners — just check position each time.
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        const container = messagesContainerRef.current;
+        if (!container) return;
+        const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        if (distanceFromBottom < 150) {
+            container.scrollTop = container.scrollHeight;
+        }
     };
 
     useEffect(() => { scrollToBottom(); }, [messages]);
 
+    // Ref to hold the abort controller for the current stream
+    const streamControllerRef = useRef<AbortController | null>(null);
+
     const handleSendMessage = async () => {
         if (!inputValue.trim() || !currentSessionId) return;
+
+        // Abort any in-flight stream
+        streamControllerRef.current?.abort();
+
         const newUserMsg: Message = {
             id: Date.now(),
             sender: 'You',
@@ -541,29 +556,54 @@ const CaseChat: React.FC = () => {
         setMessages(prev => [...prev, newUserMsg]);
         setInputValue('');
         setIsLoading(true);
-        try {
-            const responseData = await ragService.chat(caseData._id, newUserMsg.content, 5, currentSessionId);
-            const botMsg: Message = {
-                id: Date.now() + 1,
-                sender: 'AI Assistant',
-                avatar: 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff',
-                content: responseData.answer,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: false,
-                contexts: responseData.contexts
-            };
-            setMessages(prev => [...prev, botMsg]);
-        } catch (error) {
-            console.error("Error sending message:", error);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1, sender: 'System',
-                content: "Sorry, I encountered an error processing your request.",
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: false
-            }]);
-        } finally {
-            setIsLoading(false);
-        }
+
+        // Create the placeholder AI message that will be filled by streaming tokens
+        const botMsgId = Date.now() + 1;
+        const botMsgBase: Message = {
+            id: botMsgId,
+            sender: 'AI Assistant',
+            avatar: 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff',
+            content: '',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: false,
+            contexts: [],
+        };
+        setMessages(prev => [...prev, botMsgBase]);
+
+        const controller = ragService.chatStream(
+            caseData._id,
+            newUserMsg.content,
+            {
+                onContexts: (contexts) => {
+                    setMessages(prev =>
+                        prev.map(m => m.id === botMsgId ? { ...m, contexts } : m)
+                    );
+                },
+                onToken: (token) => {
+                    setMessages(prev =>
+                        prev.map(m => m.id === botMsgId ? { ...m, content: m.content + token } : m)
+                    );
+                },
+                onDone: (_fullResponse) => {
+                    setIsLoading(false);
+                    streamControllerRef.current = null;
+                },
+                onError: (_error) => {
+                    setMessages(prev =>
+                        prev.map(m => m.id === botMsgId
+                            ? { ...m, content: m.content || 'Sorry, I encountered an error processing your request.' }
+                            : m
+                        )
+                    );
+                    setIsLoading(false);
+                    streamControllerRef.current = null;
+                },
+            },
+            5,
+            currentSessionId,
+        );
+
+        streamControllerRef.current = controller;
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -704,7 +744,7 @@ const CaseChat: React.FC = () => {
                     </div>
 
                     {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth">
+                    <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 scroll-smooth">
                         {messages.length === 0 && (
                             <div className="text-center text-slate-500 py-20 flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
                                 <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 text-blue-600 shadow-sm border border-blue-100">
@@ -822,18 +862,7 @@ const CaseChat: React.FC = () => {
                             </div>
                         ))}
 
-                        {isLoading && (
-                            <div className="flex gap-4 animate-pulse">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0"></div>
-                                <div className="bg-white border border-slate-100 text-slate-800 rounded-tl-sm p-4 rounded-2xl shadow-sm">
-                                    <div className="flex space-x-1.5">
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {/* Loading dots removed — streaming tokens serve as the live indicator */}
                         <div className="h-8 w-full"></div>
                         <div ref={messagesEndRef} />
                     </div>

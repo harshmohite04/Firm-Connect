@@ -205,6 +205,14 @@ def get_llm(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"
             target_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
             return ChatOllama(model=target_model, temperature=0.1)
 
+    # USE_OPENAI toggle (shared with utils/llm.py factory)
+    use_openai_toggle = os.getenv("USE_OPENAI", "false").lower().strip() == "true"
+    if use_openai_toggle:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            target_model = os.getenv("OPENAI_MODEL", "gpt-4o")
+            return ChatOpenAI(model=target_model, api_key=api_key, temperature=0.1)
+
     # Check for DeepSeek
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
     if deepseek_api_key:
