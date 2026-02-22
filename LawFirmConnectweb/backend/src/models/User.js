@@ -42,7 +42,7 @@ const userSchema = new mongoose.Schema(
     // Subscription Fields
     subscriptionStatus: {
       type: String, 
-      enum: ['ACTIVE', 'INACTIVE'], 
+      enum: ['ACTIVE', 'INACTIVE', 'TRIAL'], 
       default: 'INACTIVE' 
     },
     subscriptionPlan: { 
