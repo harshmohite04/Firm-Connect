@@ -68,7 +68,7 @@ interface DraftSession {
 const CaseDraft: React.FC = () => {
     // @ts-ignore
     const { caseData } = useOutletContext<{ caseData: any }>();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const [templates, setTemplates] = useState<Template[]>([]);
