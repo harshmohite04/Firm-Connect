@@ -7,7 +7,6 @@ import AboutUs from './pages/AboutUs';
 import PlatformOverview from './pages/PlatformOverview';
 import ContactUs from './pages/ContactUs';
 import Home from './pages/Home';
-import PortalBilling from './pages/PortalBilling';
 import PortalCalendar from './pages/PortalCalendar';
 import PortalCaseDetails from './pages/PortalCaseDetails';
 import PortalCases from './pages/PortalCases';
@@ -24,7 +23,6 @@ import ProfileNotifications from './pages/profile/ProfileNotifications';
 import CaseActivity from './pages/case-details/CaseActivity';
 import CaseDocuments from './pages/case-details/CaseDocuments';
 import CaseChat from './pages/case-details/CaseChat';
-import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
 import CaseDraft from './pages/case-details/CaseDraft';
@@ -99,7 +97,6 @@ const App: React.FC = () => {
                 <Route path="chat" element={<CaseChat />} />
                 <Route path="investigator" element={<InvestigatorAgent />} />
                 <Route path="draft" element={<CaseDraft />} />
-                <Route path="billing" element={<CaseBilling />} />
                 <Route path="precedents" element={<CasePrecedents />} />
                 <Route path="settings" element={<CaseSettings />} />
             </Route>
@@ -107,11 +104,6 @@ const App: React.FC = () => {
             <Route path="/portal/case-law" element={
                 <SubscriptionGuard>
                     <PortalCaseLaw />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/billing" element={
-                <SubscriptionGuard>
-                    <PortalBilling />
                 </SubscriptionGuard>
             } />
             <Route path="/portal/calendar" element={

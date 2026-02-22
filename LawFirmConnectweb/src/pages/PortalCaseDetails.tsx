@@ -125,9 +125,6 @@ const PortalCaseDetails: React.FC = () => {
             <NavLink to="precedents" className={getNavLinkClass}>
               {t('caseDetails.precedents')}
             </NavLink>
-            <NavLink to="billing" className={getNavLinkClass}>
-              {t('caseDetails.billing')}
-            </NavLink>
             <NavLink to="settings" className={getNavLinkClass}>
               {t('caseDetails.settings')}
             </NavLink>

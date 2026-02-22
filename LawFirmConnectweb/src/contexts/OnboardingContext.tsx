@@ -21,7 +21,7 @@ interface OnboardingContextType {
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
-    title: 'Welcome to LawfirmAI!',
+    title: 'Welcome to LawFirmAI!',
     description: 'This is your legal portal dashboard. Let us show you around.',
     targetSelector: '[data-onboarding="dashboard"]',
     position: 'bottom',

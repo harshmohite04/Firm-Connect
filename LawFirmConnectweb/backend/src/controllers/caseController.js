@@ -487,33 +487,6 @@ const addCaseActivity = async (req, res, next) => {
     } catch (error) { next(error); }
 };
 
-// Billing
-const getCaseBilling = async (req, res, next) => {
-    try {
-        const caseDoc = await Case.findById(req.params.id);
-        res.json(caseDoc.billing || []);
-    } catch (error) { next(error); }
-};
-
-const addCaseBilling = async (req, res, next) => {
-    try {
-        const { amount, description, status, date, category } = req.body;
-        const caseDoc = await Case.findById(req.params.id);
-        
-        let receiptUrl = '';
-        if (req.file) {
-             // Supports both S3 (location) and Local (filename)
-             receiptUrl = req.file.location || `/uploads/${req.file.filename}`;
-        }
-
-        caseDoc.billing.push({
-            amount, description, status, date: date || new Date(), receiptUrl
-        });
-        await caseDoc.save();
-        res.status(201).json(caseDoc.billing);
-    } catch (error) { next(error); }
-};
-
 // Settings
 const updateCaseSettings = async (req, res, next) => {
     try {
@@ -542,6 +515,5 @@ module.exports = {
     getCases, createCase, getCaseById, deleteCase, // Main
     getCaseDocuments, uploadDocument, deleteDocument, // Documents
     getCaseActivity, addCaseActivity, // Activity
-    getCaseBilling, addCaseBilling, // Billing
     updateCaseSettings // Settings
 };

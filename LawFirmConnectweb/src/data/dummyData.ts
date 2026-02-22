@@ -176,41 +176,6 @@ export const dummyCalendarEvents = [
   },
 ];
 
-export const dummyBilling = [
-  {
-    id: "INV-001",
-    date: "2023-11-15",
-    description: "Legal Consultation Hours",
-    amount: 450.0,
-    status: "Paid",
-    caseId: "1",
-  },
-  {
-    id: "INV-002",
-    date: "2023-12-01",
-    description: "Document Preparation Fee",
-    amount: 200.0,
-    status: "Pending",
-    caseId: "2",
-  },
-  {
-    id: "INV-003",
-    date: "2023-12-10",
-    description: "Court Filing Fees",
-    amount: 150.0,
-    status: "Pending",
-    caseId: "2",
-  },
-  {
-    id: "INV-004",
-    date: "2023-06-25",
-    description: "Final Settlement Services",
-    amount: 1200.0,
-    status: "Paid",
-    caseId: "3",
-  },
-];
-
 export const dummyActivities = [
   {
     id: 1,

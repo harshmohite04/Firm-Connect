@@ -324,7 +324,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div> */}
                     <img src={Logo} alt="" style={{width:"5rem" , height:"5rem"}}/>
                     <div>
-                        <h1 className="font-bold text-slate-900 leading-none">LawfirmAI</h1>
+                        <h1 className="font-bold text-slate-900 leading-none">LawFirmAI</h1>
                         <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
                     </div>
                 </div>
@@ -344,9 +344,6 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         {t('portal.sidebar.caseLaw')}
                     </Link>
 
-                    <Link to="/portal/billing" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/billing') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <BillingIcon /> {t('portal.sidebar.billing')}
-                    </Link>
                     <Link to="/portal/calendar" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
                         <CalendarIcon /> {t('portal.sidebar.calendar')}
                     </Link>

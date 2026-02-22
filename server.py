@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 import shutil
@@ -25,7 +25,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from rag.rag import ask
+from rag.rag import ask, ask_stream
 from ingestion.injector import ingest_document, delete_document
 from investigation.generator import DocumentGenerator
 
@@ -363,28 +363,36 @@ async def get_chat_history(
         raise HTTPException(status_code=500, detail="Failed to fetch chat history")
 
 
-@app.post("/chat", response_model=ChatResponse)
-@limiter.limit("30/minute")  # Limit AI requests
+@app.post("/chat")
+@limiter.limit("30/minute")
 async def chat(
     request: Request,
     body: ChatRequest,
     current_user: Dict = Depends(get_current_user)
 ):
+    """
+    SSE streaming chat endpoint.
+    Event format:
+      data: {"type": "contexts", "contexts": [...]}
+      data: {"type": "token", "content": "The"}
+      data: {"type": "done", "full_response": "..."}
+    Saves full response to MongoDB after streaming completes.
+    """
+    import json as json_module
+
     try:
         # Validate inputs
         validate_case_id(body.caseId)
         if body.sessionId:
             validate_session_id(body.sessionId)
         validate_string_length(body.message, "Message", min_length=1, max_length=5000)
-        
+
         session_doc = None
         user_id = get_user_id(current_user)
-        
+
         # 1. Fetch history from MongoDB
         if body.sessionId:
             session_doc = chat_collection.find_one({"session_id": body.sessionId})
-            
-            # Verify ownership
             if session_doc and session_doc.get("user_id") != user_id:
                 log_security_event("UNAUTHORIZED_CHAT_ACCESS", {
                     "user_id": user_id,
@@ -392,83 +400,79 @@ async def chat(
                 })
                 raise HTTPException(status_code=403, detail="Access denied")
         else:
-            # Legacy fallback
             session_doc = chat_collection.find_one({
-                "case_id": body.caseId, 
+                "case_id": body.caseId,
                 "session_id": {"$exists": False}
             })
-        
+
         history = session_doc["messages"] if session_doc else []
-        
-        # Limit history to last 10 messages to fit token limits
         recent_history = history[-10:]
 
-        # 2. Get Answer from RAG
-        result = ask(
-            query=body.message,
-            case_id=body.caseId,
-            history=recent_history,
-            top_k=body.top_k
-        )
+        # Capture these for the generator closure
+        case_id = body.caseId
+        session_id = body.sessionId
+        message = body.message
+        top_k = body.top_k
 
-        # Extract context items from result using metadata (set in rag.py retriever)
-        contexts = []
-        score_threshold = float(os.getenv("SOURCE_SCORE_THRESHOLD", "0.3"))
-        if hasattr(result, 'retriever_result') and result.retriever_result:
-            for item in result.retriever_result.items:
-                metadata = item.metadata or {}
-                source = metadata.get("source")
-                score = metadata.get("score")
-                raw_content = item.content if isinstance(item.content, str) else str(item.content)
-                # Strip the [N] (Source: ...) prefix added for LLM citation
-                import re as _re
-                text_content = _re.sub(r'^\[\d+\]\s*\(Source:\s*[^)]*\)\s*', '', raw_content)
+        async def event_generator():
+            contexts_list = []
+            full_response = ""
 
-                # Filter out low-relevance chunks
-                if score is not None and score < score_threshold:
-                    continue
+            try:
+                for event_json in ask_stream(
+                    query=message,
+                    case_id=case_id,
+                    history=recent_history,
+                    top_k=top_k,
+                ):
+                    event = json_module.loads(event_json)
+                    event_type = event.get("type")
 
-                contexts.append(
-                    ContextItem(
-                        content=text_content,
-                        source=source,
-                        metadata=metadata,
-                        score=score
+                    if event_type == "contexts":
+                        contexts_list = event.get("contexts", [])
+                    elif event_type == "done":
+                        full_response = event.get("full_response", "")
+
+                    yield f"data: {event_json}\n\n"
+
+            except Exception as e:
+                logger.error(f"Streaming error: {e}", exc_info=True)
+                yield f"data: {json_module.dumps({'type': 'done', 'full_response': 'Error generating response.'})}\n\n"
+                full_response = "Error generating response."
+
+            # Save to MongoDB after streaming completes
+            try:
+                new_user_msg = {"role": "user", "content": message}
+                contexts_dicts = contexts_list
+                new_ai_msg = {
+                    "role": "assistant",
+                    "content": full_response,
+                    "contexts": contexts_dicts,
+                }
+
+                if session_id:
+                    chat_collection.update_one(
+                        {"session_id": session_id},
+                        {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                        upsert=False,
                     )
-                )
+                else:
+                    chat_collection.update_one(
+                        {"case_id": case_id, "session_id": {"$exists": False}},
+                        {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                        upsert=True,
+                    )
+            except Exception as e:
+                logger.error(f"Failed to save chat history: {e}", exc_info=True)
 
-            # Sort by score descending (highest relevance first)
-            contexts.sort(key=lambda c: c.score if c.score is not None else 0, reverse=True)
-
-        # 3. Save to History
-        new_user_msg = {"role": "user", "content": body.message}
-        
-        # Convert contexts to dicts for MongoDB
-        contexts_dicts = [ctx.model_dump() for ctx in contexts] if contexts else []
-        new_ai_msg = {
-            "role": "assistant", 
-            "content": result.answer,
-            "contexts": contexts_dicts
-        }
-
-        # Update MongoDB (upsert)
-        if body.sessionId:
-            chat_collection.update_one(
-                {"session_id": body.sessionId},
-                {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
-                upsert=False  # Session must exist for security
-            )
-        else:
-             # Legacy
-             chat_collection.update_one(
-                {"case_id": body.caseId, "session_id": {"$exists": False}},
-                {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
-                upsert=True
-            )
-
-        return ChatResponse(
-            answer=result.answer,
-            contexts=contexts
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     except HTTPException:
@@ -617,7 +621,8 @@ async def ingest_file(
                                     text=text,
                                     source_name=extracted_safe_name,
                                     case_id=caseId,
-                                    page_metadata=page_data
+                                    page_metadata=page_data,
+                                    file_path=dest_path,
                                 ))
 
                                 ingested_files.append(extracted_safe_name)
@@ -687,7 +692,6 @@ async def ingest_file(
                 {"$set": {"extracted_pages": page_data}}
             )
 
-            # Ingest with page metadata
             # Ingest with page metadata in BACKGROUND
             # We already set status to "Processing" above.
 
@@ -701,7 +705,8 @@ async def ingest_file(
                 text=text,
                 source_name=safe_filename,
                 case_id=caseId,
-                page_metadata=page_data
+                page_metadata=page_data,
+                file_path=file_location,
             ))
             
             logger.info(f"Started background ingestion: {safe_filename} for case {caseId}")
@@ -872,16 +877,17 @@ async def save_document_endpoint(
 
         # Start background ingestion
         asyncio.create_task(_run_ingestion_background(
-            ingest_document, 
-            body.caseId, 
-            safe_filename, 
-            document_status_collection, 
+            ingest_document,
+            body.caseId,
+            safe_filename,
+            document_status_collection,
             logger,
-            text=body.content, 
-            source_name=safe_filename, 
-            case_id=body.caseId
+            text=body.content,
+            source_name=safe_filename,
+            case_id=body.caseId,
+            file_path=file_location,
         ))
-        
+
         logger.info(f"Document saved, background ingestion started: {safe_filename}")
 
         return {
@@ -942,16 +948,17 @@ async def retry_ingest(
 
         # Start background ingestion
         asyncio.create_task(_run_ingestion_background(
-            ingest_document, 
-            body.caseId, 
-            safe_filename, 
-            document_status_collection, 
+            ingest_document,
+            body.caseId,
+            safe_filename,
+            document_status_collection,
             logger,
-            text=content, 
-            source_name=safe_filename, 
-            case_id=body.caseId
+            text=content,
+            source_name=safe_filename,
+            case_id=body.caseId,
+            file_path=file_path,
         ))
-        
+
         logger.info(f"Retry ingestion started: {safe_filename}")
         
         return {"status": "processing", "message": "Result initiated in background"}
@@ -1283,7 +1290,6 @@ async def run_investigation(
 
 # --- SSE Streaming Investigation Endpoint ---
 
-from fastapi.responses import StreamingResponse
 import json as json_module
 import asyncio
 

@@ -47,15 +47,6 @@ export interface Document {
   fileSize: number;
 }
 
-export interface BillingRecord {
-  _id?: string;
-  amount: number;
-  description: string;
-  status: "Paid" | "Unpaid" | "Pending";
-  date: string;
-  receiptUrl?: string;
-}
-
 // -- Main Case Endpoints --
 
 const getCases = async (userId?: string): Promise<Case[]> => {
@@ -138,21 +129,6 @@ const addCaseActivity = async (
   activityData: { description: string; type?: string },
 ): Promise<ActivityLog[]> => {
   const response = await api.post(`/cases/${id}/activity`, activityData);
-  return response.data;
-};
-
-// -- Billing Tab --
-
-const getCaseBilling = async (id: string): Promise<BillingRecord[]> => {
-  const response = await api.get(`/cases/${id}/billing`);
-  return response.data;
-};
-
-const addCaseBilling = async (
-  id: string,
-  billingData: any,
-): Promise<BillingRecord[]> => {
-  const response = await api.post(`/cases/${id}/billing`, billingData);
   return response.data;
 };
 
@@ -447,9 +423,6 @@ const caseService = {
 
   getCaseActivity,
   addCaseActivity,
-
-  getCaseBilling,
-  addCaseBilling,
 
   updateCaseSettings,
   generateDocument,
