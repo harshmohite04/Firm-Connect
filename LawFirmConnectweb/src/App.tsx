@@ -28,6 +28,8 @@ import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
 import CaseDraft from './pages/case-details/CaseDraft';
+import CasePrecedents from './pages/case-details/CasePrecedents';
+import PortalCaseLaw from './pages/PortalCaseLaw';
 import NotFound from './pages/NotFound';
 
 // Payment & Subscription Imports
@@ -98,9 +100,15 @@ const App: React.FC = () => {
                 <Route path="investigator" element={<InvestigatorAgent />} />
                 <Route path="draft" element={<CaseDraft />} />
                 <Route path="billing" element={<CaseBilling />} />
+                <Route path="precedents" element={<CasePrecedents />} />
                 <Route path="settings" element={<CaseSettings />} />
             </Route>
 
+            <Route path="/portal/case-law" element={
+                <SubscriptionGuard>
+                    <PortalCaseLaw />
+                </SubscriptionGuard>
+            } />
             <Route path="/portal/billing" element={
                 <SubscriptionGuard>
                     <PortalBilling />

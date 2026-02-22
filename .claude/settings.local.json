@@ -18,7 +18,8 @@
       "Bash(python -m py_compile:*)",
       "Bash(git log:*)",
       "Bash(npm uninstall:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "WebFetch(domain:api.indiankanoon.org)"
     ]
   }
 }
