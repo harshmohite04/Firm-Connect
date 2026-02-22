@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import caseService from '../../services/caseService';
-import VirtualKeyboard from '../../components/VirtualKeyboard';
+
 import TransliterateInput from '../../components/TransliterateInput';
+import LineNumberedEditor from '../../components/LineNumberedEditor';
 
 // Icons
 const SparklesIcon = () => (
@@ -43,11 +44,7 @@ const ClockIcon = () => (
     </svg>
 );
 
-const KeyboardIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-);
+
 
 interface Message {
     role: 'user' | 'assistant';
@@ -92,9 +89,7 @@ const CaseDraft: React.FC = () => {
     const [isCustomDocument, setIsCustomDocument] = useState(false);
     const [customDocumentName, setCustomDocumentName] = useState('');
     
-    // Keyboard States
-    const [showChatKeyboard, setShowChatKeyboard] = useState(false);
-    const [showDocKeyboard, setShowDocKeyboard] = useState(false);
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -598,13 +593,6 @@ const CaseDraft: React.FC = () => {
                                 className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 disabled={isGenerating}
                             />
-                            <button 
-                                onClick={() => setShowChatKeyboard(!showChatKeyboard)}
-                                className={`px-3 py-2 rounded-lg border transition-colors ${showChatKeyboard ? 'bg-blue-50 border-blue-200 text-blue-600' : 'bg-white border-slate-200 text-slate-400 hover:text-blue-600'}`}
-                                title="Toggle Virtual Keyboard"
-                            >
-                                <KeyboardIcon />
-                            </button>
                             <button
                                 onClick={handleSendMessage}
                                 disabled={isGenerating || !inputMessage.trim()}
@@ -613,16 +601,6 @@ const CaseDraft: React.FC = () => {
                                 <SendIcon />
                             </button>
                         </div>
-                        {showChatKeyboard && (
-                            <div className="mt-2 relative z-10">
-                                <VirtualKeyboard 
-                                    onChange={setInputMessage}
-                                    value={inputMessage}
-                                    language={i18n.language as any || 'en'}
-                                    inputName="draftChatInput"
-                                />
-                            </div>
-                        )}
                     </div>
                 </div>
 
@@ -634,35 +612,12 @@ const CaseDraft: React.FC = () => {
                     </div>
 
                     {documentContent ? (
-                        <>
-                            <TransliterateInput
-                                value={documentContent}
-                                onChangeText={setDocumentContent}
-                                className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
-                                placeholder={t('portal.drafting.docContentPlaceholder')}
-                                type="textarea"
-                            />
-                            {/* Document Editor Keyboard Toggle */}
-                            <div className="absolute bottom-6 right-6 flex flex-col items-end gap-2">
-                                <button 
-                                    onClick={() => setShowDocKeyboard(!showDocKeyboard)}
-                                    className={`p-3 rounded-full shadow-lg border transition-all ${showDocKeyboard ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-400 border-slate-200 hover:text-blue-600'}`}
-                                    title="Toggle Virtual Keyboard"
-                                >
-                                    <KeyboardIcon />
-                                </button>
-                            </div>
-                            {showDocKeyboard && (
-                                <div className="border-t border-slate-200 p-2 bg-slate-50 relative z-10">
-                                    <VirtualKeyboard 
-                                        onChange={setDocumentContent}
-                                        value={documentContent}
-                                        language={i18n.language as any || 'en'}
-                                        inputName="draftDocInput"
-                                    />
-                                </div>
-                            )}
-                        </>
+                        <LineNumberedEditor
+                            value={documentContent}
+                            onChangeText={setDocumentContent}
+                            className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
+                            placeholder={t('portal.drafting.docContentPlaceholder')}
+                        />
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-slate-300">

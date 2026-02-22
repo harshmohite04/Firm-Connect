@@ -25,7 +25,7 @@ const verifyCaseAccess = async (req, res, next) => {
         }
 
         // 2. Client who created the case
-        if (caseDoc.clientId.toString() === user._id.toString()) {
+        if (caseDoc.createdBy && caseDoc.createdBy.toString() === user._id.toString()) {
             req.caseDoc = caseDoc;
             return next();
         }

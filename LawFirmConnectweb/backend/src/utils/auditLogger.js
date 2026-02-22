@@ -25,7 +25,8 @@ const AUDIT_EVENTS = {
     UNAUTHORIZED_ACCESS: 'UNAUTHORIZED_ACCESS',
     SENSITIVE_DATA_ACCESS: 'SENSITIVE_DATA_ACCESS',
     FILE_UPLOAD: 'FILE_UPLOAD',
-    FILE_DELETE: 'FILE_DELETE'
+    FILE_DELETE: 'FILE_DELETE',
+    SESSION_REPLACED: 'SESSION_REPLACED'
 };
 
 /**
@@ -115,6 +116,16 @@ const logUnauthorizedAccess = (resource, userId = null, ip = null) => {
 };
 
 /**
+ * Log session replacement (single-device enforcement)
+ * @param {string} email - User email
+ * @param {string} userId - User ID
+ * @param {string} ip - Request IP of the new login
+ */
+const logSessionReplaced = (email, userId, ip = null) => {
+    return logAuditEvent(AUDIT_EVENTS.SESSION_REPLACED, { email, reason: 'New login from another device' }, userId, ip);
+};
+
+/**
  * Get client IP from request
  * @param {Object} req - Express request object
  * @returns {string} Client IP address
@@ -134,5 +145,6 @@ module.exports = {
     logAccountLockout,
     logRegistration,
     logUnauthorizedAccess,
+    logSessionReplaced,
     getClientIp
 };

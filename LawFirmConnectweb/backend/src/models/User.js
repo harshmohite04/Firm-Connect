@@ -24,8 +24,23 @@ const userSchema = new mongoose.Schema(
     failedLoginAttempts: { type: Number, default: 0 },
     lockUntil: { type: Date, default: null },
 
+    // Session management (single-device enforcement)
+    sessionToken: { type: String, default: null },
+
+    // Last login info (current session)
+    lastLoginAt: { type: Date, default: null },
+    lastLoginIp: { type: String, default: null },
+    lastLoginDevice: { type: String, default: null },
+    lastLoginLocation: { type: String, default: null },
+
+    // Previous login info (the login before the current one)
+    previousLoginAt: { type: Date, default: null },
+    previousLoginIp: { type: String, default: null },
+    previousLoginDevice: { type: String, default: null },
+    previousLoginLocation: { type: String, default: null },
+
     // Subscription Fields
-    subscriptionStatus: { 
+    subscriptionStatus: {
       type: String, 
       enum: ['ACTIVE', 'INACTIVE'], 
       default: 'INACTIVE' 

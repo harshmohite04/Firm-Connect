@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import AboutUs from './pages/AboutUs';
+import PlatformOverview from './pages/PlatformOverview';
 import ContactUs from './pages/ContactUs';
 import Home from './pages/Home';
 import PortalBilling from './pages/PortalBilling';
@@ -27,6 +28,8 @@ import CaseBilling from './pages/case-details/CaseBilling';
 import CaseSettings from './pages/case-details/CaseSettings';
 import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
 import CaseDraft from './pages/case-details/CaseDraft';
+import CasePrecedents from './pages/case-details/CasePrecedents';
+import PortalCaseLaw from './pages/PortalCaseLaw';
 import NotFound from './pages/NotFound';
 
 // Payment & Subscription Imports
@@ -62,6 +65,7 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/practice-areas" element={<PracticeAreas />} />
             <Route path="/about-us" element={<AboutUs />} />
+            <Route path="/platform" element={<PlatformOverview />} />
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/practice-areas/:id" element={<PracticeAreaDetail />} />
             <Route path="/signin" element={<AuthPage initialMode="signin" />} />
@@ -96,9 +100,15 @@ const App: React.FC = () => {
                 <Route path="investigator" element={<InvestigatorAgent />} />
                 <Route path="draft" element={<CaseDraft />} />
                 <Route path="billing" element={<CaseBilling />} />
+                <Route path="precedents" element={<CasePrecedents />} />
                 <Route path="settings" element={<CaseSettings />} />
             </Route>
 
+            <Route path="/portal/case-law" element={
+                <SubscriptionGuard>
+                    <PortalCaseLaw />
+                </SubscriptionGuard>
+            } />
             <Route path="/portal/billing" element={
                 <SubscriptionGuard>
                     <PortalBilling />

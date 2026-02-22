@@ -136,11 +136,16 @@ DOCUMENT: [The actual document content]
 
 Be helpful and professional. If you need more information, ask specific questions."""
         else:
-            # Refinement of existing document
+            # Refinement of existing document — prepend line numbers for precise references
+            numbered_lines = [f"{i}: {line}" for i, line in enumerate(current_document.split('\n'), start=1)]
+            numbered_document = '\n'.join(numbered_lines)
+
             query = f"""You are a legal assistant helping refine a document interactively.
 
-Current document:
-{current_document}
+Current document (with line numbers for reference):
+{numbered_document}
+
+Line numbers are for reference only. Do NOT include line numbers in the output document. When the user references a line number, use it to locate the text.
 
 User request: {message}
 
@@ -155,7 +160,7 @@ Format your response EXACTLY as follows:
 CHAT: [Your conversational response explaining the changes]
 DOCUMENT: [The complete updated document]
 
-Ensure you return the FULL document, not just the changed parts."""
+Ensure you return the FULL document, not just the changed parts. Do NOT include line numbers in the DOCUMENT output."""
 
         # Use RAG to generate response with case context
         result = ask(query=query, case_id=case_id, top_k=15)

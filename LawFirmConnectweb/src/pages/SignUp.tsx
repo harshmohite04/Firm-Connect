@@ -4,8 +4,6 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import authService from '../services/authService';
 import Logo from '../assets/logo.svg';
-import LanguageSwitcher from '../components/LanguageSwitcher';
-
 
 
 
@@ -110,7 +108,6 @@ const SignUp: React.FC = () => {
                             </div>
                             <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
                         </div>
-                        <LanguageSwitcher variant="navbar" />
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">

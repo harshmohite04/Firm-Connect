@@ -5,7 +5,9 @@ const sendEmail = require('../utils/emailService');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const { validationResult } = require('express-validator');
-const { logLoginAttempt, logAccountLockout, logRegistration, getClientIp } = require('../utils/auditLogger');
+const { logLoginAttempt, logAccountLockout, logRegistration, logSessionReplaced, getClientIp } = require('../utils/auditLogger');
+const UAParser = require('ua-parser-js');
+const geoip = require('geoip-lite');
 const Organization = require('../models/Organization');
 const TeamInvitation = require('../models/TeamInvitation'); // Added if we need it, though we might just push to members array directly
 
@@ -104,6 +106,11 @@ const registerUser = async (req, res, next) => {
                 }
             }
 
+            // Generate session token for single-device enforcement
+            const sessionToken = crypto.randomUUID();
+            user.sessionToken = sessionToken;
+            await user.save();
+
             // Log successful registration
             logRegistration(email, user._id.toString(), clientIp);
 
@@ -113,9 +120,9 @@ const registerUser = async (req, res, next) => {
                 email: user.email,
                 role: user.role,
                 organizationId: user.organizationId,
-                token: generateToken(user._id),
-                msg: role === 'ATTORNEY' && organizationId 
-                    ? 'Account created. Your request to join the firm is pending approval.' 
+                token: generateToken(user._id, sessionToken),
+                msg: role === 'ATTORNEY' && organizationId
+                    ? 'Account created. Your request to join the firm is pending approval.'
                     : 'User registered successfully.'
             });
         } else {
@@ -188,16 +195,59 @@ const loginUser = async (req, res, next) => {
         await user.resetLoginAttempts();
         logLoginAttempt(true, email, user._id.toString(), clientIp);
 
+        // Notify previous session via Socket.IO before replacing token
+        if (user.sessionToken) {
+            const io = req.app.get('socketio');
+            if (io) {
+                io.to(user._id.toString()).emit('session_expired', {
+                    message: 'Your account was signed in on another device.'
+                });
+            }
+            logSessionReplaced(email, user._id.toString(), clientIp);
+        }
+
+        // Generate new session token for single-device enforcement
+        const sessionToken = crypto.randomUUID();
+        user.sessionToken = sessionToken;
+
+        // Capture last login metadata
+        const ua = new UAParser(req.headers['user-agent']);
+        const browser = ua.getBrowser();
+        const os = ua.getOS();
+        const deviceString = browser.name
+            ? `${browser.name}${browser.version ? ' ' + browser.version.split('.')[0] : ''} on ${os.name || 'Unknown OS'}${os.version ? ' ' + os.version : ''}`
+            : 'Unknown device';
+
+        const geo = geoip.lookup(clientIp);
+        const locationString = geo && geo.city
+            ? `${geo.city}, ${geo.country}`
+            : geo && geo.country
+                ? geo.country
+                : 'Unknown location';
+
+        // Preserve current login as previous before overwriting
+        if (user.lastLoginAt) {
+            user.previousLoginAt = user.lastLoginAt;
+            user.previousLoginIp = user.lastLoginIp;
+            user.previousLoginDevice = user.lastLoginDevice;
+            user.previousLoginLocation = user.lastLoginLocation;
+        }
+
+        user.lastLoginAt = new Date();
+        user.lastLoginIp = clientIp;
+        user.lastLoginDevice = deviceString;
+        user.lastLoginLocation = locationString;
+
         // Auto-activate subscription for @harsh.com
         if (user.email.toLowerCase().endsWith('@harsh.com')) {
             user.subscriptionStatus = 'ACTIVE';
-            user.subscriptionPlan = 'PROFESSIONAL'; 
+            user.subscriptionPlan = 'PROFESSIONAL';
             // Reset expiration if expired or not set
             if (!user.subscriptionExpiresAt || user.subscriptionExpiresAt < new Date()) {
                  user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
             }
-            await user.save();
         }
+        await user.save();
 
         res.json({
             _id: user._id,
@@ -207,7 +257,13 @@ const loginUser = async (req, res, next) => {
             role: user.role,
             organizationId: user.organizationId,
             subscriptionStatus: user.subscriptionStatus,
-            token: generateToken(user._id)
+            lastLoginAt: user.lastLoginAt,
+            lastLoginDevice: user.lastLoginDevice,
+            lastLoginLocation: user.lastLoginLocation,
+            previousLoginAt: user.previousLoginAt,
+            previousLoginDevice: user.previousLoginDevice,
+            previousLoginLocation: user.previousLoginLocation,
+            token: generateToken(user._id, sessionToken)
         });
 
     } catch (error) {
@@ -238,7 +294,13 @@ const getCurrentUser = async (req, res, next) => {
             organizationId: user.organizationId,
             subscriptionStatus: user.subscriptionStatus,
             subscriptionPlan: user.subscriptionPlan,
-            subscriptionExpiresAt: user.subscriptionExpiresAt
+            subscriptionExpiresAt: user.subscriptionExpiresAt,
+            lastLoginAt: user.lastLoginAt,
+            lastLoginDevice: user.lastLoginDevice,
+            lastLoginLocation: user.lastLoginLocation,
+            previousLoginAt: user.previousLoginAt,
+            previousLoginDevice: user.previousLoginDevice,
+            previousLoginLocation: user.previousLoginLocation,
         });
     } catch (error) {
         next(error);

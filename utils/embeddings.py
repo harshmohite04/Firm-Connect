@@ -1,8 +1,8 @@
 import os
 from sentence_transformers import SentenceTransformer
 
-# Upgraded embedding model (768-dim, better accuracy than all-MiniLM-L6-v2's 384-dim)
-EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-base-en-v1.5")
+# Multilingual embedding model (1024-dim, supports Hindi and other Indian languages)
+EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
 
 _sentence_transformer = SentenceTransformer(EMBED_MODEL)
 

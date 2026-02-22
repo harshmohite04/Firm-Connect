@@ -122,6 +122,9 @@ const PortalCaseDetails: React.FC = () => {
                {/* Use the new Purple color for Investigator */}
                {t('caseDetails.investigatorAgent')}
             </NavLink>
+            <NavLink to="precedents" className={getNavLinkClass}>
+              {t('caseDetails.precedents')}
+            </NavLink>
             <NavLink to="billing" className={getNavLinkClass}>
               {t('caseDetails.billing')}
             </NavLink>

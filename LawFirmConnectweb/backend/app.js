@@ -49,7 +49,9 @@ app.use(helmet({
       frameSrc: ["'self'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
-      frameAncestors: ["'self'", "http://localhost:5173"] // Allow frontend to embed
+      frameAncestors: ["'self'", ...(process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : ["http://localhost:5173"])]
     }
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow cross-origin resource fetching

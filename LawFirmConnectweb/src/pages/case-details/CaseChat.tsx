@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useOutletContext } from 'react-router-dom';
 import ragService from '../../services/ragService';
 import ReactMarkdown from 'react-markdown';
-import VirtualKeyboard from '../../components/VirtualKeyboard';
+
 import TransliterateInput from '../../components/TransliterateInput';
 
 // Icons
@@ -15,11 +15,6 @@ const LockIcon = () => (
 const PaperClipIcon = () => (
     <svg className="w-5 h-5 text-slate-400 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-    </svg>
-);
-const KeyboardIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
     </svg>
 );
 
@@ -67,7 +62,7 @@ const CaseChat: React.FC = () => {
     const { t, i18n } = useTranslation();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
-    const [showKeyboard, setShowKeyboard] = useState(false);
+
     const [isLoading, setIsLoading] = useState(false);
 
     // Session State
@@ -77,6 +72,10 @@ const CaseChat: React.FC = () => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const creatingSessionRef = useRef(false); // Guard against double session creation
+
+    // File upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingFiles, setUploadingFiles] = useState<{name: string, status: 'uploading' | 'processing' | 'ready' | 'failed'}[]>([]);
 
     // Selection & Sources State
     const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
@@ -91,6 +90,7 @@ const CaseChat: React.FC = () => {
     const [highlightChunks, setHighlightChunks] = useState<string[]>([]);
     const [selectionHighlight, setSelectionHighlight] = useState<string>(''); // user's mouse selection
     const [activeHighlightIdx, setActiveHighlightIdx] = useState(0);
+    const [sourceViewMode, setSourceViewMode] = useState<'text' | 'original'>('text');
     const highlightRefs = useRef<(HTMLElement | null)[]>([]);
     const selectionRef = useRef<HTMLElement | null>(null); // ref for blue selection highlight
     const docViewerRef = useRef<HTMLDivElement>(null);
@@ -99,7 +99,7 @@ const CaseChat: React.FC = () => {
 
     // Jaccard similarity
     const computeJaccard = (textA: string, textB: string): number => {
-        const tokenize = (t: string) => new Set(t.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean));
+        const tokenize = (t: string) => new Set(t.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean));
         const setA = tokenize(textA);
         const setB = tokenize(textB);
         if (setA.size === 0 || setB.size === 0) return 0;
@@ -236,6 +236,9 @@ const CaseChat: React.FC = () => {
     const openSourcesPanel = useCallback(async (contexts: ContextItem[]) => {
         setSourcesPanelOpen(true);
         setSelectedContexts(contexts);
+        setSourceViewMode('text');
+        setDocLoading(false);
+        setDocumentText([]);
         // Store the user's mouse-selected text for blue highlighting
         setSelectionHighlight(selectedText);
 
@@ -268,6 +271,7 @@ const CaseChat: React.FC = () => {
     const switchSourceTab = useCallback(async (source: string) => {
         setActiveSourceTab(source);
         setActiveHighlightIdx(0);
+        setSourceViewMode('text');
 
         const chunks = (selectedContexts || []).filter(c => c.source === source).map(c => c.content);
         setHighlightChunks(chunks);
@@ -359,7 +363,7 @@ const CaseChat: React.FC = () => {
         if (positions.length > 0) return positions[0];
 
         // Fuzzy: slide a window over the document and find the best word-overlap
-        const selWords = selection.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(Boolean);
+        const selWords = selection.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').split(/\s+/).filter(Boolean);
         if (selWords.length < 2) return null;
         const selSet = new Set(selWords);
 
@@ -382,7 +386,7 @@ const CaseChat: React.FC = () => {
             const end = Math.min(i + windowSize, words.length);
             let overlap = 0;
             for (let j = i; j < end; j++) {
-                if (selSet.has(words[j].toLowerCase().replace(/[^\w]/g, ''))) overlap++;
+                if (selSet.has(words[j].toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''))) overlap++;
             }
             const score = overlap / (selSet.size + (end - i) - overlap); // Jaccard
             if (score > bestScore && score > 0.15) {
@@ -564,6 +568,87 @@ const CaseChat: React.FC = () => {
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+    };
+
+    // ---- File Upload ----
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !caseData?._id) return;
+
+        // Reset input so re-selecting the same file works
+        const fileList = Array.from(files);
+        e.target.value = '';
+
+        // Process files sequentially to avoid backend race conditions
+        for (const file of fileList) {
+            const fileName = file.name;
+
+            // Check file size (50MB limit)
+            if (file.size > 50 * 1024 * 1024) {
+                const errorMsg: Message = {
+                    id: Date.now(),
+                    sender: 'System',
+                    content: `**${fileName}** exceeds the 50MB file size limit.`,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    isUser: false,
+                };
+                setMessages(prev => [...prev, errorMsg]);
+                continue;
+            }
+
+            // Add to uploading tracker
+            setUploadingFiles(prev => [...prev, { name: fileName, status: 'uploading' }]);
+
+            // Post uploading system message
+            const uploadMsgId = Date.now();
+            setMessages(prev => [...prev, {
+                id: uploadMsgId,
+                sender: 'System',
+                content: `Uploading **${fileName}**...`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isUser: false,
+            }]);
+
+            try {
+                await ragService.ingestDocument(caseData._id, file);
+
+                // Update status to processing
+                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'processing' } : f));
+                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** uploaded. Processing for AI analysis...` } : m));
+
+                // Poll for ready status
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statuses = await ragService.getDocumentStatuses(caseData._id);
+                        const docStatus = Array.isArray(statuses) ? statuses.find((d: any) => d.filename === fileName) : null;
+
+                        if (docStatus?.status === 'Ready') {
+                            clearInterval(pollInterval);
+                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'ready' } : f));
+                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** is ready! You can now ask questions about it.` } : m));
+                            // Clean up ready files from tracker after a delay
+                            setTimeout(() => {
+                                setUploadingFiles(prev => prev.filter(f => f.name !== fileName));
+                            }, 3000);
+                        } else if (docStatus?.status === 'Failed') {
+                            clearInterval(pollInterval);
+                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
+                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** failed to process. Try uploading again from the Documents tab.` } : m));
+                        }
+                    } catch {
+                        // Polling error — keep trying
+                    }
+                }, 3000);
+
+                // Safety: stop polling after 5 minutes
+                setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+
+            } catch (error: any) {
+                const errMsg = error?.response?.data?.detail || error?.response?.data?.error || 'Upload failed';
+                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
+                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `Failed to upload **${fileName}**: ${errMsg}` } : m));
+            }
+        }
     };
 
     // Get unique sources from current contexts
@@ -756,17 +841,41 @@ const CaseChat: React.FC = () => {
                     {/* Input */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none">
                         <div className="pointer-events-auto max-w-4xl mx-auto">
+                            {/* Upload status indicator */}
+                            {uploadingFiles.filter(f => f.status !== 'ready').length > 0 && (
+                                <div className="mb-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm">
+                                    {uploadingFiles.filter(f => f.status !== 'ready').map(f => (
+                                        <div key={f.name} className="flex items-center gap-2 text-xs text-slate-500 py-0.5">
+                                            {(f.status === 'uploading' || f.status === 'processing') && (
+                                                <svg className="w-3.5 h-3.5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                            )}
+                                            {f.status === 'failed' && (
+                                                <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            )}
+                                            <span className="truncate">{f.name}</span>
+                                            <span className="text-slate-400">—</span>
+                                            <span className={f.status === 'failed' ? 'text-red-500' : 'text-blue-500'}>
+                                                {f.status === 'uploading' ? 'Uploading...' : f.status === 'processing' ? 'Processing...' : 'Failed'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex items-end gap-2 bg-white/80 backdrop-blur-md p-2 rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-200/40 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400">
-                                <button className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center"
+                                >
                                     <PaperClipIcon />
                                 </button>
-                                <button 
-                                    onClick={() => setShowKeyboard(!showKeyboard)}
-                                    className={`p-3 rounded-full transition-colors self-center ${showKeyboard ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                                    title="Toggle Virtual Keyboard"
-                                >
-                                    <KeyboardIcon />
-                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.tiff,.zip"
+                                    className="hidden"
+                                    onChange={handleFileUpload}
+                                />
                                 <TransliterateInput
                                     value={inputValue}
                                     onChangeText={setInputValue}
@@ -791,17 +900,6 @@ const CaseChat: React.FC = () => {
                                 </button>
                             </div>
                             
-                            {/* Virtual Keyboard */}
-                            {showKeyboard && (
-                                <div className="mt-4 animate-in slide-in-from-bottom-2 duration-300">
-                                    <VirtualKeyboard 
-                                        onChange={setInputValue}
-                                        value={inputValue}
-                                        language={i18n.language as any || 'en'}
-                                        inputName="chatInput"
-                                    />
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -853,6 +951,29 @@ const CaseChat: React.FC = () => {
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </a>
                         )}
+
+                        {/* Text / Original toggle */}
+                        {(() => {
+                            const ext = activeSourceTab?.split('.').pop()?.toLowerCase() || '';
+                            const isVisualFile = ['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'pdf'].includes(ext);
+                            if (!isVisualFile || !activeSourceTab) return null;
+                            return (
+                                <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+                                    <button
+                                        onClick={() => setSourceViewMode('text')}
+                                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${sourceViewMode === 'text' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Text
+                                    </button>
+                                    <button
+                                        onClick={() => setSourceViewMode('original')}
+                                        className={`px-2.5 py-1 text-[11px] font-medium rounded-md transition-all ${sourceViewMode === 'original' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                    >
+                                        Original
+                                    </button>
+                                </div>
+                            );
+                        })()}
 
                         {/* Close */}
                         <button
@@ -911,7 +1032,23 @@ const CaseChat: React.FC = () => {
 
                     {/* Document content */}
                     <div ref={docViewerRef} className="flex-1 overflow-y-auto">
-                        {docLoading ? (
+                        {sourceViewMode === 'original' && activeSourceTab ? (
+                            (() => {
+                                const ext = activeSourceTab.split('.').pop()?.toLowerCase() || '';
+                                const downloadUrl = `${import.meta.env.VITE_RAG_API_URL || 'http://localhost:8000'}/download/${caseData._id}/${encodeURIComponent(activeSourceTab)}`;
+                                const isImage = ['jpg', 'jpeg', 'png', 'bmp', 'tiff'].includes(ext);
+                                if (isImage) {
+                                    return (
+                                        <div className="p-4 flex items-center justify-center">
+                                            <img src={downloadUrl} alt={activeSourceTab} className="max-w-full h-auto rounded-lg shadow-sm border border-slate-200" />
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <iframe src={downloadUrl} title={activeSourceTab} className="w-full h-full border-0" />
+                                );
+                            })()
+                        ) : docLoading ? (
                             <div className="flex flex-col items-center justify-center py-20 gap-4">
                                 <div className="w-10 h-10 border-3 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
                                 <p className="text-sm text-slate-400 font-medium">Loading document...</p>

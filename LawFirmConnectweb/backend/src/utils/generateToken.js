@@ -7,8 +7,8 @@ if (!JWT_SECRET) {
     throw new Error('CRITICAL: JWT_SECRET environment variable not set. Cannot start server.');
 }
 
-const generateToken = (id) => {
-    return jwt.sign({ id }, JWT_SECRET, {
+const generateToken = (id, sessionToken) => {
+    return jwt.sign({ id, sessionToken }, JWT_SECRET, {
         expiresIn: '7d', // Reduced from 30d for security
     });
 };

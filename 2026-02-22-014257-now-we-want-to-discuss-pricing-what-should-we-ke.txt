@@ -1,0 +1,1339 @@
+
+╭─── Claude Code v2.1.50 ──────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Harsh!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                                                    │ ─────────────────────── │
+│                          ✻                         │ Recent activity         │
+│                          |                         │ No recent activity      │
+│                         ▟█▙                        │                         │
+│                       ▐▛███▜▌                      │                         │
+│                      ▝▜█████▛▘                     │                         │
+│                        ▘▘ ▝▝                       │                         │
+│                                                    │                         │
+│               Opus 4.6 · Claude Pro                │                         │
+│ D:\harsh\Code_Playground\Law Firm Connect\Firm-Co… │                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+❯ now we want to discuss pricing , what should we keep pricing by taking    
+  all the cost consideration to us                                          
+
+● Let me explore your codebase to understand the full stack, external services,
+  and features you're offering so I can help you think through pricing.
+
+● Explore(Explore app features and costs) Sonnet 4.6
+  ⎿  Done (41 tool uses · 123.6k tokens · 2m 7s)
+  (ctrl+o to expand)
+
+● Great question! Based on my exploration of your entire codebase, here's a
+  comprehensive cost analysis and pricing discussion.
+
+  ---
+  Your Cost Structure
+
+  1. AI/LLM Costs (Variable - scales with usage)
+
+  Service: DeepSeek API
+  Usage Trigger: Every chat message, doc generation, all 11 investigation agents
+  Est. Cost per Unit: ~$0.14/M input, $0.28/M output tokens
+  ────────────────────────────────────────
+  Service: Groq API (fallback)
+  Usage Trigger: When DeepSeek is down
+  Est. Cost per Unit: Free tier / very cheap
+  ────────────────────────────────────────
+  Service: Sarvam AI (coming)
+  Usage Trigger: TTS/ASR/Translation for Indian languages
+  Est. Cost per Unit: TBD
+
+  Per-action cost estimates (DeepSeek):
+  - 1 chat message (RAG query): ~₹0.03-0.05 (~2K in + 500 out tokens)
+  - 1 AI Investigation (11 agents + critique loop, up to 2 revisions): ~₹1-3
+  (~50K-150K total tokens)
+  - 1 document draft: ~₹0.05-0.10
+  - Document ingestion (embedding is local/free): ~₹0 (BAAI/bge-m3 runs locally)
+
+  2. Infrastructure Costs (Fixed monthly)
+
+  Item: VPS (needs 8-16GB RAM for MongoDB + Neo4j + Qdrant + 3 servers)
+  Est. Monthly Cost: ₹2,000-6,000/mo
+  ────────────────────────────────────────
+  Item: Domain + SSL
+  Est. Monthly Cost: ~₹500/mo amortized
+  ────────────────────────────────────────
+  Item: AWS S3 (when enabled for file storage)
+  Est. Monthly Cost: ~₹500-2,000/mo depending on volume
+  ────────────────────────────────────────
+  Item: Twilio SMS (when enabled)
+  Est. Monthly Cost: ~₹0.50/SMS
+  ────────────────────────────────────────
+  Item: Email/SMTP
+  Est. Monthly Cost: ~₹500/mo
+
+  Estimated fixed infrastructure: ~₹3,000-8,000/month
+
+  3. Transaction Costs
+
+  - Razorpay: 2% of every payment collected
+
+  ---
+  Your Current Pricing (from code)
+
+  ┌──────────────┬────────────┬───────┬──────────────────────┬───────┐
+  │     Plan     │   Price    │ Cases │ AI Investigations/mo │ Seats │
+  ├──────────────┼────────────┼───────┼──────────────────────┼───────┤
+  │ Starter      │ ₹9,999/mo  │ 5     │ 2                    │ 2     │
+  ├──────────────┼────────────┼───────┼──────────────────────┼───────┤
+  │ Professional │ ₹24,999/mo │ 20    │ 10                   │ 5     │
+  └──────────────┴────────────┴───────┴──────────────────────┴───────┘
+
+  ---
+  Cost-Per-Customer Analysis
+
+  For a Starter customer using their full quota:
+  - 2 investigations × ₹3 = ₹6
+  - ~100 chat messages/mo × ₹0.05 = ₹5
+  - ~10 doc drafts × ₹0.10 = ₹1
+  - Total variable cost: ~₹12/month (DeepSeek is incredibly cheap)
+
+  For a Professional customer at full usage:
+  - 10 investigations × ₹3 = ₹30
+  - ~500 chat messages/mo × ₹0.05 = ₹25
+  - ~50 doc drafts × ₹0.10 = ₹5
+  - Total variable cost: ~₹60/month
+
+  Your margins are extremely healthy because DeepSeek is very affordable. The
+  main costs are infrastructure (fixed) and your time/development.
+
+  ---
+
+● User answered Claude's questions:
+  ⎿  · Who is your target customer and what's your go-to-market strategy? →
+      Both segments
+     · What's your priority - rapid user acquisition or maximizing revenue 
+     per customer? → Balanced
+     · Do you want to offer a free trial or freemium tier? → Yes, free 
+     trial (7-14 days)
+     · Are you considering annual pricing discounts? → Monthly only for now
+
+● Great choices. Based on your answers, here's my recommended pricing structure:
+
+  ---
+  Recommended Pricing Strategy
+
+  Free Trial
+
+  14-day full access to the Professional plan - no credit card required. This
+  lets firms experience the AI investigation and RAG chat before committing.
+
+  Tier Structure
+
+  Column 1: Price
+  Starter: ₹4,999/mo
+  Professional: ₹14,999/mo
+  Enterprise: ₹29,999/mo
+  ────────────────────────────────────────
+  Column 1: Target
+  Starter: Solo / 1-3 lawyer firms
+  Professional: 3-10 lawyer firms
+  Enterprise: 10-20+ lawyer firms
+  ────────────────────────────────────────
+  Column 1: User Seats
+  Starter: 2
+  Professional: 5
+  Enterprise: 15
+  ────────────────────────────────────────
+  Column 1: Active Cases
+  Starter: 10
+  Professional: 50
+  Enterprise: Unlimited
+  ────────────────────────────────────────
+  Column 1: AI Investigations/mo
+  Starter: 5
+  Professional: 25
+  Enterprise: Unlimited
+  ────────────────────────────────────────
+  Column 1: Chat Messages/mo
+  Starter: 200
+  Professional: 1,000
+  Enterprise: Unlimited
+  ────────────────────────────────────────
+  Column 1: Document Drafts/mo
+  Starter: 20
+  Professional: 100
+  Enterprise: Unlimited
+  ────────────────────────────────────────
+  Column 1: Storage
+  Starter: 2 GB
+  Professional: 10 GB
+  Enterprise: 50 GB
+  ────────────────────────────────────────
+  Column 1: Support
+  Starter: Email
+  Professional: Priority Email
+  Enterprise: Dedicated + Onboarding
+
+  Why these numbers?
+
+  Starter at ₹4,999 (down from ₹9,999):
+  - Lower entry point captures small firms who are price-sensitive
+  - Your cost per Starter customer is ~₹12-50/mo in AI + proportional infra
+  - Even at 10 customers, you cover infrastructure costs
+  - Psychological barrier for Indian small firms is much lower at ~₹5K
+
+  Professional at ₹14,999 (down from ₹24,999):
+  - Sweet spot for mid-size firms - roughly ₹3,000/lawyer/month
+  - Your cost per Professional customer: ~₹60-200/mo max
+  - ~98% gross margin at full usage
+
+  Enterprise at ₹29,999 (new tier):
+  - Captures larger firms willing to pay for unlimited access
+  - Even heavy usage costs you only ~₹500-1,000/mo
+  - Dedicated onboarding creates stickiness
+
+  Break-even Analysis
+
+  Your fixed costs: ~₹5,000-8,000/mo (VPS + infra)
+
+  Scenario: 3 Starter customers
+  Revenue: ₹14,997
+  Variable AI Cost: ~₹150
+  Fixed Cost: ₹8,000
+  Profit: ₹6,847
+  ────────────────────────────────────────
+  Scenario: 2 Starter + 1 Pro
+  Revenue: ₹24,997
+  Variable AI Cost: ~₹300
+  Fixed Cost: ₹8,000
+  Profit: ₹16,697
+  ────────────────────────────────────────
+  Scenario: 5 Starter + 3 Pro + 1 Enterprise
+  Revenue: ₹79,992
+  Variable AI Cost: ~₹1,500
+  Fixed Cost: ₹15,000*
+  Profit: ₹63,492
+
+  *Upgraded VPS at scale
+
+  You break even with just 2 Starter customers.
+
+  Additional Revenue Opportunities (Future)
+
+  - Add-on packs: Extra investigations (₹499 for 5 more), extra seats
+  (₹999/seat)
+  - Annual plans later: Offer 2 months free when ready
+  - White-label / API access: For legal tech companies wanting your AI engine
+
+  ---
+
+● User answered Claude's questions:
+  ⎿  · How does this pricing structure look? Should I write this up as a 
+     final plan to implement in the codebase? → Adjust the prices
+
+● What price points and limits would you like to adjust? Tell me which
+  tiers/values you'd like to change and I'll update the structure.
+
+● User answered Claude's questions:
+  ⎿  · Which aspects do you want to adjust? → first we will identify in 
+     which stage we will ke cost then we can charge like wise to customer
+
+● Great approach - let's map out every stage where you incur a cost, then build
+  pricing around those cost centers.
+
+  Cost Map: Where You Spend Money Per User Action
+
+  Stage 1: Onboarding & Auth (Near Zero Cost)
+
+  - User signup/login → JWT auth → ₹0 (just MongoDB write)
+  - Organization creation → ₹0
+  - Team member invite → ₹0 (email cost when SMTP is enabled: ~₹0.05/email)
+
+  Stage 2: Case Creation & Document Upload
+
+  - Create a case → ₹0 (MongoDB write)
+  - Upload document (PDF/DOCX/TXT) → ₹0 for storage (local disk currently)
+  - Document Ingestion (RAG pipeline) → ₹0.50-2.00 per document
+    - Text extraction: Free (local libraries)
+    - Chunking: Free (LangChain local)
+    - Embedding generation: Free (BAAI/bge-m3 runs locally on your VPS)
+    - Qdrant + Neo4j upserts: Free (self-hosted)
+    - BUT: CPU/GPU compute time on your VPS is the hidden cost here (~₹0.50-2
+  worth of compute per large document)
+
+  Stage 3: AI Chat (RAG) - Per Message Cost
+
+  - User asks a question about their case
+  - Vector retrieval + Re-ranking: Free (local models)
+  - DeepSeek API call: ~₹0.03-0.08 per message
+    - Input: ~2,000-4,000 tokens (system prompt + retrieved chunks + question)
+    - Output: ~500-1,500 tokens (answer)
+
+  Stage 4: AI Investigation - HIGHEST COST ACTION
+
+  - User triggers an investigation on a case
+  - 11 specialized agents run sequentially, each calling DeepSeek:
+    - Each agent: ~3,000-10,000 input + 1,000-5,000 output tokens
+    - Critique loop: Can run up to 2 additional times (debate_hub → back to
+  investigator)
+    - Total per investigation: ~₹1-5 (50K-200K tokens depending on case
+  complexity)
+    - Worst case with max loops on a large case: ~₹8-10
+
+  Stage 5: Document Generation (Drafting)
+
+  - User generates a legal document (NOC, demand letter, etc.)
+  - DeepSeek API call: ~₹0.05-0.15 per draft
+    - Uses case context + template prompt
+    - Output is longer (full document): 1,000-3,000 output tokens
+
+  Stage 6: Sarvam AI (Coming Soon)
+
+  - Text-to-Speech: ~₹0.05-0.10 per request
+  - Speech-to-Text: ~₹0.05-0.10 per minute
+  - Translation: ~₹0.02-0.05 per request
+
+  Stage 7: Infrastructure (Fixed, Shared Across All Users)
+
+  - VPS: ₹5,000-8,000/mo (MongoDB, Neo4j, Qdrant, 3 servers)
+  - Razorpay: 2% of every payment you collect
+
+  ---
+  Cost Summary Table
+
+  Stage: Document Ingestion
+  Action: Upload + process a doc
+  Your Cost: ₹0.50-2.00
+  Frequency: Per document
+  ────────────────────────────────────────
+  Stage: AI Chat
+  Action: Ask a question
+  Your Cost: ₹0.03-0.08
+  Frequency: Per message
+  ────────────────────────────────────────
+  Stage: AI Investigation
+  Action: Run full investigation
+  Your Cost: ₹1-10
+  Frequency: Per investigation
+  ────────────────────────────────────────
+  Stage: Document Draft
+  Action: Generate legal doc
+  Your Cost: ₹0.05-0.15
+  Frequency: Per draft
+  ────────────────────────────────────────
+  Stage: Sarvam (future)
+  Action: Voice/Translation
+  Your Cost: ₹0.05-0.10
+  Frequency: Per request
+  ────────────────────────────────────────
+  Stage: Infrastructure
+  Action: Servers
+  Your Cost: ₹5,000-8,000
+  Frequency: Monthly fixed
+  ────────────────────────────────────────
+  Stage: Payment processing
+  Action: Razorpay
+  Your Cost: 2% of revenue
+  Frequency: Per transaction
+
+  ---
+  The clear takeaway: AI Investigation is your #1 cost driver by far. Chat and
+  drafting are almost negligible.
+
+● User answered Claude's questions:
+  ⎿  · Now that you see the cost stages, how do you want to structure 
+     pricing around them? → Flat monthly subscription
+
+● Good - flat subscription with usage limits keeps it simple and predictable for
+   law firms. Now let me propose pricing that's directly tied to your cost
+  reality.
+
+  Revised Pricing Proposal (Cost-First Approach)
+
+  Cost Per Tier at Full Usage
+
+  Column 1: Seats
+  Starter: 2
+  Professional: 5
+  Enterprise: 15
+  ────────────────────────────────────────
+  Column 1: Active Cases
+  Starter: 10
+  Professional: 50
+  Enterprise: Unlimited
+  ────────────────────────────────────────
+  Column 1: Doc Uploads/mo
+  Starter: 50
+  Professional: 200
+  Enterprise: 500
+  ────────────────────────────────────────
+  Column 1: AI Chat Messages/mo
+  Starter: 200
+  Professional: 1,000
+  Enterprise: 5,000
+  ────────────────────────────────────────
+  Column 1: AI Investigations/mo
+  Starter: 5
+  Professional: 20
+  Enterprise: 50
+  ────────────────────────────────────────
+  Column 1: Document Drafts/mo
+  Starter: 20
+  Professional: 100
+  Enterprise: 300
+  ────────────────────────────────────────
+  Column 1:
+  Starter:
+  Professional:
+  Enterprise:
+  ────────────────────────────────────────
+  Column 1: Your cost: Doc ingestion
+  Starter: 50 × ₹1 = ₹50
+  Professional: 200 × ₹1 = ₹200
+  Enterprise: 500 × ₹1 = ₹500
+  ────────────────────────────────────────
+  Column 1: Your cost: Chat
+  Starter: 200 × ₹0.05 = ₹10
+  Professional: 1000 × ₹0.05 = ₹50
+  Enterprise: 5000 × ₹0.05 = ₹250
+  ────────────────────────────────────────
+  Column 1: Your cost: Investigations
+  Starter: 5 × ₹5 = ₹25
+  Professional: 20 × ₹5 = ₹100
+  Enterprise: 50 × ₹5 = ₹250
+  ────────────────────────────────────────
+  Column 1: Your cost: Drafts
+  Starter: 20 × ₹0.10 = ₹2
+  Professional: 100 × ₹0.10 = ₹10
+  Enterprise: 300 × ₹0.10 = ₹30
+  ────────────────────────────────────────
+  Column 1: Total variable cost
+  Starter: ~₹87
+  Professional: ~₹360
+  Enterprise: ~₹1,030
+  ────────────────────────────────────────
+  Column 1: + Infra share (per customer)
+  Starter: ~₹500-1,000
+  Professional: ~₹500-1,000
+  Enterprise: ~₹1,000-2,000
+  ────────────────────────────────────────
+  Column 1: Total cost per customer
+  Starter: ~₹600-1,100
+  Professional: ~₹860-1,360
+  Enterprise: ~₹2,030-3,030
+
+  Recommended Prices (5-10x markup on costs)
+
+  ┌──────────────┬───────────────┬───────────────────┬──────────────┐
+  │     Plan     │ Your Max Cost │ Recommended Price │ Gross Margin │
+  ├──────────────┼───────────────┼───────────────────┼──────────────┤
+  │ Starter      │ ~₹1,100       │ ₹4,999/mo         │ ~78%         │
+  ├──────────────┼───────────────┼───────────────────┼──────────────┤
+  │ Professional │ ~₹1,360       │ ₹12,999/mo        │ ~90%         │
+  ├──────────────┼───────────────┼───────────────────┼──────────────┤
+  │ Enterprise   │ ~₹3,030       │ ₹29,999/mo        │ ~90%         │
+  └──────────────┴───────────────┴───────────────────┴──────────────┘
+
+  With 14-Day Free Trial
+
+  - Full Professional plan access
+  - No credit card required
+  - Converts to paid after 14 days or downgrades to read-only
+
+  ---
+
+● User answered Claude's questions:
+  ⎿  · Are you happy with these price points and limits? I'll write the 
+     final implementation plan. → Yes, go with these exact numbers
+
+● Let me explore the pricing page and payment flow code to write the
+  implementation plan.
+
+● Explore(Explore pricing and payment code) Sonnet 4.6
+  ⎿  Done (31 tool uses · 66.5k tokens · 1m 40s)
+  (ctrl+o to expand)
+
+● Now I have everything I need. Let me write the implementation plan.
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  Tool use rejected with user message: are you sure with the cost , and can 
+     you tell me how we will call api so it will run sequqnetail or parallel y
+
+● Good questions! Let me dig into the actual API call flow in the Investigation
+  Engine to give you precise cost estimates.
+
+● Explore(Analyze investigation API calls) Sonnet 4.6
+  ⎿  Done (15 tool uses · 74.1k tokens · 2m 6s)
+  (ctrl+o to expand)
+
+● Excellent - now I have the exact call flow and token counts. Let me give you a
+   precise cost breakdown.
+
+  How Your AI Investigation Engine Calls APIs
+
+  Execution Flow (Sequential + Parallel)
+
+  SEQUENTIAL PHASE 1 (per document):
+    [1] document_analyst    → DeepSeek API call (per doc)
+    [2] entity_fact_extractor → DeepSeek API call (per doc)
+
+  SEQUENTIAL PHASE 2:
+    [3] audit_timeline      → DeepSeek API call (1x)
+    [4] primary_investigator → DeepSeek API call (1x)
+
+  PARALLEL FAN-OUT (all run simultaneously):
+    [5a] cross_examiner     → DeepSeek API call ─┐
+    [5b] evidence_validator → DeepSeek API call  ├── run in PARALLEL
+    [5c] gap_detector       → DeepSeek API call  │
+    [5d] legal_researcher   → DeepSeek API call ─┘
+
+  SEQUENTIAL after fan-out:
+    [6] conflict_resolver   → DeepSeek API call (only if conflicts found)
+    [7] debate_hub          → NO LLM call (just merges results)
+
+    IF high-severity challenges found (max 2 loops):
+        → LOOPS BACK to [4] primary_investigator
+        → Re-runs [5a-5d] parallel + [6] again
+
+  FINAL SEQUENTIAL:
+    [8] risk_assessor       → DeepSeek API call (1x)
+    [9] final_judge         → DeepSeek API call (1x, MOST EXPENSIVE)
+
+  Rate limiter: 2-second delay between EVERY LLM call (configurable via
+  LLM_RATE_LIMIT_SECONDS).
+
+  Precise Token Counts Per Investigation
+
+  DeepSeek-V3 (deepseek-chat) pricing:
+  - Input: $0.27/M tokens (cache miss) / $0.07/M (cache hit) = ~₹22.7/M tokens
+  - Output: $1.10/M tokens = ~₹92.4/M tokens
+
+  Scenario: 1 document, no revision loop (TYPICAL)
+
+  ┌───────────────────────┬──────────────┬───────────────┬──────────┐
+  │         Agent         │ Input Tokens │ Output Tokens │ Cost (₹) │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ document_analyst      │ ~1,150       │ ~300          │ ₹0.054   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ entity_fact_extractor │ ~1,640       │ ~750          │ ₹0.107   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ audit_timeline        │ ~600         │ ~500          │ ₹0.060   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ primary_investigator  │ ~1,200       │ ~1,000        │ ₹0.120   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ cross_examiner        │ ~2,700       │ ~500          │ ₹0.108   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ evidence_validator    │ ~1,600       │ ~300          │ ₹0.064   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ gap_detector          │ ~1,100       │ ~400          │ ₹0.062   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ legal_researcher      │ ~1,100       │ ~500          │ ₹0.071   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ conflict_resolver     │ ~500         │ ~300          │ ₹0.039   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ risk_assessor         │ ~500         │ ~400          │ ₹0.048   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ final_judge           │ ~4,000       │ ~2,500        │ ₹0.322   │
+  ├───────────────────────┼──────────────┼───────────────┼──────────┤
+  │ TOTAL                 │ ~16,090      │ ~7,450        │ ₹1.06    │
+  └───────────────────────┴──────────────┴───────────────┴──────────┘
+
+  Scenario: 2 documents, 1 revision loop
+
+  ┌────────────────────────────┬──────────────┬───────────────┬──────────┐
+  │           Phase            │ Input Tokens │ Output Tokens │ Cost (₹) │
+  ├────────────────────────────┼──────────────┼───────────────┼──────────┤
+  │ Agents 1-2 (×2 docs)       │ ~5,580       │ ~2,100        │ ₹0.321   │
+  ├────────────────────────────┼──────────────┼───────────────┼──────────┤
+  │ Agents 3-9 (first pass)    │ ~8,200       │ ~3,400        │ ₹0.501   │
+  ├────────────────────────────┼──────────────┼───────────────┼──────────┤
+  │ Agents 4-7 (revision loop) │ ~6,500       │ ~2,700        │ ₹0.397   │
+  ├────────────────────────────┼──────────────┼───────────────┼──────────┤
+  │ Agents 8-9 (final)         │ ~4,500       │ ~2,900        │ ₹0.370   │
+  ├────────────────────────────┼──────────────┼───────────────┼──────────┤
+  │ TOTAL                      │ ~24,780      │ ~11,100       │ ₹1.59    │
+  └────────────────────────────┴──────────────┴───────────────┴──────────┘
+
+  Scenario: 3 documents, 2 revision loops (WORST CASE)
+
+  | TOTAL | ~38,000 | ~18,000 | ₹2.53 |
+
+  Other Actions Cost
+
+  Action: 1 Chat message (regular, top_k=15)
+  Input Tokens: ~1,800
+  Output Tokens: ~500
+  Cost (₹): ₹0.087
+  ────────────────────────────────────────
+  Action: 1 Chat message ("give me summary", top_k=50)
+  Input Tokens: ~6,000
+  Output Tokens: ~1,000
+  Cost (₹): ₹0.228
+  ────────────────────────────────────────
+  Action: 1 Doc generation (initial)
+  Input Tokens: ~2,500
+  Output Tokens: ~1,500
+  Cost (₹): ₹0.195
+  ────────────────────────────────────────
+  Action: 1 Doc refinement (long document)
+  Input Tokens: ~8,000
+  Output Tokens: ~2,000
+  Cost (₹): ₹0.366
+
+  ---
+  Revised Cost Per Customer (PRECISE)
+
+  Column 1: 5/20/50 investigations
+  Starter: ₹5.3 / ₹21.2 / ₹53
+  Professional:
+  Enterprise:
+  ────────────────────────────────────────
+  Column 1: 200/1000/5000 chats
+  Starter: ₹17.4 / ₹87 / ₹435
+  Professional:
+  Enterprise:
+  ────────────────────────────────────────
+  Column 1: 20/100/300 doc drafts
+  Starter: ₹3.9 / ₹19.5 / ₹58.5
+  Professional:
+  Enterprise:
+  ────────────────────────────────────────
+  Column 1: Total AI cost (max usage)
+  Starter: ₹26.6
+  Professional: ₹127.7
+  Enterprise: ₹546.5
+  ────────────────────────────────────────
+  Column 1: + Infra share
+  Starter: ~₹500
+  Professional: ~₹500
+  Enterprise: ~₹1,000
+  ────────────────────────────────────────
+  Column 1: + Razorpay (2%)
+  Starter: ₹100
+  Professional: ₹260
+  Enterprise: ₹600
+  ────────────────────────────────────────
+  Column 1: TOTAL COST
+  Starter: ~₹627
+  Professional: ~₹888
+  Enterprise: ~₹2,147
+  ────────────────────────────────────────
+  Column 1: Price
+  Starter: ₹4,999
+  Professional: ₹12,999
+  Enterprise: ₹29,999
+  ────────────────────────────────────────
+  Column 1: Gross Margin
+  Starter: 87.5%
+  Professional: 93.2%
+  Enterprise: 92.8%
+
+  ---
+  Bottom line: Your costs are very low because DeepSeek-V3 is extremely cheap
+  and your embeddings/reranking run locally. Even at maximum usage, your
+  worst-case cost per Enterprise customer is ~₹2,147 against ₹29,999 revenue.
+
+● User answered Claude's questions:
+  ⎿  · Are you confident with these cost numbers and the proposed pricing? 
+     Should I finalize the plan? → Adjust something
+
+● What would you like to adjust? Tell me your thoughts - whether it's the price
+  points, usage limits, tier structure, or any other questions about the costs.
+
+● User answered Claude's questions:
+  ⎿  · What specifically do you want to change? → i am thinking to change 
+     the llm and change to openai , and also finetun eiwth indian law 
+     dataset so it can answer good , and also i will useing search api of 
+     perplexity or like wise
+
+● That changes the cost picture dramatically. Let me recalculate everything with
+   OpenAI + Perplexity search.
+
+  Revised Cost Analysis: OpenAI + Perplexity
+
+  OpenAI Model Options & Pricing
+
+  Model: GPT-4o
+  Input ($/M tokens): $2.50 (~₹210)
+  Output ($/M tokens): $10.00 (~₹840)
+  Best For: Highest quality, most expensive
+  ────────────────────────────────────────
+  Model: GPT-4o-mini
+  Input ($/M tokens): $0.15 (~₹12.6)
+  Output ($/M tokens): $0.60 (~₹50.4)
+  Best For: Good quality, budget-friendly
+  ────────────────────────────────────────
+  Model: Fine-tuned GPT-4o-mini
+  Input ($/M tokens): $0.30 (~₹25.2)
+  Output ($/M tokens): $1.20 (~₹100.8)
+  Best For: Best for your use case (Indian law)
+  ────────────────────────────────────────
+  Model: Fine-tuned GPT-4o
+  Input ($/M tokens): $3.75 (~₹315)
+  Output ($/M tokens): $15.00 (~₹1,260)
+  Best For: Premium quality, very expensive
+  ────────────────────────────────────────
+  Model: ~~DeepSeek-V3 (current)~~
+  Input ($/M tokens): ~~$0.27 (~₹22.7)~~
+  Output ($/M tokens): ~~$1.10 (~₹92.4)~~
+  Best For: ~~What you use now~~
+
+  Fine-Tuning Costs (One-Time)
+
+  ┌─────────────┬───────────────────────┬──────────────────────────────────┐
+  │    Model    │     Training Cost     │ Estimated Dataset (10K examples) │
+  ├─────────────┼───────────────────────┼──────────────────────────────────┤
+  │ GPT-4o-mini │ $3/M training tokens  │ ~₹5,000-15,000 one-time          │
+  ├─────────────┼───────────────────────┼──────────────────────────────────┤
+  │ GPT-4o      │ $25/M training tokens │ ~₹40,000-1,20,000 one-time       │
+  └─────────────┴───────────────────────┴──────────────────────────────────┘
+
+  Perplexity Search API Pricing
+
+  Model: sonar (basic)
+  Input ($/M tokens): $1/M
+  Output ($/M tokens): $1/M
+  Per Search (~): ~₹0.50-1.00
+  ────────────────────────────────────────
+  Model: sonar-pro (deeper)
+  Input ($/M tokens): $3/M
+  Output ($/M tokens): $15/M
+  Per Search (~): ~₹2-5
+
+  ---
+  Cost Per Investigation: OpenAI vs DeepSeek
+
+  Using the same token counts from our earlier analysis (1 doc, no revision
+  loop):
+  - Total input: ~16,090 tokens, Total output: ~7,450 tokens
+
+  LLM Choice: DeepSeek-V3 (current)
+  Input Cost: ₹0.37
+  Output Cost: ₹0.69
+  Total/Investigation: ₹1.06
+  vs DeepSeek: baseline
+  ────────────────────────────────────────
+  LLM Choice: GPT-4o-mini
+  Input Cost: ₹0.20
+  Output Cost: ₹0.38
+  Total/Investigation: ₹0.58
+  vs DeepSeek: 0.5x (cheaper!)
+  ────────────────────────────────────────
+  LLM Choice: Fine-tuned GPT-4o-mini
+  Input Cost: ₹0.41
+  Output Cost: ₹0.75
+  Total/Investigation: ₹1.16
+  vs DeepSeek: ~1.1x
+  ────────────────────────────────────────
+  LLM Choice: GPT-4o
+  Input Cost: ₹3.38
+  Output Cost: ₹6.26
+  Total/Investigation: ₹9.64
+  vs DeepSeek: ~9x
+  ────────────────────────────────────────
+  LLM Choice: Fine-tuned GPT-4o
+  Input Cost: ₹5.07
+  Output Cost: ₹9.39
+  Total/Investigation: ₹14.46
+  vs DeepSeek: ~14x
+
+  + Perplexity search per investigation (if legal_researcher uses it): +₹1-5 per
+   investigation
+
+  Cost Per Chat Message: OpenAI vs DeepSeek
+
+  Regular chat (1,800 input + 500 output tokens):
+
+  ┌────────────────────────┬──────────────┐
+  │       LLM Choice       │ Cost/Message │
+  ├────────────────────────┼──────────────┤
+  │ DeepSeek-V3 (current)  │ ₹0.087       │
+  ├────────────────────────┼──────────────┤
+  │ GPT-4o-mini            │ ₹0.048       │
+  ├────────────────────────┼──────────────┤
+  │ Fine-tuned GPT-4o-mini │ ₹0.096       │
+  ├────────────────────────┼──────────────┤
+  │ GPT-4o                 │ ₹0.798       │
+  ├────────────────────────┼──────────────┤
+  │ Fine-tuned GPT-4o      │ ₹1.197       │
+  └────────────────────────┴──────────────┘
+
+  ---
+  Revised Cost Per Customer (with different LLM choices)
+
+  Option A: Fine-tuned GPT-4o-mini (RECOMMENDED)
+
+  Best balance of quality + cost. Fine-tuned on Indian law = better answers than
+   GPT-4o for your domain.
+
+  Column 1: Investigations (5/20/50)
+  Starter: ₹5.8 + ₹5 search = ₹10.8
+  Professional: ₹23.2 + ₹20 = ₹43.2
+  Enterprise: ₹58 + ₹50 = ₹108
+  ────────────────────────────────────────
+  Column 1: Chats (200/1K/5K)
+  Starter: ₹19.2
+  Professional: ₹96
+  Enterprise: ₹480
+  ────────────────────────────────────────
+  Column 1: Doc Drafts (20/100/300)
+  Starter: ₹4.2
+  Professional: ₹21
+  Enterprise: ₹63
+  ────────────────────────────────────────
+  Column 1: Total AI cost
+  Starter: ₹34
+  Professional: ₹160
+  Enterprise: ₹651
+  ────────────────────────────────────────
+  Column 1: + Infra + Razorpay
+  Starter: ₹600
+  Professional: ₹760
+  Enterprise: ₹1,600
+  ────────────────────────────────────────
+  Column 1: TOTAL COST
+  Starter: ~₹634
+  Professional: ~₹920
+  Enterprise: ~₹2,251
+  ────────────────────────────────────────
+  Column 1: Price
+  Starter: ₹4,999
+  Professional: ₹12,999
+  Enterprise: ₹29,999
+  ────────────────────────────────────────
+  Column 1: Margin
+  Starter: 87%
+  Professional: 93%
+  Enterprise: 92%
+
+  Option B: GPT-4o (premium quality)
+
+  ┌────────────────────┬─────────┬──────────────┬────────────┐
+  │                    │ Starter │ Professional │ Enterprise │
+  ├────────────────────┼─────────┼──────────────┼────────────┤
+  │ Total AI cost      │ ₹260    │ ₹1,200       │ ₹5,000     │
+  ├────────────────────┼─────────┼──────────────┼────────────┤
+  │ + Infra + Razorpay │ ₹600    │ ₹760         │ ₹1,600     │
+  ├────────────────────┼─────────┼──────────────┼────────────┤
+  │ TOTAL COST         │ ~₹860   │ ~₹1,960      │ ~₹6,600    │
+  ├────────────────────┼─────────┼──────────────┼────────────┤
+  │ Price              │ ₹4,999  │ ₹12,999      │ ₹29,999    │
+  ├────────────────────┼─────────┼──────────────┼────────────┤
+  │ Margin             │ 83%     │ 85%          │ 78%        │
+  └────────────────────┴─────────┴──────────────┴────────────┘
+
+  Option C: Hybrid (SMART approach)
+
+  Use different models for different tasks:
+  - Fine-tuned GPT-4o-mini: Chat, document drafts, fast-tier agents
+  - GPT-4o: primary_investigator + final_judge (powerful-tier only)
+  - Perplexity sonar-pro: legal_researcher agent only
+
+  ┌────────────┬─────────┬──────────────┬────────────┐
+  │            │ Starter │ Professional │ Enterprise │
+  ├────────────┼─────────┼──────────────┼────────────┤
+  │ TOTAL COST │ ~₹700   │ ~₹1,100      │ ~₹3,200    │
+  ├────────────┼─────────┼──────────────┼────────────┤
+  │ Margin     │ 86%     │ 92%          │ 89%        │
+  └────────────┴─────────┴──────────────┴────────────┘
+
+  ---
+
+● User answered Claude's questions:
+  ⎿  · Which LLM strategy do you want to go with? → Hybrid approach (Option
+      C)
+     · Which search API do you want to integrate? → Perplexity sonar-pro
+
+● Good choices. The hybrid approach with Perplexity sonar-pro gives you the best
+   quality for critical analysis while keeping costs manageable.
+
+  Before I finalize the plan, let me clarify scope:
+  ⎿  Tool use rejected with user message: The user wants to clarify these 
+     questions.
+         This means they may have additional information, context or questions 
+     for you.
+         Take their response into account and then reformulate the questions if 
+     appropriate.
+         Start by asking them what they would like to clarify.
+
+         Questions asked:
+     - "What do you want to implement RIGHT NOW in this session?"
+       (No answer provided)
+     - "Do you already have an Indian law dataset ready for fine-tuning, or is 
+     that something you need to build?"
+       (No answer provided)
+
+● What would you like to clarify? Feel free to share your thoughts on what you
+  want to implement now and your fine-tuning data situation.
+
+● User answered Claude's questions:
+  ⎿  · What's on your mind? Tell me what you'd like to clarify or discuss 
+     further. → Want to discuss LLM migration approach first
+
+● LLM Migration: Hybrid Approach Explained
+
+  How It Works in Your Architecture
+
+  Your codebase already has a nice abstraction in Investigator 
+  Engine/src/utils.py with the get_llm() function that supports multiple
+  providers. Here's how the hybrid approach would work:
+
+  Current Setup
+
+  ALL agents → DeepSeek (deepseek-chat) → same model for everything
+
+  Proposed Hybrid Setup
+
+  FAST tier agents (document_analyst, entity_fact_extractor)
+    → Fine-tuned GPT-4o-mini (or GPT-4o-mini until fine-tune is ready)
+
+  STANDARD tier agents (auditor, cross_examiner, conflict_resolver,
+                        evidence_validator, gap_detector, risk_assessor)
+    → GPT-4o-mini
+
+  POWERFUL tier agents (primary_investigator, final_judge)
+    → GPT-4o (best quality for the most critical analysis)
+
+  LEGAL RESEARCHER agent
+    → Perplexity sonar-pro (has real-time web search built-in)
+    → Can find actual Indian case law, recent judgments, current statutes
+
+  RAG Chat (/chat)
+    → GPT-4o-mini (high volume, needs to be cheap)
+
+  Document Drafting (/draft/chat, /generate-document)
+    → GPT-4o-mini (or fine-tuned GPT-4o-mini for Indian legal language)
+
+  Your utils.py Already Supports This!
+
+  The existing code has three LLM tiers (fast, standard, powerful) with env var
+  overrides:
+  - LLM_TIER_FAST → can point to gpt-4o-mini
+  - LLM_TIER_STANDARD → can point to gpt-4o-mini
+  - LLM_TIER_POWERFUL → can point to gpt-4o
+
+  The migration is mostly about:
+  1. Switching the provider from DeepSeek to OpenAI in get_llm()
+  2. Allowing different models per tier (currently all tiers use the same model)
+  3. Adding Perplexity as a new provider specifically for legal_researcher
+  4. Updating rag/rag.py to use OpenAI instead of DeepSeek
+
+  What Changes Per File
+
+  File: Investigator Engine/src/utils.py
+  Change: Support per-tier model selection (OpenAI for fast/standard/powerful)
+  ────────────────────────────────────────
+  File: Investigator Engine/src/agents/legal.py
+  Change: legal_researcher uses Perplexity API instead of LLM
+  ────────────────────────────────────────
+  File: rag/rag.py
+  Change: Switch from DeepSeek to OpenAI GPT-4o-mini
+  ────────────────────────────────────────
+  File: .env
+  Change: Add OPENAI_API_KEY, PERPLEXITY_API_KEY, per-tier model configs
+
+  Cost Impact: Per-Call Breakdown
+
+  Component: Chat message
+  Current (DeepSeek): ₹0.087
+  After Migration: ₹0.048 (GPT-4o-mini)
+  Change: 42% cheaper
+  ────────────────────────────────────────
+  Component: Fast agents (per doc)
+  Current (DeepSeek): ₹0.16
+  After Migration: ₹0.09 (GPT-4o-mini)
+  Change: 44% cheaper
+  ────────────────────────────────────────
+  Component: Standard agents (6 agents)
+  Current (DeepSeek): ₹0.39
+  After Migration: ₹0.22 (GPT-4o-mini)
+  Change: 44% cheaper
+  ────────────────────────────────────────
+  Component: Powerful agents (2 agents)
+  Current (DeepSeek): ₹0.44
+  After Migration: ₹3.80 (GPT-4o)
+  Change: 8.6x more expensive
+  ────────────────────────────────────────
+  Component: Legal researcher
+  Current (DeepSeek): ₹0.07
+  After Migration: ₹3-5 (Perplexity sonar-pro)
+  Change: ~50x more expensive
+  ────────────────────────────────────────
+  Component: Doc drafting
+  Current (DeepSeek): ₹0.20
+  After Migration: ₹0.11 (GPT-4o-mini)
+  Change: 45% cheaper
+
+  Net Investigation Cost Comparison
+
+  ┌─────────────────────────┬────────────────────┬───────────────────┐
+  │        Scenario         │ DeepSeek (current) │ Hybrid (proposed) │
+  ├─────────────────────────┼────────────────────┼───────────────────┤
+  │ 1 doc, no loop          │ ₹1.06              │ ₹7-10             │
+  ├─────────────────────────┼────────────────────┼───────────────────┤
+  │ 2 docs, 1 loop          │ ₹1.59              │ ₹12-18            │
+  ├─────────────────────────┼────────────────────┼───────────────────┤
+  │ 3 docs, 2 loops (worst) │ ₹2.53              │ ₹20-30            │
+  └─────────────────────────┴────────────────────┴───────────────────┘
+
+  The big cost jump comes from GPT-4o for powerful agents + Perplexity for 
+  search. Investigation costs go from ~₹1-3 to ~₹7-30.
+
+  Revised Customer Costs with Hybrid
+
+  ┌──────────────────────────┬─────────┬──────────────┬────────────┐
+  │                          │ Starter │ Professional │ Enterprise │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Investigations (5/20/50) │ ₹50     │ ₹200         │ ₹500       │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Chats (200/1K/5K)        │ ₹9.6    │ ₹48          │ ₹240       │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Doc Drafts (20/100/300)  │ ₹2.2    │ ₹11          │ ₹33        │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Total AI cost            │ ₹62     │ ₹259         │ ₹773       │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ + Infra + Razorpay       │ ₹600    │ ₹760         │ ₹1,600     │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ TOTAL COST               │ ~₹662   │ ~₹1,019      │ ~₹2,373    │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Price                    │ ₹4,999  │ ₹12,999      │ ₹29,999    │
+  ├──────────────────────────┼─────────┼──────────────┼────────────┤
+  │ Margin                   │ 87%     │ 92%          │ 92%        │
+  └──────────────────────────┴─────────┴──────────────┴────────────┘
+
+  Still very healthy margins even with the hybrid approach!
+
+● User answered Claude's questions:
+  ⎿  · Are you satisfied with the hybrid LLM migration approach? Ready to 
+     finalize everything into the implementation plan? → Yes, finalize the 
+     full plan
+
+● Let me read the key files that need modification to finalize the plan.
+
+● Read 3 files (ctrl+o to expand)
+
+● Now let me read the pricing page and payment routes for the complete picture.
+
+● Read 2 files (ctrl+o to expand)
+
+● Now I have all the details. Let me write the comprehensive final plan.
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ Pricing Update + Hybrid LLM Migration + Perplexity Integration          │
+     │                                                                         │
+     │ Context                                                                 │
+     │                                                                         │
+     │ Currently the app uses DeepSeek (deepseek-chat) for all AI tasks and    │
+     │ has a 2-tier pricing model (Starter ₹9,999, Professional ₹24,999).      │
+     │ We're making three changes:                                             │
+     │                                                                         │
+     │ 1. New 3-tier pricing with lower prices, an Enterprise tier, and 14-day │
+     │  free trial                                                             │
+     │ 2. Hybrid LLM migration — GPT-4o for critical agents, GPT-4o-mini for   │
+     │ the rest                                                                │
+     │ 3. Perplexity sonar-pro integration for the legal researcher agent      │
+     │ (real-time web search for Indian case law)                              │
+     │                                                                         │
+     │ Final Pricing                                                           │
+     │                                                                         │
+     │ Column 1: Price                                                         │
+     │ Starter: ₹4,999/mo                                                      │
+     │ Professional: ₹12,999/mo                                                │
+     │ Enterprise: ₹29,999/mo                                                  │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Seats                                                         │
+     │ Starter: 2                                                              │
+     │ Professional: 5                                                         │
+     │ Enterprise: 15                                                          │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Active Cases                                                  │
+     │ Starter: 10                                                             │
+     │ Professional: 50                                                        │
+     │ Enterprise: Unlimited                                                   │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: AI Investigations/mo                                          │
+     │ Starter: 5                                                              │
+     │ Professional: 20                                                        │
+     │ Enterprise: 50                                                          │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Chat Messages/mo                                              │
+     │ Starter: 200                                                            │
+     │ Professional: 1,000                                                     │
+     │ Enterprise: 5,000                                                       │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Document Drafts/mo                                            │
+     │ Starter: 20                                                             │
+     │ Professional: 100                                                       │
+     │ Enterprise: 300                                                         │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Storage                                                       │
+     │ Starter: 2 GB                                                           │
+     │ Professional: 10 GB                                                     │
+     │ Enterprise: 50 GB                                                       │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Support                                                       │
+     │ Starter: Email                                                          │
+     │ Professional: Priority Email                                            │
+     │ Enterprise: Dedicated + Onboarding                                      │
+     │ ────────────────────────────────────────                                │
+     │ Column 1: Free trial                                                    │
+     │ Starter: —                                                              │
+     │ Professional: 14-day full access                                        │
+     │ Enterprise: —                                                           │
+     │                                                                         │
+     │ Cost per customer at max usage: Starter ~₹662, Professional ~₹1,019,    │
+     │ Enterprise ~₹2,373.                                                     │
+     │ Margins: 87% / 92% / 92%.                                               │
+     │                                                                         │
+     │ Hybrid LLM Strategy                                                     │
+     │                                                                         │
+     │ Component: RAG Chat (/chat)                                             │
+     │ Current: DeepSeek                                                       │
+     │ New: GPT-4o-mini                                                        │
+     │ ────────────────────────────────────────                                │
+     │ Component: Doc Drafting (/draft/chat, /generate-document)               │
+     │ Current: DeepSeek                                                       │
+     │ New: GPT-4o-mini                                                        │
+     │ ────────────────────────────────────────                                │
+     │ Component: Investigation fast-tier agents (document_analyst,            │
+     │   entity_fact_extractor)                                                │
+     │ Current: DeepSeek                                                       │
+     │ New: GPT-4o-mini                                                        │
+     │ ────────────────────────────────────────                                │
+     │ Component: Investigation standard-tier agents (auditor, cross_examiner, │
+     │  etc.)                                                                  │
+     │ Current: DeepSeek                                                       │
+     │ New: GPT-4o-mini                                                        │
+     │ ────────────────────────────────────────                                │
+     │ Component: Investigation powerful-tier agents (primary_investigator,    │
+     │   final_judge)                                                          │
+     │ Current: DeepSeek                                                       │
+     │ New: GPT-4o                                                             │
+     │ ────────────────────────────────────────                                │
+     │ Component: Legal researcher agent                                       │
+     │ Current: DeepSeek (no web search)                                       │
+     │ New: Perplexity sonar-pro (real web search)                             │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Implementation Steps                                                    │
+     │                                                                         │
+     │ Part A: Pricing Update                                                  │
+     │                                                                         │
+     │ Step 1: Update Pricing Page UI                                          │
+     │                                                                         │
+     │ File: LawFirmConnectweb/src/pages/Pricing.tsx                           │
+     │                                                                         │
+     │ - Replace the plans array (line 33-60) with 3 tiers:                    │
+     │   - Starter: ₹4,999, features list updated with new limits              │
+     │   - Professional: ₹12,999, recommended, features list updated           │
+     │   - Enterprise: ₹29,999, new tier with 15 seats, unlimited cases,       │
+     │ dedicated support                                                       │
+     │ - Change grid from lg:grid-cols-2 to lg:grid-cols-3 (line 226)          │
+     │ - Add "14-Day Free Trial" button alongside subscribe (calls             │
+     │ handleStartTrial)                                                       │
+     │ - Add handleStartTrial() function that calls POST /payments/start-trial │
+     │                                                                         │
+     │ Step 2: Add Free Trial Endpoint (Backend)                               │
+     │                                                                         │
+     │ File: LawFirmConnectweb/backend/src/routes/paymentRoutes.js             │
+     │                                                                         │
+     │ Add POST /payments/start-trial endpoint:                                │
+     │ - Check user doesn't already have an active subscription or past trial  │
+     │ - Set user.subscriptionStatus = 'TRIAL'                                 │
+     │ - Set user.subscriptionPlan = 'PROFESSIONAL'                            │
+     │ - Set user.subscriptionExpiresAt = now + 14 days                        │
+     │ - Create Organization with Professional limits (5 seats)                │
+     │ - Set user.role = 'ADMIN'                                               │
+     │                                                                         │
+     │ Step 3: Update maxSeats Mapping (Backend)                               │
+     │                                                                         │
+     │ File: LawFirmConnectweb/backend/src/routes/paymentRoutes.js             │
+     │                                                                         │
+     │ - Line 44: Change plan === 'STARTER' ? 2 : 5 to:                        │
+     │ const seatMap = { STARTER: 2, PROFESSIONAL: 5, ENTERPRISE: 15 };        │
+     │ const maxSeats = seatMap[plan] || 5;                                    │
+     │ - Apply same change in /test-activate (line 122)                        │
+     │                                                                         │
+     │ Step 4: Update User Model                                               │
+     │                                                                         │
+     │ File: LawFirmConnectweb/backend/src/models/User.js                      │
+     │                                                                         │
+     │ - Add 'TRIAL' to subscriptionStatus enum: ['ACTIVE', 'INACTIVE',        │
+     │ 'TRIAL']                                                                │
+     │ - 'ENTERPRISE' already exists in subscriptionPlan enum                  │
+     │                                                                         │
+     │ Step 5: Update Organization Model                                       │
+     │                                                                         │
+     │ File: LawFirmConnectweb/backend/src/models/Organization.js              │
+     │                                                                         │
+     │ - Add 'ENTERPRISE' to plan enum: ['STARTER', 'PROFESSIONAL',            │
+     │ 'ENTERPRISE']                                                           │
+     │                                                                         │
+     │ Step 6: Update SubscriptionGuard (Frontend)                             │
+     │                                                                         │
+     │ File: LawFirmConnectweb/src/components/SubscriptionGuard.tsx            │
+     │                                                                         │
+     │ - Allow subscriptionStatus === 'TRIAL' as valid alongside 'ACTIVE'      │
+     │ (both check expiry)                                                     │
+     │                                                                         │
+     │ Step 7: Update checkAccess Middleware (Backend)                         │
+     │                                                                         │
+     │ File: LawFirmConnectweb/backend/src/middlewares/authMiddleware.js       │
+     │                                                                         │
+     │ - In checkAccess function, allow 'TRIAL' alongside 'ACTIVE':            │
+     │ if (['ACTIVE', 'TRIAL'].includes(req.user.subscriptionStatus) &&        │
+     │ req.user.subscriptionExpiresAt > Date.now())                            │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Part B: Hybrid LLM Migration                                            │
+     │                                                                         │
+     │ Step 8: Refactor get_llm() for Multi-Provider Tiers                     │
+     │                                                                         │
+     │ File: Investigator Engine/src/utils.py (lines 185-236)                  │
+     │                                                                         │
+     │ Current flow: Ollama → DeepSeek → Groq → OpenAI (waterfall, all tiers   │
+     │ use same provider)                                                      │
+     │                                                                         │
+     │ New flow: Each tier can use a different provider and model via env      │
+     │ vars:                                                                   │
+     │ # New env vars:                                                         │
+     │ # LLM_TIER_FAST=gpt-4o-mini          (provider inferred from model      │
+     │ name)                                                                   │
+     │ # LLM_TIER_STANDARD=gpt-4o-mini                                         │
+     │ # LLM_TIER_POWERFUL=gpt-4o                                              │
+     │ # OPENAI_API_KEY=sk-...                                                 │
+     │                                                                         │
+     │ def get_llm(model_name="gpt-4o-mini", task_tier="standard"):            │
+     │     # 1. Check tier env override (existing logic, keep)                 │
+     │     # 2. NEW: If model starts with "gpt-", use OpenAI directly          │
+     │     # 3. If model starts with "deepseek-", use DeepSeek base_url        │
+     │     # 4. Else fall back to existing waterfall                           │
+     │                                                                         │
+     │ Key change: Instead of the waterfall (DeepSeek → Groq → OpenAI), we     │
+     │ route based on the model name resolved from the tier. This lets         │
+     │ powerful-tier use GPT-4o while fast-tier uses GPT-4o-mini.              │
+     │                                                                         │
+     │ Step 9: Integrate Perplexity for Legal Researcher                       │
+     │                                                                         │
+     │ File: Investigator Engine/src/agents/legal.py (lines 17-53)             │
+     │                                                                         │
+     │ Replace the current legal_researcher function to use Perplexity API     │
+     │ instead of the standard LLM:                                            │
+     │ # Perplexity uses OpenAI-compatible API                                 │
+     │ from langchain_openai import ChatOpenAI                                 │
+     │                                                                         │
+     │ def get_perplexity_llm():                                               │
+     │     return ChatOpenAI(                                                  │
+     │         model="sonar-pro",                                              │
+     │         api_key=os.getenv("PERPLEXITY_API_KEY"),                        │
+     │         base_url="https://api.perplexity.ai",                           │
+     │         temperature=0.1                                                 │
+     │     )                                                                   │
+     │                                                                         │
+     │ Update the legal_researcher prompt to leverage Perplexity's web search: │
+     │ - Remove "Mock them if needed" instruction                              │
+     │ - Add: "Search for and cite REAL Indian statutes, sections, and         │
+     │ landmark judgments"                                                     │
+     │ - Add: "Include specific Section numbers from IPC, CrPC, Indian         │
+     │ Contract Act, etc."                                                     │
+     │                                                                         │
+     │ Step 10: Update RAG Chat to Use OpenAI                                  │
+     │                                                                         │
+     │ File: rag/rag.py (lines 25-43)                                          │
+     │                                                                         │
+     │ Change the LLM initialization:                                          │
+     │ # Before:                                                               │
+     │ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")                        │
+     │ DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")           │
+     │ llm = OpenAILLM(model_name=DEEPSEEK_MODEL, api_key=DEEPSEEK_API_KEY,    │
+     │ base_url="https://api.deepseek.com")                                    │
+     │                                                                         │
+     │ # After:                                                                │
+     │ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")                            │
+     │ RAG_MODEL = os.getenv("RAG_MODEL", "gpt-4o-mini")                       │
+     │ llm = OpenAILLM(model_name=RAG_MODEL, model_params={"temperature":      │
+     │ 0.1}, api_key=OPENAI_API_KEY)                                           │
+     │ # No base_url needed for OpenAI (uses default)                          │
+     │                                                                         │
+     │ Step 11: Update Environment Variables                                   │
+     │                                                                         │
+     │ File: .env (root or wherever env files are)                             │
+     │                                                                         │
+     │ Add new keys:                                                           │
+     │ OPENAI_API_KEY=sk-...                                                   │
+     │ PERPLEXITY_API_KEY=pplx-...                                             │
+     │ RAG_MODEL=gpt-4o-mini                                                   │
+     │ LLM_TIER_FAST=gpt-4o-mini                                               │
+     │ LLM_TIER_STANDARD=gpt-4o-mini                                           │
+     │ LLM_TIER_POWERFUL=gpt-4o                                                │
+     │ # Keep DEEPSEEK_API_KEY as fallback (optional)                          │
+     │                                                                         │
+     │ Step 12: Install Perplexity Dependency                                  │
+     │                                                                         │
+     │ No new package needed — Perplexity uses the OpenAI-compatible API       │
+     │ format, so langchain_openai.ChatOpenAI works directly with              │
+     │ base_url="https://api.perplexity.ai".                                   │
+     │                                                                         │
+     │ ---                                                                     │
+     │ Files to Modify (Summary)                                               │
+     │                                                                         │
+     │ #: 1                                                                    │
+     │ File: LawFirmConnectweb/src/pages/Pricing.tsx                           │
+     │ Change: 3 tiers, new prices, free trial button                          │
+     │ ────────────────────────────────────────                                │
+     │ #: 2                                                                    │
+     │ File: LawFirmConnectweb/backend/src/routes/paymentRoutes.js             │
+     │ Change: Enterprise seats, trial endpoint                                │
+     │ ────────────────────────────────────────                                │
+     │ #: 3                                                                    │
+     │ File: LawFirmConnectweb/backend/src/models/User.js                      │
+     │ Change: Add TRIAL to subscriptionStatus                                 │
+     │ ────────────────────────────────────────                                │
+     │ #: 4                                                                    │
+     │ File: LawFirmConnectweb/backend/src/models/Organization.js              │
+     │ Change: Add ENTERPRISE to plan enum                                     │
+     │ ────────────────────────────────────────                                │
+     │ #: 5                                                                    │
+     │ File: LawFirmConnectweb/src/components/SubscriptionGuard.tsx            │
+     │ Change: Allow TRIAL access                                              │
+     │ ────────────────────────────────────────                                │
+     │ #: 6                                                                    │
+     │ File: LawFirmConnectweb/backend/src/middlewares/authMiddleware.js       │
+     │ Change: Allow TRIAL in checkAccess                                      │
+     │ ────────────────────────────────────────                                │
+     │ #: 7                                                                    │
+     │ File: Investigator Engine/src/utils.py                                  │
+     │ Change: Tier-based provider routing                                     │
+     │ ────────────────────────────────────────                                │
+     │ #: 8                                                                    │
+     │ File: Investigator Engine/src/agents/legal.py                           │
+     │ Change: Perplexity for legal_researcher                                 │
+     │ ────────────────────────────────────────                                │
+     │ #: 9                                                                    │
+     │ File: rag/rag.py                                                        │
+     │ Change: Switch to OpenAI GPT-4o-mini                                    │
+     │ ────────────────────────────────────────                                │
+     │ #: 10                                                                   │
+     │ File: .env                                                              │
+     │ Change: New API keys and tier config                                    │
+     │                                                                         │
+     │ Verification                                                            │
+     │                                                                         │
+     │ 1. Free Trial: Sign up → /pricing → "Start Free Trial" → 14-day         │
+     │ Professional access → portal loads                                      │
+     │ 2. Starter Purchase: Subscribe Starter → Razorpay ₹4,999 → portal with  │
+     │ Starter limits                                                          │
+     │ 3. Enterprise Purchase: Subscribe Enterprise → Razorpay ₹29,999 → 15    │
+     │ max seats                                                               │
+     │ 4. Trial Expiry: Set trial expiry to past → redirect to /pricing        │
+     │ 5. RAG Chat: Send a chat message → verify response comes from           │
+     │ GPT-4o-mini (check server logs)                                         │
+     │ 6. Investigation: Run an investigation → verify powerful agents use     │
+     │ GPT-4o, others use GPT-4o-mini                                          │
+     │ 7. Legal Researcher: Run investigation → verify legal_researcher        │
+     │ returns real Indian statutes/case law from Perplexity                   │
+     │ 8. Fallback: Remove OPENAI_API_KEY → verify system falls back to        │
+     │ DeepSeek if configured                                                  │
+     ╰─────────────────────────────────────────────────────────────────────────╯

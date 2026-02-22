@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Depends, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 import shutil
 
@@ -129,6 +129,8 @@ chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]
 investigation_reports_collection = db["investigation_reports"]
+investigation_jobs_collection = db["investigation_jobs"]
+case_law_bookmarks_collection = db["case_law_bookmarks"]
 
 # ---------- CORS Configuration ----------
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,7 +145,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,  # Environment-based, no wildcard
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -600,19 +602,24 @@ async def ingest_file(
                             text = "\n".join(p.get("text", "") for p in page_data)
 
                             if text.strip():
+                                # Cache extracted text for fast retrieval
+                                document_status_collection.update_one(
+                                    {"case_id": caseId, "filename": extracted_safe_name},
+                                    {"$set": {"extracted_pages": page_data}}
+                                )
                                 # Start background ingestion
                                 asyncio.create_task(_run_ingestion_background(
-                                    ingest_document, 
-                                    caseId, 
-                                    extracted_safe_name, 
-                                    document_status_collection, 
+                                    ingest_document,
+                                    caseId,
+                                    extracted_safe_name,
+                                    document_status_collection,
                                     logger,
-                                    text=text, 
-                                    source_name=extracted_safe_name, 
-                                    case_id=caseId, 
+                                    text=text,
+                                    source_name=extracted_safe_name,
+                                    case_id=caseId,
                                     page_metadata=page_data
                                 ))
-                                
+
                                 ingested_files.append(extracted_safe_name)
                                 logger.info(f"Started background ingestion for zip entry: {extracted_safe_name}")
                             else:
@@ -674,20 +681,26 @@ async def ingest_file(
                     detail="Could not extract text from file or file is empty."
                 )
 
+            # Cache extracted text in document_status for fast retrieval later
+            document_status_collection.update_one(
+                {"case_id": caseId, "filename": safe_filename},
+                {"$set": {"extracted_pages": page_data}}
+            )
+
             # Ingest with page metadata
             # Ingest with page metadata in BACKGROUND
             # We already set status to "Processing" above.
-            
+
             # Start background task
             asyncio.create_task(_run_ingestion_background(
-                ingest_document, 
-                caseId, 
-                safe_filename, 
-                document_status_collection, 
+                ingest_document,
+                caseId,
+                safe_filename,
+                document_status_collection,
                 logger,
-                text=text, 
-                source_name=safe_filename, 
-                case_id=caseId, 
+                text=text,
+                source_name=safe_filename,
+                case_id=caseId,
                 page_metadata=page_data
             ))
             
@@ -1462,6 +1475,218 @@ async def get_investigation_reports(
     return reports
 
 
+# --- Background Investigation (runs even if user navigates away) ---
+
+async def _run_investigation_background(job_id: str, case_id: str, focus_questions: list, user_id: str, doc_list: list):
+    """Runs the full investigation pipeline as a background task, updating progress in MongoDB."""
+    try:
+        workflow = create_graph()
+        initial_state = {
+            "documents": doc_list,
+            "entities": [],
+            "facts": [],
+            "timeline": [],
+            "revision_count": 0,
+            "errors": [],
+            "focus_questions": focus_questions,
+        }
+
+        total_steps = len(_STEP_ORDER)
+
+        def run_stream():
+            return list(workflow.stream(initial_state))
+
+        stream_results = await asyncio.to_thread(run_stream)
+
+        final_state = initial_state.copy()
+        completed_steps = 0
+
+        for chunk in stream_results:
+            for node_name, node_output in chunk.items():
+                if node_output and isinstance(node_output, dict):
+                    final_state.update(node_output)
+                completed_steps += 1
+                step_index = _STEP_ORDER.index(node_name) if node_name in _STEP_ORDER else completed_steps
+                progress = min(int((step_index + 1) / total_steps * 100), 99)
+                label = _STEP_LABELS.get(node_name, f"Processing {node_name}...")
+
+                investigation_jobs_collection.update_one(
+                    {"_id": job_id},
+                    {"$set": {
+                        "status": "running",
+                        "current_step": node_name,
+                        "progress": progress,
+                        "progress_label": label,
+                        "updated_at": datetime.utcnow(),
+                    }}
+                )
+
+        # Build final results
+        report = final_state.get("final_report", "Analysis completed but no report was generated.")
+        facts = final_state.get("facts", [])
+        entities = list(set(final_state.get("entities", [])))
+        timeline = final_state.get("timeline", [])
+        conflicts = final_state.get("conflicts", [])
+        risks = final_state.get("risks", [])
+        evidence_gaps = final_state.get("evidence_gaps", [])
+        hypotheses = final_state.get("hypotheses", [])
+        legal_issues = final_state.get("legal_issues", [])
+        avg_confidence = round(sum(f.get("confidence", 0) for f in facts) / len(facts), 2) if facts else 0.0
+        risk_level = "CRITICAL" if len(risks) >= 5 else "HIGH" if len(risks) >= 3 else "MEDIUM" if len(risks) >= 1 else "LOW"
+
+        structured_data = {
+            "entities": entities, "facts": facts, "timeline": timeline,
+            "conflicts": conflicts, "risks": risks, "evidence_gaps": evidence_gaps,
+            "hypotheses": hypotheses, "legal_issues": legal_issues,
+        }
+        metadata = {
+            "fact_count": len(facts), "entity_count": len(entities),
+            "conflict_count": len(conflicts), "risk_count": len(risks),
+            "timeline_count": len(timeline), "evidence_gap_count": len(evidence_gaps),
+            "document_count": len(doc_list), "revision_count": final_state.get("revision_count", 0),
+            "avg_confidence": avg_confidence, "overall_risk_level": risk_level,
+            "errors": final_state.get("errors", []),
+        }
+
+        # Save report to investigation_reports
+        report_doc = {
+            "case_id": case_id, "user_id": user_id,
+            "final_report": report, "focus_questions": focus_questions,
+            "structured_data": structured_data, "metadata": metadata,
+            "created_at": datetime.utcnow(),
+        }
+        insert_result = investigation_reports_collection.insert_one(report_doc)
+        report_id = str(insert_result.inserted_id)
+
+        # Mark job as completed
+        investigation_jobs_collection.update_one(
+            {"_id": job_id},
+            {"$set": {
+                "status": "completed",
+                "progress": 100,
+                "progress_label": "Investigation complete",
+                "report_id": report_id,
+                "final_report": report,
+                "structured_data": structured_data,
+                "stats": metadata,
+                "completed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        investigation_jobs_collection.update_one(
+            {"_id": job_id},
+            {"$set": {
+                "status": "error",
+                "error": str(e),
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+
+
+@app.post("/investigation/run-background")
+@limiter.limit("5/minute")
+async def run_investigation_background(
+    request: Request,
+    body: InvestigatorRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Start investigation as a background task. Returns a jobId immediately."""
+    if not create_graph:
+        raise HTTPException(status_code=500, detail="Investigator Engine not loaded properly.")
+
+    validate_case_id(body.caseId)
+    doc_list = _fetch_docs_for_case(body.caseId)
+
+    if not doc_list:
+        raise HTTPException(status_code=404, detail="No documents found for this case.")
+
+    # Create job record
+    import uuid
+    job_id = str(uuid.uuid4())
+    investigation_jobs_collection.insert_one({
+        "_id": job_id,
+        "case_id": body.caseId,
+        "user_id": current_user.get("user_id", "unknown"),
+        "status": "running",
+        "progress": 0,
+        "progress_label": "Starting investigation...",
+        "current_step": "",
+        "focus_questions": body.focusQuestions or [],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    })
+
+    # Fire and forget — runs in the background
+    asyncio.create_task(
+        _run_investigation_background(
+            job_id, body.caseId, body.focusQuestions or [], current_user.get("user_id", "unknown"), doc_list
+        )
+    )
+
+    return {"jobId": job_id}
+
+
+@app.get("/investigation/status/{jobId}")
+@limiter.limit("60/minute")
+async def get_investigation_status(
+    request: Request,
+    jobId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Poll the status of a background investigation job."""
+    job = investigation_jobs_collection.find_one({"_id": jobId})
+    if not job:
+        raise HTTPException(status_code=404, detail="Investigation job not found.")
+
+    result = {
+        "jobId": job["_id"],
+        "status": job["status"],
+        "progress": job.get("progress", 0),
+        "progressLabel": job.get("progress_label", ""),
+        "currentStep": job.get("current_step", ""),
+    }
+
+    if job["status"] == "completed":
+        result["reportId"] = job.get("report_id")
+        result["finalReport"] = job.get("final_report")
+        result["structuredData"] = job.get("structured_data")
+        result["stats"] = job.get("stats")
+
+    if job["status"] == "error":
+        result["error"] = job.get("error", "Unknown error")
+
+    return result
+
+
+@app.get("/investigation/active-job/{caseId}")
+@limiter.limit("30/minute")
+async def get_active_investigation_job(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Check if there's a running investigation job for this case."""
+    validate_case_id(caseId)
+    job = investigation_jobs_collection.find_one(
+        {"case_id": caseId, "status": "running"},
+        sort=[("created_at", -1)]
+    )
+    if not job:
+        return {"hasActiveJob": False}
+
+    return {
+        "hasActiveJob": True,
+        "jobId": job["_id"],
+        "progress": job.get("progress", 0),
+        "progressLabel": job.get("progress_label", ""),
+        "currentStep": job.get("current_step", ""),
+    }
+
+
 # ---------- SECURITY NOTE ----------
 # Static file serving has been REMOVED for security.
 # All document access must go through authenticated endpoints.
@@ -1489,12 +1714,26 @@ async def get_document_text(
         if not doc_status:
             raise HTTPException(status_code=404, detail="Document not found")
 
+        # Serve from cached extracted_pages if available (avoids re-running OCR)
+        if doc_status.get("extracted_pages"):
+            return {
+                "filename": safe_filename,
+                "pages": doc_status["extracted_pages"]
+            }
+
+        # Fallback: re-parse (for documents ingested before caching was added)
         file_path = f"documents/{safe_filename}"
         if not os.path.exists(file_path):
             raise HTTPException(status_code=404, detail="File not found on server")
 
         from ingestion.loader import parse_file_with_pages
         pages = parse_file_with_pages(file_path)
+
+        # Cache for future requests
+        document_status_collection.update_one(
+            {"case_id": caseId, "filename": safe_filename},
+            {"$set": {"extracted_pages": pages}}
+        )
 
         return {
             "filename": safe_filename,
@@ -1545,6 +1784,435 @@ async def download_document(
     except Exception as e:
         logger.error(f"Download error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to download document")
+
+
+# ---------- INDIAN KANOON CASE LAW ENDPOINTS ----------
+
+import httpx
+
+INDIAN_KANOON_API_TOKEN = os.getenv("INDIAN_KANOON_API_TOKEN", "")
+INDIAN_KANOON_BASE_URL = "https://api.indiankanoon.org"
+
+
+class CaseLawSearchRequest(BaseModel):
+    formInput: str = Field(..., min_length=1, max_length=500)
+    pagenum: Optional[int] = 0
+    doctypes: Optional[str] = None  # e.g. "judgments", "laws"
+    fromdate: Optional[str] = None  # DD-MM-YYYY
+    todate: Optional[str] = None    # DD-MM-YYYY
+    title: Optional[str] = None
+    author: Optional[str] = None
+
+
+class CaseLawBookmarkRequest(BaseModel):
+    docId: int
+    title: str
+    court: Optional[str] = ""
+    date: Optional[str] = ""
+    practiceArea: Optional[str] = ""
+    tags: Optional[List[str]] = []
+    notes: Optional[str] = ""
+    caseId: Optional[str] = None  # linked current case
+
+
+class CaseLawBookmarkUpdateRequest(BaseModel):
+    tags: Optional[List[str]] = None
+    notes: Optional[str] = None
+    practiceArea: Optional[str] = None
+
+
+@app.post("/case-law/search")
+@limiter.limit("20/minute")
+async def case_law_search(
+    request: Request,
+    body: CaseLawSearchRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Proxy search to Indian Kanoon API."""
+    try:
+        if not INDIAN_KANOON_API_TOKEN:
+            raise HTTPException(status_code=503, detail="Indian Kanoon API not configured")
+
+        params = {"formInput": body.formInput, "pagenum": body.pagenum or 0}
+        if body.doctypes:
+            params["doctypes"] = body.doctypes
+        if body.fromdate:
+            params["fromdate"] = body.fromdate
+        if body.todate:
+            params["todate"] = body.todate
+        if body.title:
+            params["title"] = body.title
+        if body.author:
+            params["author"] = body.author
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{INDIAN_KANOON_BASE_URL}/search/",
+                data=params,
+                headers={"Authorization": f"Token {INDIAN_KANOON_API_TOKEN}"}
+            )
+
+        if resp.status_code != 200:
+            logger.warning(f"Indian Kanoon search failed: {resp.status_code}")
+            raise HTTPException(status_code=resp.status_code, detail="Indian Kanoon API error")
+
+        return resp.json()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Case law search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to search case law")
+
+
+@app.get("/case-law/doc/{docId}")
+@limiter.limit("30/minute")
+async def case_law_doc(
+    request: Request,
+    docId: int,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Proxy document fetch to Indian Kanoon API."""
+    try:
+        if not INDIAN_KANOON_API_TOKEN:
+            raise HTTPException(status_code=503, detail="Indian Kanoon API not configured")
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{INDIAN_KANOON_BASE_URL}/doc/{docId}/",
+                headers={"Authorization": f"Token {INDIAN_KANOON_API_TOKEN}"}
+            )
+
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Indian Kanoon API error")
+
+        return resp.json()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Case law doc error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch case document")
+
+
+@app.get("/case-law/meta/{docId}")
+@limiter.limit("30/minute")
+async def case_law_meta(
+    request: Request,
+    docId: int,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Proxy document metadata fetch to Indian Kanoon API."""
+    try:
+        if not INDIAN_KANOON_API_TOKEN:
+            raise HTTPException(status_code=503, detail="Indian Kanoon API not configured")
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{INDIAN_KANOON_BASE_URL}/docmeta/{docId}/",
+                headers={"Authorization": f"Token {INDIAN_KANOON_API_TOKEN}"}
+            )
+
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Indian Kanoon API error")
+
+        return resp.json()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Case law meta error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch case metadata")
+
+
+# --- Embedding-based Precedent Finder ---
+
+@app.post("/case-law/find-precedents/{caseId}")
+@limiter.limit("5/minute")
+async def find_precedents_from_embeddings(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """
+    Use case document embeddings to find relevant Indian Kanoon precedents.
+    1. Fetch top chunks from Qdrant for this case
+    2. Use LLM to extract targeted legal search queries
+    3. Search Indian Kanoon with those queries
+    4. Return deduplicated results
+    """
+    try:
+        validate_case_id(caseId)
+
+        if not INDIAN_KANOON_API_TOKEN:
+            raise HTTPException(status_code=503, detail="Indian Kanoon API not configured")
+
+        from qdrant_client import QdrantClient, models as qmodels
+        from groq import Groq
+
+        qdrant_url = os.getenv("QDRANT_URL")
+        qdrant_key = os.getenv("QDRANT_API_KEY")
+        qdrant_client = QdrantClient(url=qdrant_url, api_key=qdrant_key)
+        COLLECTION = "chunks"
+
+        # 1. Scroll Qdrant for this case's chunks (get a representative sample)
+        try:
+            scroll_result = qdrant_client.scroll(
+                collection_name=COLLECTION,
+                scroll_filter=qmodels.Filter(
+                    must=[
+                        qmodels.FieldCondition(
+                            key="case_id",
+                            match=qmodels.MatchValue(value=caseId),
+                        )
+                    ]
+                ),
+                limit=20,
+                with_payload=True,
+                with_vectors=False,
+            )
+            points = scroll_result[0]
+        except Exception as e:
+            logger.warning(f"Qdrant scroll failed for case {caseId}: {e}")
+            points = []
+
+        if not points:
+            raise HTTPException(
+                status_code=404,
+                detail="No document embeddings found for this case. Please upload documents first."
+            )
+
+        # 2. Combine chunk texts for LLM analysis
+        chunk_texts = [p.payload.get("text", "") for p in points if p.payload.get("text")]
+        combined_text = "\n---\n".join(chunk_texts)
+        # Truncate to fit LLM context
+        if len(combined_text) > 12000:
+            combined_text = combined_text[:12000]
+
+        # 3. Use Groq LLM to extract legal search queries
+        groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+        llm_response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an Indian legal research assistant. Given excerpts from case documents, "
+                        "extract 3 to 5 specific search queries for finding relevant precedents on Indian Kanoon. "
+                        "Each query should target a distinct legal issue, section, act, or principle mentioned in the documents. "
+                        "Return ONLY a JSON array of strings, nothing else. Example: "
+                        '[\"Section 498A IPC dowry harassment\", \"Supreme Court maintenance under Section 125 CrPC\"]'
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Extract legal search queries from these case documents:\n\n{combined_text}"
+                }
+            ],
+            temperature=0.2,
+            max_tokens=500,
+        )
+
+        import json as _json
+        raw_queries = llm_response.choices[0].message.content.strip()
+        # Parse JSON array from LLM response
+        try:
+            # Handle case where LLM wraps in markdown code block
+            if raw_queries.startswith("```"):
+                raw_queries = raw_queries.split("```")[1]
+                if raw_queries.startswith("json"):
+                    raw_queries = raw_queries[4:]
+            search_queries = _json.loads(raw_queries)
+            if not isinstance(search_queries, list):
+                search_queries = [raw_queries]
+        except _json.JSONDecodeError:
+            # Fallback: split by newlines and clean
+            search_queries = [q.strip().strip('"').strip("'") for q in raw_queries.split("\n") if q.strip()]
+
+        search_queries = search_queries[:5]  # Cap at 5
+
+        logger.info(f"Generated {len(search_queries)} search queries for case {caseId}: {search_queries}")
+
+        # 4. Search Indian Kanoon with each query and deduplicate
+        seen_doc_ids = set()
+        all_results = []
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            for query in search_queries:
+                if not query.strip():
+                    continue
+                try:
+                    resp = await client.post(
+                        f"{INDIAN_KANOON_BASE_URL}/search/",
+                        data={"formInput": query, "pagenum": 0},
+                        headers={"Authorization": f"Token {INDIAN_KANOON_API_TOKEN}"}
+                    )
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        for doc in data.get("docs", []):
+                            tid = doc.get("tid")
+                            if tid and tid not in seen_doc_ids:
+                                seen_doc_ids.add(tid)
+                                doc["_matched_query"] = query
+                                all_results.append(doc)
+                except Exception as e:
+                    logger.warning(f"IK search failed for query '{query}': {e}")
+                    continue
+
+        return {
+            "queries": search_queries,
+            "docs": all_results[:30],  # Cap total results
+            "total": len(all_results),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Find precedents error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to find precedents")
+
+
+# --- Case Law Bookmarks CRUD ---
+
+@app.post("/case-law/bookmark")
+@limiter.limit("30/minute")
+async def create_case_law_bookmark(
+    request: Request,
+    body: CaseLawBookmarkRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Save a case law bookmark."""
+    try:
+        user_id = get_user_id(current_user)
+
+        # Check if already bookmarked
+        existing = case_law_bookmarks_collection.find_one({
+            "userId": user_id,
+            "docId": body.docId
+        })
+        if existing:
+            raise HTTPException(status_code=409, detail="Case already bookmarked")
+
+        bookmark = {
+            "userId": user_id,
+            "docId": body.docId,
+            "title": body.title,
+            "court": body.court,
+            "date": body.date,
+            "practiceArea": body.practiceArea,
+            "tags": body.tags or [],
+            "notes": body.notes or "",
+            "caseId": body.caseId,
+            "createdAt": datetime.utcnow()
+        }
+        case_law_bookmarks_collection.insert_one(bookmark)
+
+        logger.info(f"Case law bookmarked: docId={body.docId} by user {user_id}")
+        return {"status": "success", "message": "Case bookmarked"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bookmark create error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to bookmark case")
+
+
+@app.get("/case-law/bookmarks")
+@limiter.limit("60/minute")
+async def get_case_law_bookmarks(
+    request: Request,
+    current_user: Dict = Depends(get_current_user),
+    caseId: Optional[str] = None
+):
+    """List user's bookmarked cases."""
+    try:
+        user_id = get_user_id(current_user)
+        query = {"userId": user_id}
+        if caseId:
+            query["caseId"] = caseId
+
+        bookmarks = list(
+            case_law_bookmarks_collection.find(query)
+            .sort("createdAt", -1)
+            .limit(100)
+        )
+
+        for b in bookmarks:
+            b["_id"] = str(b["_id"])
+
+        return bookmarks
+
+    except Exception as e:
+        logger.error(f"Bookmark list error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch bookmarks")
+
+
+@app.delete("/case-law/bookmark/{docId}")
+@limiter.limit("30/minute")
+async def delete_case_law_bookmark(
+    request: Request,
+    docId: int,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Remove a case law bookmark."""
+    try:
+        user_id = get_user_id(current_user)
+        result = case_law_bookmarks_collection.delete_one({
+            "userId": user_id,
+            "docId": docId
+        })
+
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Bookmark not found")
+
+        return {"status": "success", "message": "Bookmark removed"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bookmark delete error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to remove bookmark")
+
+
+@app.patch("/case-law/bookmark/{docId}")
+@limiter.limit("30/minute")
+async def update_case_law_bookmark(
+    request: Request,
+    docId: int,
+    body: CaseLawBookmarkUpdateRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Update notes/tags on a bookmark."""
+    try:
+        user_id = get_user_id(current_user)
+
+        update_fields = {}
+        if body.tags is not None:
+            update_fields["tags"] = body.tags
+        if body.notes is not None:
+            update_fields["notes"] = body.notes
+        if body.practiceArea is not None:
+            update_fields["practiceArea"] = body.practiceArea
+
+        if not update_fields:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        result = case_law_bookmarks_collection.update_one(
+            {"userId": user_id, "docId": docId},
+            {"$set": update_fields}
+        )
+
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Bookmark not found")
+
+        return {"status": "success", "message": "Bookmark updated"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Bookmark update error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update bookmark")
 
 
 if __name__ == "__main__":

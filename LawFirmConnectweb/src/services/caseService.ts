@@ -252,6 +252,19 @@ export interface InvestigationProgressEvent {
   stats?: InvestigationStats;
 }
 
+export interface InvestigationJobStatus {
+  jobId: string;
+  status: "running" | "completed" | "error";
+  progress: number;
+  progressLabel: string;
+  currentStep: string;
+  reportId?: string;
+  finalReport?: string;
+  structuredData?: InvestigationStructuredData;
+  stats?: InvestigationStats;
+  error?: string;
+}
+
 const runInvestigation = async (
   caseId: string,
   focusQuestions?: string[],
@@ -344,6 +357,38 @@ const getInvestigationReports = async (
   return response.data;
 };
 
+const startInvestigationBackground = async (
+  caseId: string,
+  focusQuestions?: string[],
+): Promise<{ jobId: string }> => {
+  const response = await axios.post(
+    `${RAG_API_URL}/investigation/run-background`,
+    { caseId, focusQuestions: focusQuestions || [] },
+    { headers: getAuthHeaders() },
+  );
+  return response.data;
+};
+
+const getInvestigationStatus = async (
+  jobId: string,
+): Promise<InvestigationJobStatus> => {
+  const response = await axios.get(
+    `${RAG_API_URL}/investigation/status/${jobId}`,
+    { headers: getAuthHeaders() },
+  );
+  return response.data;
+};
+
+const getActiveInvestigationJob = async (
+  caseId: string,
+): Promise<{ hasActiveJob: boolean; jobId?: string; progress?: number; progressLabel?: string; currentStep?: string }> => {
+  const response = await axios.get(
+    `${RAG_API_URL}/investigation/active-job/${caseId}`,
+    { headers: getAuthHeaders() },
+  );
+  return response.data;
+};
+
 // -- Document Generation --
 const generateDocument = async (
   caseId: string,
@@ -413,6 +458,9 @@ const caseService = {
   runInvestigation,
   runInvestigationStream,
   getInvestigationReports,
+  startInvestigationBackground,
+  getInvestigationStatus,
+  getActiveInvestigationJob,
 
   // -- Team Management --
   validateTeamMember: async (id: string, email: string) => {
