@@ -95,7 +95,7 @@ const inviteTeamMember = async (req, res, next) => {
         });
 
         // Send email
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const frontendUrl = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
         const acceptLink = `${frontendUrl}/team/invitations/${invitation.token}/accept`;
         const rejectLink = `${frontendUrl}/team/invitations/${invitation.token}/reject`;
 

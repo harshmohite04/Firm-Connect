@@ -45,7 +45,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", process.env.RAG_API_URL || "http://localhost:8000", "https://api.deepseek.com"],
+      connectSrc: ["'self'", "http://localhost:8000", "https://api.deepseek.com"],
       frameSrc: ["'self'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],

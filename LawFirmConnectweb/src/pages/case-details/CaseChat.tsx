@@ -59,7 +59,7 @@ const CaseChat: React.FC = () => {
     // @ts-ignore
     // @ts-ignore
     const { caseData } = useOutletContext<{ caseData: CaseData }>();
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
 

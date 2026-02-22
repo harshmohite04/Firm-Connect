@@ -138,7 +138,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
     const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
     const abortRef = useRef<AbortController | null>(null);
-    const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+    const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
     // Refs for values needed inside event handlers (avoids stale closures)
     const suggestionsRef = useRef(suggestions);

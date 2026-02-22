@@ -189,7 +189,7 @@ const inviteMember = async (req, res, next) => {
         // --- EMAIL NOTIFICATION (Outside Transaction) ---
         // We do this after commit so we don't send email if DB fails.
         try {
-            const loginLink = process.env.FRONTEND_URL || 'http://localhost:5173/login';
+            const loginLink = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim() + '/login';
             
             if (isNewUser) {
                 const htmlContent = organizationInvitationTemplate(org.name, `${admin.firstName} ${admin.lastName}`, generatedPassword, loginLink);

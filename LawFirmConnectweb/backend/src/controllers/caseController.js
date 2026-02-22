@@ -418,7 +418,7 @@ function getMimeType(filename) {
 // Helper to trigger RAG ingestion
 async function ingestToRAG(filePath, filename, caseId, authToken) {
     try {
-        const PYTHON_SERVER = process.env.PYTHON_SERVER_URL || 'http://localhost:8000';
+        const PYTHON_SERVER = 'http://localhost:8000';
         console.log(`Triggering RAG ingestion for ${filename} to ${PYTHON_SERVER}...`);
         
         const formData = new FormData();

@@ -50,6 +50,7 @@ export interface CaseLawDocument {
 export interface CaseLawMeta {
   title?: string;
   doctype?: string;
+  docsource?: string;
   author?: string;
   bench?: string;
   publishdate?: string;
@@ -82,27 +83,23 @@ const searchCases = async (params: {
   fromdate?: string;
   todate?: string;
 }): Promise<CaseLawSearchResult> => {
-  const response = await axios.post(
-    `${RAG_API_URL}/case-law/search`,
-    params,
-    { headers: getAuthHeaders() },
-  );
+  const response = await axios.post(`${RAG_API_URL}/case-law/search`, params, {
+    headers: getAuthHeaders(),
+  });
   return response.data;
 };
 
 const getDocument = async (docId: number): Promise<CaseLawDocument> => {
-  const response = await axios.get(
-    `${RAG_API_URL}/case-law/doc/${docId}`,
-    { headers: getAuthHeaders() },
-  );
+  const response = await axios.get(`${RAG_API_URL}/case-law/doc/${docId}`, {
+    headers: getAuthHeaders(),
+  });
   return response.data;
 };
 
 const getDocMeta = async (docId: number): Promise<CaseLawMeta> => {
-  const response = await axios.get(
-    `${RAG_API_URL}/case-law/meta/${docId}`,
-    { headers: getAuthHeaders() },
-  );
+  const response = await axios.get(`${RAG_API_URL}/case-law/meta/${docId}`, {
+    headers: getAuthHeaders(),
+  });
   return response.data;
 };
 
@@ -116,11 +113,9 @@ const bookmarkCase = async (data: {
   notes?: string;
   caseId?: string;
 }): Promise<{ status: string; message: string }> => {
-  const response = await axios.post(
-    `${RAG_API_URL}/case-law/bookmark`,
-    data,
-    { headers: getAuthHeaders() },
-  );
+  const response = await axios.post(`${RAG_API_URL}/case-law/bookmark`, data, {
+    headers: getAuthHeaders(),
+  });
   return response.data;
 };
 
@@ -154,7 +149,9 @@ const updateBookmark = async (
   return response.data;
 };
 
-const findPrecedents = async (caseId: string): Promise<PrecedentFinderResult> => {
+const findPrecedents = async (
+  caseId: string,
+): Promise<PrecedentFinderResult> => {
   const response = await axios.post(
     `${RAG_API_URL}/case-law/find-precedents/${caseId}`,
     {},
