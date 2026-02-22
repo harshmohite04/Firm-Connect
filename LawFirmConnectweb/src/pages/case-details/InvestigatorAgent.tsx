@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -6,11 +6,11 @@ import caseService from '../../services/caseService';
 import type {
     Case,
     InvestigationReport,
-    InvestigationProgressEvent,
     InvestigationStructuredData,
     InvestigationStats,
     InvestigationFact,
     InvestigationConflict,
+    InvestigationJobStatus,
 } from '../../services/caseService';
 
 // ============================================================
@@ -481,6 +481,8 @@ interface CaseContextType {
     setCaseData: React.Dispatch<React.SetStateAction<Case | null>>;
 }
 
+const POLL_INTERVAL_MS = 2000;
+
 const InvestigatorAgent: React.FC = () => {
     const { t } = useTranslation();
     const { caseData } = useOutletContext<CaseContextType>();
@@ -514,11 +516,98 @@ const InvestigatorAgent: React.FC = () => {
     // Evidence cards expand
     const [showAllFacts, setShowAllFacts] = useState(false);
 
-    const abortRef = useRef<AbortController | null>(null);
+    // Background job polling
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    const stopPolling = useCallback(() => {
+        if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+        }
+    }, []);
+
+    const applyJobProgress = useCallback((data: InvestigationJobStatus) => {
+        setActiveStep(data.currentStep || '');
+        setProgressLabel(data.progressLabel || 'Processing...');
+        setProgressPercent(data.progress || 0);
+        setCompletedSteps(() => {
+            const next = new Set<string>();
+            const idx = PIPELINE_STEPS.findIndex(s => s.key === data.currentStep);
+            for (let i = 0; i < idx; i++) next.add(PIPELINE_STEPS[i].key);
+            return next;
+        });
+    }, []);
+
+    const startPolling = useCallback((jobId: string) => {
+        stopPolling();
+        setLoading(true);
+
+        pollRef.current = setInterval(async () => {
+            try {
+                const data = await caseService.getInvestigationStatus(jobId);
+
+                if (data.status === 'running') {
+                    applyJobProgress(data);
+                } else if (data.status === 'completed') {
+                    stopPolling();
+                    sessionStorage.removeItem(`investigation_job_${caseData._id}`);
+                    setProgressPercent(100);
+                    setProgressLabel(t('portal.investigator.status.completed'));
+                    setCompletedSteps(new Set(PIPELINE_STEPS.map(s => s.key)));
+                    if (data.structuredData) setStructuredData(data.structuredData);
+                    if (data.stats) setStats(data.stats);
+                    setTimeout(() => {
+                        setReport(data.finalReport || null);
+                        setLoading(false);
+                        loadReportHistory();
+                    }, 600);
+                } else if (data.status === 'error') {
+                    stopPolling();
+                    sessionStorage.removeItem(`investigation_job_${caseData._id}`);
+                    setError(data.error || t('portal.investigator.status.error'));
+                    setLoading(false);
+                }
+            } catch (err) {
+                console.error('Polling error:', err);
+                // Don't stop polling on transient network errors — retry next interval
+            }
+        }, POLL_INTERVAL_MS);
+    }, [caseData?._id, stopPolling, applyJobProgress, t]);
+
+    // On mount: load history + check for an active background job
     useEffect(() => {
-        if (caseData?._id) loadReportHistory();
-        return () => { abortRef.current?.abort(); };
+        if (!caseData?._id) return;
+
+        loadReportHistory();
+
+        // Check sessionStorage for a running job first (instant)
+        const savedJobId = sessionStorage.getItem(`investigation_job_${caseData._id}`);
+        if (savedJobId) {
+            setLoading(true);
+            setProgressLabel('Resuming investigation...');
+            startPolling(savedJobId);
+            return () => stopPolling();
+        }
+
+        // Also check the server for any running job (covers browser refresh)
+        const checkActiveJob = async () => {
+            try {
+                const result = await caseService.getActiveInvestigationJob(caseData._id);
+                if (result.hasActiveJob && result.jobId) {
+                    sessionStorage.setItem(`investigation_job_${caseData._id}`, result.jobId);
+                    setLoading(true);
+                    setProgressLabel(result.progressLabel || 'Investigation in progress...');
+                    setProgressPercent(result.progress || 0);
+                    setActiveStep(result.currentStep || '');
+                    startPolling(result.jobId);
+                }
+            } catch {
+                // Silent — non-critical
+            }
+        };
+        checkActiveJob();
+
+        return () => stopPolling();
     }, [caseData?._id]);
 
     // Inject intel styles once
@@ -548,7 +637,7 @@ const InvestigatorAgent: React.FC = () => {
         }
     };
 
-    const handleRun = () => {
+    const handleRun = async () => {
         setLoading(true);
         setError(null);
         setReport(null);
@@ -564,42 +653,14 @@ const InvestigatorAgent: React.FC = () => {
         const focusQuestions = focusText.split('\n').map(q => q.trim()).filter(Boolean);
 
         try {
-            const controller = caseService.runInvestigationStream(
-                caseData._id,
-                focusQuestions,
-                (event: InvestigationProgressEvent) => {
-                    if (event.type === 'progress') {
-                        setActiveStep(event.step || '');
-                        setProgressLabel(event.label || 'Processing...');
-                        setProgressPercent(event.progress || 0);
-                        setCompletedSteps(prev => {
-                            const next = new Set(prev);
-                            const idx = PIPELINE_STEPS.findIndex(s => s.key === event.step);
-                            for (let i = 0; i < idx; i++) next.add(PIPELINE_STEPS[i].key);
-                            return next;
-                        });
-                    } else if (event.type === 'complete') {
-                        setProgressPercent(100);
-                        setProgressLabel(t('portal.investigator.status.completed'));
-                        setCompletedSteps(new Set(PIPELINE_STEPS.map(s => s.key)));
-                        if (event.structured_data) setStructuredData(event.structured_data);
-                        if (event.stats) setStats(event.stats);
-                        setTimeout(() => {
-                            setReport(event.final_report || null);
-                            setLoading(false);
-                            loadReportHistory();
-                        }, 600);
-                    } else if (event.type === 'error') {
-                        setError(event.detail || t('portal.investigator.status.error'));
-                        setLoading(false);
-                    }
-                },
-                (errMsg: string) => {
-                    setError(errMsg);
-                    setLoading(false);
-                }
-            );
-            abortRef.current = controller;
+            // Start as a background job on the server
+            const { jobId } = await caseService.startInvestigationBackground(caseData._id, focusQuestions);
+
+            // Persist jobId so we can resume if user navigates away & back
+            sessionStorage.setItem(`investigation_job_${caseData._id}`, jobId);
+
+            // Begin polling for progress
+            startPolling(jobId);
         } catch (err: any) {
             setError(err.response?.data?.detail || t('portal.investigator.status.error'));
             setLoading(false);

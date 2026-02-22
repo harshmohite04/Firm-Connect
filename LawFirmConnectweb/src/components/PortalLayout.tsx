@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
 import { messageService } from '../services/messageService';
 import { io, Socket } from 'socket.io-client';
+import toast from 'react-hot-toast';
 import Logo from "../assets/logo.svg"
 // Icons
 const HomeIcon = () => (
@@ -160,6 +161,14 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         // When I read messages, refetch the count
         socketRef.current.on('messagesRead', () => {
             fetchUnreadCount();
+        });
+
+        // Single-device session enforcement: kicked out by another login
+        socketRef.current.on('session_expired', () => {
+            toast.error("You've been logged out because your account was signed in on another device.");
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/signin';
         });
 
         return () => {

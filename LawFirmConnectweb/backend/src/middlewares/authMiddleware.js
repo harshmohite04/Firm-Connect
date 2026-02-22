@@ -27,6 +27,15 @@ const protect = asyncHandler(async (req, res, next) => {
                 res.status(401);
                 throw new Error('Not authorized, user not found');
             }
+
+            // Single-device session enforcement
+            if (decoded.sessionToken && req.user.sessionToken !== decoded.sessionToken) {
+                return res.status(401).json({
+                    message: 'Session expired. Your account was logged in from another device.',
+                    code: 'SESSION_EXPIRED'
+                });
+            }
+
             next();
         } catch (error) {
             console.error(error);

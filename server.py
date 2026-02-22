@@ -129,6 +129,7 @@ chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]
 investigation_reports_collection = db["investigation_reports"]
+investigation_jobs_collection = db["investigation_jobs"]
 
 # ---------- CORS Configuration ----------
 from fastapi.middleware.cors import CORSMiddleware
@@ -1471,6 +1472,218 @@ async def get_investigation_reports(
         if r.get("created_at"):
             r["created_at"] = r["created_at"].isoformat()
     return reports
+
+
+# --- Background Investigation (runs even if user navigates away) ---
+
+async def _run_investigation_background(job_id: str, case_id: str, focus_questions: list, user_id: str, doc_list: list):
+    """Runs the full investigation pipeline as a background task, updating progress in MongoDB."""
+    try:
+        workflow = create_graph()
+        initial_state = {
+            "documents": doc_list,
+            "entities": [],
+            "facts": [],
+            "timeline": [],
+            "revision_count": 0,
+            "errors": [],
+            "focus_questions": focus_questions,
+        }
+
+        total_steps = len(_STEP_ORDER)
+
+        def run_stream():
+            return list(workflow.stream(initial_state))
+
+        stream_results = await asyncio.to_thread(run_stream)
+
+        final_state = initial_state.copy()
+        completed_steps = 0
+
+        for chunk in stream_results:
+            for node_name, node_output in chunk.items():
+                if node_output and isinstance(node_output, dict):
+                    final_state.update(node_output)
+                completed_steps += 1
+                step_index = _STEP_ORDER.index(node_name) if node_name in _STEP_ORDER else completed_steps
+                progress = min(int((step_index + 1) / total_steps * 100), 99)
+                label = _STEP_LABELS.get(node_name, f"Processing {node_name}...")
+
+                investigation_jobs_collection.update_one(
+                    {"_id": job_id},
+                    {"$set": {
+                        "status": "running",
+                        "current_step": node_name,
+                        "progress": progress,
+                        "progress_label": label,
+                        "updated_at": datetime.utcnow(),
+                    }}
+                )
+
+        # Build final results
+        report = final_state.get("final_report", "Analysis completed but no report was generated.")
+        facts = final_state.get("facts", [])
+        entities = list(set(final_state.get("entities", [])))
+        timeline = final_state.get("timeline", [])
+        conflicts = final_state.get("conflicts", [])
+        risks = final_state.get("risks", [])
+        evidence_gaps = final_state.get("evidence_gaps", [])
+        hypotheses = final_state.get("hypotheses", [])
+        legal_issues = final_state.get("legal_issues", [])
+        avg_confidence = round(sum(f.get("confidence", 0) for f in facts) / len(facts), 2) if facts else 0.0
+        risk_level = "CRITICAL" if len(risks) >= 5 else "HIGH" if len(risks) >= 3 else "MEDIUM" if len(risks) >= 1 else "LOW"
+
+        structured_data = {
+            "entities": entities, "facts": facts, "timeline": timeline,
+            "conflicts": conflicts, "risks": risks, "evidence_gaps": evidence_gaps,
+            "hypotheses": hypotheses, "legal_issues": legal_issues,
+        }
+        metadata = {
+            "fact_count": len(facts), "entity_count": len(entities),
+            "conflict_count": len(conflicts), "risk_count": len(risks),
+            "timeline_count": len(timeline), "evidence_gap_count": len(evidence_gaps),
+            "document_count": len(doc_list), "revision_count": final_state.get("revision_count", 0),
+            "avg_confidence": avg_confidence, "overall_risk_level": risk_level,
+            "errors": final_state.get("errors", []),
+        }
+
+        # Save report to investigation_reports
+        report_doc = {
+            "case_id": case_id, "user_id": user_id,
+            "final_report": report, "focus_questions": focus_questions,
+            "structured_data": structured_data, "metadata": metadata,
+            "created_at": datetime.utcnow(),
+        }
+        insert_result = investigation_reports_collection.insert_one(report_doc)
+        report_id = str(insert_result.inserted_id)
+
+        # Mark job as completed
+        investigation_jobs_collection.update_one(
+            {"_id": job_id},
+            {"$set": {
+                "status": "completed",
+                "progress": 100,
+                "progress_label": "Investigation complete",
+                "report_id": report_id,
+                "final_report": report,
+                "structured_data": structured_data,
+                "stats": metadata,
+                "completed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        investigation_jobs_collection.update_one(
+            {"_id": job_id},
+            {"$set": {
+                "status": "error",
+                "error": str(e),
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+
+
+@app.post("/investigation/run-background")
+@limiter.limit("5/minute")
+async def run_investigation_background(
+    request: Request,
+    body: InvestigatorRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Start investigation as a background task. Returns a jobId immediately."""
+    if not create_graph:
+        raise HTTPException(status_code=500, detail="Investigator Engine not loaded properly.")
+
+    validate_case_id(body.caseId)
+    doc_list = _fetch_docs_for_case(body.caseId)
+
+    if not doc_list:
+        raise HTTPException(status_code=404, detail="No documents found for this case.")
+
+    # Create job record
+    import uuid
+    job_id = str(uuid.uuid4())
+    investigation_jobs_collection.insert_one({
+        "_id": job_id,
+        "case_id": body.caseId,
+        "user_id": current_user.get("user_id", "unknown"),
+        "status": "running",
+        "progress": 0,
+        "progress_label": "Starting investigation...",
+        "current_step": "",
+        "focus_questions": body.focusQuestions or [],
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    })
+
+    # Fire and forget — runs in the background
+    asyncio.create_task(
+        _run_investigation_background(
+            job_id, body.caseId, body.focusQuestions or [], current_user.get("user_id", "unknown"), doc_list
+        )
+    )
+
+    return {"jobId": job_id}
+
+
+@app.get("/investigation/status/{jobId}")
+@limiter.limit("60/minute")
+async def get_investigation_status(
+    request: Request,
+    jobId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Poll the status of a background investigation job."""
+    job = investigation_jobs_collection.find_one({"_id": jobId})
+    if not job:
+        raise HTTPException(status_code=404, detail="Investigation job not found.")
+
+    result = {
+        "jobId": job["_id"],
+        "status": job["status"],
+        "progress": job.get("progress", 0),
+        "progressLabel": job.get("progress_label", ""),
+        "currentStep": job.get("current_step", ""),
+    }
+
+    if job["status"] == "completed":
+        result["reportId"] = job.get("report_id")
+        result["finalReport"] = job.get("final_report")
+        result["structuredData"] = job.get("structured_data")
+        result["stats"] = job.get("stats")
+
+    if job["status"] == "error":
+        result["error"] = job.get("error", "Unknown error")
+
+    return result
+
+
+@app.get("/investigation/active-job/{caseId}")
+@limiter.limit("30/minute")
+async def get_active_investigation_job(
+    request: Request,
+    caseId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Check if there's a running investigation job for this case."""
+    validate_case_id(caseId)
+    job = investigation_jobs_collection.find_one(
+        {"case_id": caseId, "status": "running"},
+        sort=[("created_at", -1)]
+    )
+    if not job:
+        return {"hasActiveJob": False}
+
+    return {
+        "hasActiveJob": True,
+        "jobId": job["_id"],
+        "progress": job.get("progress", 0),
+        "progressLabel": job.get("progress_label", ""),
+        "currentStep": job.get("current_step", ""),
+    }
 
 
 # ---------- SECURITY NOTE ----------

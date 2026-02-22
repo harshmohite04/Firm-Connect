@@ -17,7 +17,8 @@
       "Bash(.venv/Scripts/python:*)",
       "Bash(python -m py_compile:*)",
       "Bash(git log:*)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(done)"
     ]
   }
 }

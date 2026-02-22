@@ -5,6 +5,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import caseService from '../../services/caseService';
 
 import TransliterateInput from '../../components/TransliterateInput';
+import LineNumberedEditor from '../../components/LineNumberedEditor';
 
 // Icons
 const SparklesIcon = () => (
@@ -611,15 +612,12 @@ const CaseDraft: React.FC = () => {
                     </div>
 
                     {documentContent ? (
-                        <>
-                            <TransliterateInput
-                                value={documentContent}
-                                onChangeText={setDocumentContent}
-                                className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
-                                placeholder={t('portal.drafting.docContentPlaceholder')}
-                                type="textarea"
-                            />
-                        </>
+                        <LineNumberedEditor
+                            value={documentContent}
+                            onChangeText={setDocumentContent}
+                            className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
+                            placeholder={t('portal.drafting.docContentPlaceholder')}
+                        />
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center text-slate-400 bg-slate-50">
                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm text-slate-300">

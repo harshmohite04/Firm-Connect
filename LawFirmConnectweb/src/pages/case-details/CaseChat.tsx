@@ -73,6 +73,10 @@ const CaseChat: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const creatingSessionRef = useRef(false); // Guard against double session creation
 
+    // File upload state
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [uploadingFiles, setUploadingFiles] = useState<{name: string, status: 'uploading' | 'processing' | 'ready' | 'failed'}[]>([]);
+
     // Selection & Sources State
     const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
     const [selectedContexts, setSelectedContexts] = useState<ContextItem[] | null>(null);
@@ -566,6 +570,87 @@ const CaseChat: React.FC = () => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
     };
 
+    // ---- File Upload ----
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0 || !caseData?._id) return;
+
+        // Reset input so re-selecting the same file works
+        const fileList = Array.from(files);
+        e.target.value = '';
+
+        // Process files sequentially to avoid backend race conditions
+        for (const file of fileList) {
+            const fileName = file.name;
+
+            // Check file size (50MB limit)
+            if (file.size > 50 * 1024 * 1024) {
+                const errorMsg: Message = {
+                    id: Date.now(),
+                    sender: 'System',
+                    content: `**${fileName}** exceeds the 50MB file size limit.`,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    isUser: false,
+                };
+                setMessages(prev => [...prev, errorMsg]);
+                continue;
+            }
+
+            // Add to uploading tracker
+            setUploadingFiles(prev => [...prev, { name: fileName, status: 'uploading' }]);
+
+            // Post uploading system message
+            const uploadMsgId = Date.now();
+            setMessages(prev => [...prev, {
+                id: uploadMsgId,
+                sender: 'System',
+                content: `Uploading **${fileName}**...`,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                isUser: false,
+            }]);
+
+            try {
+                await ragService.ingestDocument(caseData._id, file);
+
+                // Update status to processing
+                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'processing' } : f));
+                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** uploaded. Processing for AI analysis...` } : m));
+
+                // Poll for ready status
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statuses = await ragService.getDocumentStatuses(caseData._id);
+                        const docStatus = Array.isArray(statuses) ? statuses.find((d: any) => d.filename === fileName) : null;
+
+                        if (docStatus?.status === 'Ready') {
+                            clearInterval(pollInterval);
+                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'ready' } : f));
+                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** is ready! You can now ask questions about it.` } : m));
+                            // Clean up ready files from tracker after a delay
+                            setTimeout(() => {
+                                setUploadingFiles(prev => prev.filter(f => f.name !== fileName));
+                            }, 3000);
+                        } else if (docStatus?.status === 'Failed') {
+                            clearInterval(pollInterval);
+                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
+                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** failed to process. Try uploading again from the Documents tab.` } : m));
+                        }
+                    } catch {
+                        // Polling error — keep trying
+                    }
+                }, 3000);
+
+                // Safety: stop polling after 5 minutes
+                setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+
+            } catch (error: any) {
+                const errMsg = error?.response?.data?.detail || error?.response?.data?.error || 'Upload failed';
+                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
+                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `Failed to upload **${fileName}**: ${errMsg}` } : m));
+            }
+        }
+    };
+
     // Get unique sources from current contexts
     const uniqueSources = selectedContexts ? [...new Set(selectedContexts.map(c => c.source).filter(Boolean))] as string[] : [];
 
@@ -756,10 +841,41 @@ const CaseChat: React.FC = () => {
                     {/* Input */}
                     <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none">
                         <div className="pointer-events-auto max-w-4xl mx-auto">
+                            {/* Upload status indicator */}
+                            {uploadingFiles.filter(f => f.status !== 'ready').length > 0 && (
+                                <div className="mb-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm">
+                                    {uploadingFiles.filter(f => f.status !== 'ready').map(f => (
+                                        <div key={f.name} className="flex items-center gap-2 text-xs text-slate-500 py-0.5">
+                                            {(f.status === 'uploading' || f.status === 'processing') && (
+                                                <svg className="w-3.5 h-3.5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                            )}
+                                            {f.status === 'failed' && (
+                                                <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            )}
+                                            <span className="truncate">{f.name}</span>
+                                            <span className="text-slate-400">—</span>
+                                            <span className={f.status === 'failed' ? 'text-red-500' : 'text-blue-500'}>
+                                                {f.status === 'uploading' ? 'Uploading...' : f.status === 'processing' ? 'Processing...' : 'Failed'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <div className="flex items-end gap-2 bg-white/80 backdrop-blur-md p-2 rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-200/40 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400">
-                                <button className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center"
+                                >
                                     <PaperClipIcon />
                                 </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.tiff,.zip"
+                                    className="hidden"
+                                    onChange={handleFileUpload}
+                                />
                                 <TransliterateInput
                                     value={inputValue}
                                     onChangeText={setInputValue}

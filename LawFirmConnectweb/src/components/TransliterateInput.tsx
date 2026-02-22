@@ -20,6 +20,69 @@ const ITC_CODES: Record<string, string> = {
     mr: 'mr-t-i0-und',
 };
 
+/**
+ * Mirror-div technique to get caret pixel coordinates in an input/textarea.
+ * Returns { top, left } relative to the viewport.
+ */
+function getCaretPixelPos(element: HTMLInputElement | HTMLTextAreaElement): { top: number; left: number } {
+    const doc = element.ownerDocument;
+    const mirror = doc.createElement('div');
+    const computed = getComputedStyle(element);
+
+    // Copy styling that affects text measurement
+    const stylesToCopy = [
+        'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant',
+        'letterSpacing', 'wordSpacing', 'textIndent', 'textTransform',
+        'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+        'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+        'boxSizing', 'lineHeight',
+    ] as const;
+
+    mirror.style.position = 'absolute';
+    mirror.style.top = '-9999px';
+    mirror.style.left = '-9999px';
+    mirror.style.visibility = 'hidden';
+    mirror.style.width = `${element.offsetWidth}px`;
+
+    for (const prop of stylesToCopy) {
+        (mirror.style as any)[prop] = computed[prop];
+    }
+
+    const isInput = element.tagName === 'INPUT';
+    if (isInput) {
+        mirror.style.whiteSpace = 'nowrap';
+        mirror.style.overflow = 'hidden';
+    } else {
+        mirror.style.whiteSpace = computed.whiteSpace;
+        mirror.style.wordWrap = computed.wordWrap;
+        mirror.style.overflowWrap = computed.overflowWrap;
+    }
+
+    const caretPos = element.selectionEnd ?? element.value.length;
+    const textBefore = element.value.slice(0, caretPos);
+
+    // Use a text node for the content before caret (handles special chars safely)
+    mirror.appendChild(doc.createTextNode(textBefore));
+
+    // Insert a zero-width marker span at the caret position
+    const marker = doc.createElement('span');
+    marker.textContent = '\u200b'; // zero-width space
+    mirror.appendChild(marker);
+
+    doc.body.appendChild(mirror);
+
+    const markerRect = marker.getBoundingClientRect();
+    const elemRect = element.getBoundingClientRect();
+
+    // Compute viewport-relative position, accounting for scroll offset
+    const top = elemRect.top + (markerRect.top - mirror.getBoundingClientRect().top) - element.scrollTop;
+    const left = elemRect.left + (markerRect.left - mirror.getBoundingClientRect().left) - element.scrollLeft;
+
+    doc.body.removeChild(mirror);
+
+    return { top, left };
+}
+
 // Simple in-memory cache to avoid redundant API calls
 const suggestionCache: Record<string, string[]> = {};
 
@@ -198,13 +261,14 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
         setMatchStart(lastBreak + 1);
         setMatchEnd(caret);
 
-        // Position the dropdown below the input
+        // Position the dropdown below the text cursor (caret)
         if (inputRef.current) {
-            const rect = inputRef.current.getBoundingClientRect();
+            const caretPos = getCaretPixelPos(inputRef.current);
+            const lineHeight = parseFloat(getComputedStyle(inputRef.current).lineHeight) || 20;
             setDropdownPos({
-                top: rect.bottom + 2,
-                left: rect.left,
-                width: rect.width,
+                top: caretPos.top + lineHeight + 2,
+                left: caretPos.left,
+                width: 0,
             });
         }
 
@@ -305,7 +369,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                         style={{
                             position: 'fixed',
                             top: dropdownPos.top,
-                            left: dropdownPos.left,
+                            left: Math.min(dropdownPos.left, window.innerWidth - 290),
                             zIndex: 99999,
                             backgroundColor: '#fff',
                             border: '1px solid #e2e8f0',
@@ -318,7 +382,8 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                             display: 'flex',
                             flexWrap: 'wrap',
                             gap: '2px',
-                            maxWidth: Math.max(dropdownPos.width, 280),
+                            minWidth: 120,
+                            maxWidth: 360,
                         }}
                     >
                         {suggestions.map((s, i) => (
