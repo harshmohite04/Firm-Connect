@@ -33,7 +33,7 @@ const WhyChooseUs: React.FC = () => {
                     
                     {/* Image Side */}
                     <div className="relative order-2 lg:order-1">
-                        <div className="relative rounded-2xl overflow-hidden shadow-2xl h-[500px]">
+                        <div className="relative rounded-2xl overflow-hidden shadow-2xl h-[300px] sm:h-[400px] lg:h-[500px]">
                             <img 
                                 src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1974" 
                                 alt="Staircase in courthouse" 

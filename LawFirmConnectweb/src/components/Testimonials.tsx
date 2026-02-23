@@ -37,7 +37,7 @@ const Testimonials: React.FC = () => {
                 <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4">{t('testimonials.title')}</h2>
                 <p className="text-lg text-slate-600 mb-12">{t('testimonials.subtitle')}</p>
 
-                <div className="grid md:grid-cols-3 gap-8">
+                <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {testimonials.map((testimonial, index) => (
                         <div key={index} className="bg-white p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 text-left border border-slate-100">
                              <div className="flex gap-1 mb-4">

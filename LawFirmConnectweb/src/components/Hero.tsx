@@ -137,18 +137,35 @@ const Hero: React.FC = () => {
                             </div>
                             
                             {/* Browser Body (Sidebar + Content) */}
-                            <div className="flex flex-col md:flex-row h-[600px] md:h-[750px]">
-                                {/* Sidebar */}
-                                <div className="w-full md:w-64 bg-slate-50 border-r border-slate-200 flex flex-col shrink-0">
-                                    <div className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Features</div>
-                                    <div className="flex-1 overflow-y-auto">
+                            <div className="flex flex-col md:flex-row h-[400px] md:h-[750px]">
+                                {/* Sidebar - horizontal pills on mobile, vertical on desktop */}
+                                <div className="w-full md:w-64 bg-slate-50 md:border-r border-slate-200 flex flex-col shrink-0">
+                                    <div className="hidden md:block p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Features</div>
+                                    {/* Mobile: horizontal scrollable tabs */}
+                                    <div className="flex md:hidden overflow-x-auto gap-2 p-3 border-b border-slate-200">
+                                        {features.map((feature, index) => (
+                                            <button
+                                                key={feature.id}
+                                                onClick={() => setActiveFeature(index)}
+                                                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+                                                    activeFeature === index
+                                                    ? 'bg-blue-600 text-white shadow-sm'
+                                                    : 'bg-white text-slate-500 hover:bg-slate-100 border border-slate-200'
+                                                }`}
+                                            >
+                                                {feature.title}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {/* Desktop: vertical sidebar list */}
+                                    <div className="hidden md:block flex-1 overflow-y-auto">
                                         {features.map((feature, index) => (
                                             <button
                                                 key={feature.id}
                                                 onClick={() => setActiveFeature(index)}
                                                 className={`w-full text-left px-4 py-3 border-l-2 transition-all duration-200 ${
-                                                    activeFeature === index 
-                                                    ? 'bg-white border-blue-600 text-slate-900 shadow-sm' 
+                                                    activeFeature === index
+                                                    ? 'bg-white border-blue-600 text-slate-900 shadow-sm'
                                                     : 'border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700'
                                                 }`}
                                             >
@@ -159,8 +176,8 @@ const Hero: React.FC = () => {
                                             </button>
                                         ))}
                                     </div>
-                                    {/* Sidebar Footer */}
-                                    <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+                                    {/* Sidebar Footer - hidden on mobile */}
+                                    <div className="hidden md:block p-4 border-t border-slate-200 bg-slate-50/50">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-xs text-white font-bold shadow-sm shadow-blue-600/20">LC</div>
                                             <div className="text-xs text-slate-500">

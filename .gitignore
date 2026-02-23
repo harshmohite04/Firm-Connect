@@ -57,3 +57,5 @@ temp/
 .env.example
 
 .claude
+
+email_sender.js

@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
+    "dotenv": "^17.3.1",
     "file-saver": "^2.0.5",
     "html-docx-js-typescript": "^0.1.5",
     "i18next": "^25.8.8",

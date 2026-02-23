@@ -14,7 +14,7 @@ const Footer: React.FC = () => {
                          <div className="flex items-center gap-2 mb-1 text-white">
                              <div className="rounded">
                                  {/* <LogoIcon /> */}
-                                <img src={Logo} alt="" style={{width:"10rem",height:"10rem"}}/> 
+                                <img src={Logo} alt="" className="w-20 h-20 md:w-40 md:h-40"/>
                              </div>
                              <span className="font-bold text-lg">LawfirmAI</span>
                          </div>

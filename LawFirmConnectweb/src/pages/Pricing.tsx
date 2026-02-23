@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CheckCircle, Rocket, X } from 'lucide-react';
+import { CheckCircle, Rocket, X, Lock } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +20,9 @@ const Pricing: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showWelcome, setShowWelcome] = useState(false);
+    const [showAuthPopup, setShowAuthPopup] = useState(false);
+    const [authPopupVisible, setAuthPopupVisible] = useState(false);
+    const [authPopupRender, setAuthPopupRender] = useState(false);
 
     React.useEffect(() => {
         if (location.state?.needsSubscription) {
@@ -28,6 +31,28 @@ const Pricing: React.FC = () => {
             setError(location.state.error);
         }
     }, [location.state]);
+
+    // Auth popup animation (same pattern as ConfirmationModal)
+    useEffect(() => {
+        if (showAuthPopup) {
+            setAuthPopupRender(true);
+            setTimeout(() => setAuthPopupVisible(true), 10);
+        } else {
+            setAuthPopupVisible(false);
+            const timer = setTimeout(() => setAuthPopupRender(false), 300);
+            return () => clearTimeout(timer);
+        }
+    }, [showAuthPopup]);
+
+    // ESC key to dismiss auth popup
+    useEffect(() => {
+        if (!showAuthPopup) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setShowAuthPopup(false);
+        };
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [showAuthPopup]);
 
     // Hardcoded for now, should come from API/Env
     const plans = [
@@ -69,7 +94,8 @@ const Pricing: React.FC = () => {
             const token = user?.token;
 
             if (!token) {
-                navigate('/signin', { state: { from: { pathname: '/pricing' } } });
+                setShowAuthPopup(true);
+                setLoading(false);
                 return;
             }
 
@@ -270,6 +296,51 @@ const Pricing: React.FC = () => {
                     </p>
                 </div> */}
             </div>
+
+            {/* Auth popup for unauthenticated users */}
+            {authPopupRender && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        onClick={() => setShowAuthPopup(false)}
+                        className={`absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-all duration-300 ease-out cursor-pointer ${
+                            authPopupVisible ? 'opacity-100' : 'opacity-0'
+                        }`}
+                    />
+                    <div className={`relative bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 p-8 max-w-sm w-full text-center transition-all duration-300 ease-out ${
+                        authPopupVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+                    }`}>
+                        <div className={`mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md mb-5 transition-all duration-300 ${
+                            authPopupVisible ? 'scale-100 rotate-0' : 'scale-75 rotate-12'
+                        }`}>
+                            <Lock className="w-7 h-7 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-slate-900">Sign in to continue</h3>
+                        <p className="mt-2 text-sm text-slate-600">
+                            Create an account or sign in to subscribe to a plan.
+                        </p>
+                        <div className="mt-6 flex flex-col gap-3">
+                            <button
+                                onClick={() => navigate('/signup', { state: { from: '/pricing' } })}
+                                className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors"
+                            >
+                                Sign Up
+                            </button>
+                            <button
+                                onClick={() => navigate('/signin', { state: { from: { pathname: '/pricing' } } })}
+                                className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm transition-colors"
+                            >
+                                Sign In
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setShowAuthPopup(false)}
+                            className="mt-4 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+                        >
+                            Browse Plans
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <Footer />
         </div>
