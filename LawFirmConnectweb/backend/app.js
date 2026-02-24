@@ -88,6 +88,7 @@ app.use('/cases', caseRoutes);
 app.use('/schedule', scheduleRoutes);
 app.use('/messages', messageRoutes);
 app.use('/contact', contactRoutes);
+app.use('/contact-inquiry', require('./src/routes/contactInquiryRoutes'));
 app.use('/team', teamRoutes);
 app.use('/organization', require('./src/routes/organizationRoutes'));
 app.use('/payments', require('./src/routes/paymentRoutes'));

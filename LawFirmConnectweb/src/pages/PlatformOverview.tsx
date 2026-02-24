@@ -63,12 +63,6 @@ const GlobeIcon = () => (
     </svg>
 );
 
-const ShieldIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-);
-
 const CheckIcon = () => (
     <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -126,17 +120,6 @@ const PlatformOverview: React.FC = () => {
         'multilingualPractice',
     ];
 
-    const securityFeatures = [
-        'jwt',
-        'rateLimiting',
-        'inputSanitization',
-        'docOwnership',
-        'caseIsolation',
-        'passwordSecurity',
-        'fileValidation',
-        'encryption',
-    ];
-
     return (
         <div className="bg-white min-h-screen">
 
@@ -186,10 +169,10 @@ const PlatformOverview: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             {[
-                                { value: '25+', labelKey: 'statYears' },
-                                { value: '2,000+', labelKey: 'statCases' },
-                                { value: '15', labelKey: 'statAttorneys' },
                                 { value: '9', labelKey: 'statAgents' },
+                                { value: '3', labelKey: 'statLanguages' },
+                                { value: '5+', labelKey: 'statTemplates' },
+                                { value: '24/7', labelKey: 'statAvailability' },
                             ].map((stat, idx) => (
                                 <div key={idx} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm text-center">
                                     <div className="text-3xl font-extrabold text-blue-600 mb-1">{stat.value}</div>
@@ -362,58 +345,6 @@ const PlatformOverview: React.FC = () => {
                             <Link to="/pricing" className="block text-center bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg">
                                 {t('platformOverview.plans.selectPlan')}
                             </Link>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Technology & Security */}
-            <section className="py-20 bg-white">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid lg:grid-cols-2 gap-16">
-                        {/* Tech Stack */}
-                        <div>
-                            <div className="text-blue-600 font-bold uppercase tracking-widest text-sm mb-2">{t('platformOverview.techLabel')}</div>
-                            <h2 className="text-3xl font-bold text-slate-900 mb-8">{t('platformOverview.techTitle')}</h2>
-                            <div className="space-y-4">
-                                {[
-                                    { key: 'frontend', value: 'React 19 + TypeScript + Vite + Tailwind CSS' },
-                                    { key: 'backend', value: 'Node.js/Express + Python/FastAPI' },
-                                    { key: 'databases', value: 'MongoDB + Qdrant + Neo4j' },
-                                    { key: 'ai', value: 'DeepSeek LLM + BAAI/bge-m3 + Sarvam OCR' },
-                                    { key: 'realtime', value: 'Socket.io' },
-                                    { key: 'payments', value: 'Razorpay' },
-                                ].map((item) => (
-                                    <div key={item.key} className="flex items-start gap-3">
-                                        <div className="flex-shrink-0 w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
-                                        <div>
-                                            <span className="font-semibold text-slate-900">{t(`platformOverview.tech.${item.key}`)}: </span>
-                                            <span className="text-slate-500 text-sm">{item.value}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Security */}
-                        <div>
-                            <div className="flex items-center gap-3 mb-8">
-                                <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600">
-                                    <ShieldIcon />
-                                </div>
-                                <div>
-                                    <div className="text-emerald-600 font-bold uppercase tracking-widest text-sm">{t('platformOverview.securityLabel')}</div>
-                                    <h2 className="text-3xl font-bold text-slate-900">{t('platformOverview.securityTitle')}</h2>
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                {securityFeatures.map((sf) => (
-                                    <div key={sf} className="flex items-start gap-3 bg-slate-50 p-3 rounded-lg">
-                                        <CheckIcon />
-                                        <span className="text-slate-600 text-sm">{t(`platformOverview.security.${sf}`)}</span>
-                                    </div>
-                                ))}
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -16,7 +16,7 @@ const Footer: React.FC = () => {
                                  {/* <LogoIcon /> */}
                                 <img src={Logo} alt="" className="w-20 h-20 md:w-40 md:h-40"/>
                              </div>
-                             <span className="font-bold text-lg">LawfirmAI</span>
+                             <span className="font-bold text-lg">LawFirmAI</span>
                          </div>
                          <p className="text-slate-400 leading-relaxed max-w-xs mb-6">
                              {t('footer.tagline')}
@@ -32,11 +32,11 @@ const Footer: React.FC = () => {
                      <div>
                          <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.practiceAreas')}</h4>
                          <ul className="space-y-4">
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.corporateLaw')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.realEstate')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.familyLaw')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.criminalDefense')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.intellectualProperty')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.corporateLaw')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.realEstate')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.familyLaw')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.criminalDefense')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.intellectualProperty')}</a></li>
                          </ul>
                      </div>
 
@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
                          <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.company')}</h4>
                          <ul className="space-y-4">
                              <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.aboutUs')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.attorneys')}</a></li>
+                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.attorneys')}</a></li>
                              <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.careers')}</a></li>
                              <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.blog')}</a></li>
                              <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.contact')}</a></li>

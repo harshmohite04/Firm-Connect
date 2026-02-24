@@ -29,11 +29,10 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { to: '/', label: t('nav.home') },
-    { to: '/practice-areas', label: t('nav.practiceAreas') },
-    { to: '/pricing', label: t('nav.pricing') },
-    { to: '/contact', label: t('nav.contact') },
     { to: '/platform', label: t('nav.platform') },
+    { to: '/pricing', label: t('nav.pricing') },
     { to: '/about-us', label: t('nav.aboutUs') },
+    { to: '/contact', label: t('nav.contact') },
   ];
 
   return (
@@ -46,7 +45,7 @@ const Navbar: React.FC = () => {
             <div className="rounded-lg">
                <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
             </div>
-            <span className="font-bold text-xl tracking-tight text-slate-900">LawfirmAI</span>
+            <span className="font-bold text-xl tracking-tight text-slate-900">LawFirmAI</span>
           </Link>
 
           {/* Desktop Menu */}

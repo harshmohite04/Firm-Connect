@@ -2,15 +2,15 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Icons
-const ScaleIcon = () => (
+const GlobeIcon = () => (
     <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 )
 
-const TrophyIcon = () => (
+const CpuChipIcon = () => (
     <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
     </svg>
 )
 
@@ -69,8 +69,8 @@ const AboutUs: React.FC = () => {
                      {/* Values Cards */}
                      <div className="grid md:grid-cols-3 gap-8 mt-16">
                          {[
-                             { titleKey: 'integrity', icon: <ScaleIcon />, descKey: 'integrityDesc' },
-                             { titleKey: 'excellence', icon: <TrophyIcon />, descKey: 'excellenceDesc' },
+                             { titleKey: 'integrity', icon: <GlobeIcon />, descKey: 'integrityDesc' },
+                             { titleKey: 'excellence', icon: <CpuChipIcon />, descKey: 'excellenceDesc' },
                              { titleKey: 'clientCentric', icon: <HeartIcon />, descKey: 'clientCentricDesc' },
                          ].map((value, idx) => (
                              <div key={idx} className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
@@ -92,19 +92,19 @@ const AboutUs: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-blue-500/50">
                         <div>
-                            <div className="text-4xl md:text-5xl font-extrabold mb-2">25+</div>
+                            <div className="text-4xl md:text-5xl font-extrabold mb-2">9</div>
                             <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.yearsExperience')}</div>
                         </div>
                         <div>
-                             <div className="text-4xl md:text-5xl font-extrabold mb-2">$50M+</div>
+                             <div className="text-4xl md:text-5xl font-extrabold mb-2">3</div>
                              <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.recovered')}</div>
                         </div>
                         <div>
-                             <div className="text-4xl md:text-5xl font-extrabold mb-2">2k+</div>
+                             <div className="text-4xl md:text-5xl font-extrabold mb-2">5+</div>
                              <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.casesWon')}</div>
                         </div>
                          <div>
-                             <div className="text-4xl md:text-5xl font-extrabold mb-2">15</div>
+                             <div className="text-4xl md:text-5xl font-extrabold mb-2">24/7</div>
                              <div className="text-blue-200 text-sm font-medium uppercase tracking-wider">{t('aboutUs.expertAttorneys')}</div>
                         </div>
                     </div>
@@ -126,7 +126,7 @@ const AboutUs: React.FC = () => {
                                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-blue-100 rounded-full border-4 border-white flex items-center justify-center">
                                               <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
-                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">1998</div>
+                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2024</div>
                                          <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year1998Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
                                              {t('aboutUs.year1998Desc')}
@@ -138,7 +138,7 @@ const AboutUs: React.FC = () => {
                                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-blue-100 rounded-full border-4 border-white flex items-center justify-center">
                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
-                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2010</div>
+                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2025</div>
                                          <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year2010Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
                                              {t('aboutUs.year2010Desc')}
@@ -150,7 +150,7 @@ const AboutUs: React.FC = () => {
                                          <div className="absolute -left-[41px] top-0 w-5 h-5 bg-blue-100 rounded-full border-4 border-white flex items-center justify-center">
                                                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                                          </div>
-                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2023</div>
+                                         <div className="text-blue-600 font-bold text-sm mb-1 uppercase tracking-wider">2026</div>
                                          <h3 className="text-xl font-bold text-slate-900 mb-2">{t('aboutUs.year2023Title')}</h3>
                                          <p className="text-slate-600 text-sm leading-relaxed">
                                              {t('aboutUs.year2023Desc')}
@@ -164,9 +164,9 @@ const AboutUs: React.FC = () => {
                         {/* Image */}
                          <div className="order-1 lg:order-2">
                             <div className="rounded-2xl overflow-hidden shadow-2xl h-[400px] lg:h-[500px]">
-                                <img 
-                                    src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070" 
-                                    alt="Historic Courthouse" 
+                                <img
+                                    src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070"
+                                    alt="Technology workspace"
                                     className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"
                                 />
                             </div>
@@ -185,7 +185,7 @@ const AboutUs: React.FC = () => {
 
                     <div className="grid md:grid-cols-1 max-w-sm mx-auto gap-8">
                          {[
-                             { name: t('aboutUs.founderName'), role: t('aboutUs.founderRole'), img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=2000' },
+                             { name: t('aboutUs.founderName'), role: t('aboutUs.founderRole'), img: '/assets/harsh mohite img.png' },
                          ].map((member, idx) => (
                              <div key={idx} className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all text-left group">
                                  <div className="h-64 overflow-hidden">

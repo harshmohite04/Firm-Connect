@@ -63,11 +63,11 @@ const App: React.FC = () => {
        <main className="flex-grow">
         <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/practice-areas" element={<PracticeAreas />} />
+            <Route path="/practice-areas" element={<Navigate to="/platform" replace />} />
             <Route path="/about-us" element={<AboutUs />} />
             <Route path="/platform" element={<PlatformOverview />} />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/practice-areas/:id" element={<PracticeAreaDetail />} />
+            <Route path="/practice-areas/:id" element={<Navigate to="/platform" replace />} />
             <Route path="/signin" element={<AuthPage initialMode="signin" />} />
             <Route path="/signup" element={<AuthPage initialMode="signup" />} />
             <Route path="/pricing" element={<Pricing />} />

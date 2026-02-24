@@ -92,16 +92,16 @@ const Hero: React.FC = () => {
                         </p>
                         
                         <div className="flex flex-col sm:flex-row gap-4 mb-10 justify-center">
-                            <Link 
-                                to="/contact" 
-                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'Get Legal Help' })}
+                            <Link
+                                to="/pricing"
+                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'Start Free Trial' })}
                                 className="px-7 py-3.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 text-center inline-block"
                             >
                                 {t('hero.cta')}
                             </Link>
-                            <Link 
-                                to="/practice-areas" 
-                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'Learn More' })}
+                            <Link
+                                to="/platform"
+                                onClick={() => trackEvent({ category: 'Hero', action: 'Click', label: 'See How It Works' })}
                                 className="px-7 py-3.5 bg-white text-slate-700 border border-slate-200 font-semibold rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-all text-center inline-block"
                             >
                                 {t('hero.learnMore')}
@@ -132,7 +132,7 @@ const Hero: React.FC = () => {
                                 {/* Address Bar Simulation */}
                                 <div className="ml-4 flex-1 bg-white border border-slate-200 rounded-md h-7 w-full max-w-sm mx-auto hidden sm:block flex items-center px-3 text-xs text-slate-500 font-mono shadow-sm">
                                     <span className="text-slate-300 mr-2">🔒</span>
-                                    lawfirmconnect.com/features/{features[activeFeature].title.toLowerCase().replace(' ', '-')}
+                                    lawfirmai.in/features/{features[activeFeature].title.toLowerCase().replace(' ', '-')}
                                 </div>
                             </div>
                             
@@ -181,8 +181,8 @@ const Hero: React.FC = () => {
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-xs text-white font-bold shadow-sm shadow-blue-600/20">LC</div>
                                             <div className="text-xs text-slate-500">
-                                                <div className="text-slate-900 font-bold">Law Connect</div>
-                                                <div>Enterprise Ready</div>
+                                                <div className="text-slate-900 font-bold">LawFirmAI</div>
+                                                <div>Built for Indian Law Firms</div>
                                             </div>
                                         </div>
                                     </div>

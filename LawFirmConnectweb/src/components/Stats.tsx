@@ -5,9 +5,9 @@ const Stats: React.FC = () => {
   const { t } = useTranslation();
 
   const stats = [
-    { value: '10x', label: t('stats.experience') },
-    { value: '90%', label: t('stats.casesWon') },
-    { value: 'Instant', label: t('stats.attorneys') },
+    { value: '9', label: t('stats.experience') },
+    { value: '3', label: t('stats.casesWon') },
+    { value: '5+', label: t('stats.attorneys') },
     { value: '24/7', label: t('stats.support') },
   ];
 

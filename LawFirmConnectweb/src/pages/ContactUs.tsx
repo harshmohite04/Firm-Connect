@@ -65,13 +65,24 @@ const ContactUs: React.FC = () => {
         e.preventDefault();
         setLoading(true);
         setStatus('idle');
-        
-        // Mock Form Submission
-        setTimeout(() => {
+
+        try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${apiUrl}/contact-inquiry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData),
+            });
+
+            if (!res.ok) throw new Error('Request failed');
+
             setStatus('success');
             setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+        } catch {
+            setStatus('error');
+        } finally {
             setLoading(false);
-        }, 1500);
+        }
     };
 
     const faqs = [
@@ -231,9 +242,9 @@ const ContactUs: React.FC = () => {
                                             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-slate-600"
                                         >
                                              <option value="">{t('contactUs.selectSubject')}</option>
-                                             <option value="Corporate Law">{t('contactUs.corporateLaw')}</option>
-                                             <option value="Family Law">{t('contactUs.familyLaw')}</option>
-                                             <option value="Criminal Defense">{t('contactUs.criminalDefense')}</option>
+                                             <option value="Product Inquiry">{t('contactUs.corporateLaw')}</option>
+                                             <option value="Technical Support">{t('contactUs.familyLaw')}</option>
+                                             <option value="Partnership">{t('contactUs.criminalDefense')}</option>
                                              <option value="Other">{t('contactUs.other')}</option>
                                          </select>
                                      </div>

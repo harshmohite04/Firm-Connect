@@ -324,7 +324,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div> */}
                     <img src={Logo} alt="" style={{width:"5rem" , height:"5rem"}}/>
                     <div>
-                        <h1 className="font-bold text-slate-900 leading-none">LawfirmAI</h1>
+                        <h1 className="font-bold text-slate-900 leading-none">LawFirmAI</h1>
                         <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
                     </div>
                 </div>

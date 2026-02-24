@@ -2,29 +2,29 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Icons
-const BriefcaseIcon = () => (
+const GridDashboardIcon = () => (
   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
   </svg>
 );
 
-const UserGroupIcon = () => (
+const ChatBubbleIcon = () => (
   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
   </svg>
 );
 
-const ShieldExclamationIcon = () => (
-   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20.618 5.984A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016zM12 9v2m0 4h.01" />
+const MagnifyingGlassIcon = () => (
+  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
   </svg>
-)
+);
 
-const DocumentTextIcon = () => (
-    <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-)
+const PencilEditIcon = () => (
+  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
 
 const Services: React.FC = () => {
     const { t } = useTranslation();
@@ -33,22 +33,22 @@ const Services: React.FC = () => {
         {
             title: t('services.corporateLaw'),
             description: t('services.corporateLawDesc'),
-            icon: <BriefcaseIcon />,
+            icon: <GridDashboardIcon />,
         },
         {
             title: t('services.familyLaw'),
             description: t('services.familyLawDesc'),
-            icon: <UserGroupIcon />,
+            icon: <ChatBubbleIcon />,
         },
         {
             title: t('services.criminalDefense'),
             description: t('services.criminalDefenseDesc'),
-            icon: <ShieldExclamationIcon />,
+            icon: <MagnifyingGlassIcon />,
         },
         {
             title: t('services.estatePlanning'),
             description: t('services.estatePlanningDesc'),
-            icon: <DocumentTextIcon />,
+            icon: <PencilEditIcon />,
         },
     ];
 
@@ -61,7 +61,7 @@ const Services: React.FC = () => {
                         <p className="text-lg text-slate-600 max-w-2xl">
                             {t('services.subtitle')}
                         </p>
-                        <a href="#" className="hidden md:flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                        <a href="/platform" className="hidden md:flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
                             {t('services.viewAll')} <span className="ml-1">+</span>
                         </a>
                      </div>
@@ -84,7 +84,7 @@ const Services: React.FC = () => {
                 </div>
 
                 <div className="mt-8 md:hidden text-center">
-                    <a href="#" className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
+                    <a href="/platform" className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors">
                          {t('services.viewAll')} <span className="ml-1">+</span>
                     </a>
                 </div>

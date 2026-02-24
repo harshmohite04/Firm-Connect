@@ -15,19 +15,22 @@ const Testimonials: React.FC = () => {
             text: t('testimonials.testimonial1'),
             author: t('testimonials.testimonial1Author'),
             role: t('testimonials.testimonial1Role'),
-            image: "https://randomuser.me/api/portraits/men/32.jpg"
+            initials: "RS",
+            bgColor: "bg-blue-600",
         },
         {
             text: t('testimonials.testimonial2'),
             author: t('testimonials.testimonial2Author'),
             role: t('testimonials.testimonial2Role'),
-            image: "https://randomuser.me/api/portraits/women/44.jpg"
+            initials: "PD",
+            bgColor: "bg-indigo-600",
         },
         {
             text: t('testimonials.testimonial3'),
             author: t('testimonials.testimonial3Author'),
             role: t('testimonials.testimonial3Role'),
-            image: "https://randomuser.me/api/portraits/men/86.jpg"
+            initials: "VP",
+            bgColor: "bg-emerald-600",
         },
     ];
 
@@ -49,11 +52,9 @@ const Testimonials: React.FC = () => {
                                  "{testimonial.text}"
                              </p>
                              <div className="flex items-center gap-4">
-                                 <img 
-                                    src={testimonial.image} 
-                                    alt={testimonial.author} 
-                                    className="w-12 h-12 rounded-full object-cover border-2 border-slate-200"
-                                 />
+                                 <div className={`w-12 h-12 rounded-full ${testimonial.bgColor} flex items-center justify-center text-white font-bold text-sm`}>
+                                    {testimonial.initials}
+                                 </div>
                                  <div>
                                      <div className="font-bold text-slate-900">{testimonial.author}</div>
                                      <div className="text-sm text-slate-500">{testimonial.role}</div>

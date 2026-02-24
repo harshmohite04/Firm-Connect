@@ -2,23 +2,21 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Icons
-const ShieldCheckIcon = () => (
+const GlobeIcon = () => (
     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 )
 
-
-const TrophyRealIcon = () => (
-     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+const CpuChipIcon = () => (
+    <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
     </svg>
 )
 
-
-const HeartIcon = () => (
+const LockIcon = () => (
     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
     </svg>
 )
 
@@ -30,16 +28,16 @@ const WhyChooseUs: React.FC = () => {
         <section className="py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-                    
+
                     {/* Image Side */}
                     <div className="relative order-2 lg:order-1">
                         <div className="relative rounded-2xl overflow-hidden shadow-2xl h-[300px] sm:h-[400px] lg:h-[500px]">
-                            <img 
-                                src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=1974" 
-                                alt="Staircase in courthouse" 
+                            <img
+                                src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1974"
+                                alt="Analytics dashboard on laptop"
                                 className="object-cover w-full h-full"
                             />
-                            
+
                             {/* Quote Overlay */}
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-8 pt-24 text-white">
                                 <blockquote className="font-serif text-xl sm:text-2xl italic leading-relaxed mb-4">
@@ -62,11 +60,11 @@ const WhyChooseUs: React.FC = () => {
                         </p>
 
                         <div className="space-y-8">
-                            
+
                             {/* Feature 1 */}
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mt-1">
-                                    <ShieldCheckIcon />
+                                    <GlobeIcon />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.integrity')}</h3>
@@ -79,7 +77,7 @@ const WhyChooseUs: React.FC = () => {
                             {/* Feature 2 */}
                             <div className="flex gap-4">
                                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mt-1">
-                                    <TrophyRealIcon />
+                                    <CpuChipIcon />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.trackRecord')}</h3>
@@ -92,7 +90,7 @@ const WhyChooseUs: React.FC = () => {
                              {/* Feature 3 */}
                              <div className="flex gap-4">
                                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center mt-1">
-                                    <HeartIcon />
+                                    <LockIcon />
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-slate-900 mb-2">{t('whyChooseUs.clientCentric')}</h3>

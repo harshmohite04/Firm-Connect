@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 const CTA: React.FC = () => {
@@ -14,12 +15,12 @@ const CTA: React.FC = () => {
                     {t('cta.subtitle')}
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <button className="px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                    <Link to="/pricing" className="px-8 py-4 bg-white text-blue-600 font-bold rounded-lg hover:bg-blue-50 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                         {t('cta.bookConsultation')}
-                    </button>
-                    <button className="px-8 py-4 bg-transparent border-2 border-blue-400 text-white font-bold rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-colors">
+                    </Link>
+                    <Link to="/contact" className="px-8 py-4 bg-transparent border-2 border-blue-400 text-white font-bold rounded-lg hover:bg-blue-700 hover:border-blue-700 transition-colors">
                         {t('cta.callUs')}
-                    </button>
+                    </Link>
                 </div>
             </div>
         </section>
