@@ -12,8 +12,6 @@ import PortalCalendar from './pages/PortalCalendar';
 import PortalCaseDetails from './pages/PortalCaseDetails';
 import PortalCases from './pages/PortalCases';
 import PortalMessages from './pages/PortalMessages';
-import PracticeAreas from './pages/PracticeAreas';
-import PracticeAreaDetail from './pages/PracticeAreaDetail';
 import AuthPage from './pages/AuthPage';
 import StartCase from './pages/StartCase';
 import UserPortal from './pages/UserPortal';
