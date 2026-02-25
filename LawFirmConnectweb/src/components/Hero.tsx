@@ -14,34 +14,10 @@ const CheckIcon = () => (
 const Hero: React.FC = () => {
     const { t } = useTranslation();
     const videoRef = React.useRef<HTMLVideoElement>(null);
-    const [activeFeature, setActiveFeature] = React.useState(0);
-
-    const features = [
-        {
-            id: 0,
-            title: t('hero.features.caseManagement', 'Case Management'), // Fallback if translation missing
-            description: t('hero.features.caseManagementDesc', 'Organize every detail.'),
-            video: '/assets/hero-video.mp4' 
-        },
-        {
-            id: 1,
-            title: t('hero.features.aiDrafting', 'AI Drafting'),
-            description: t('hero.features.aiDraftingDesc', 'Draft documents in seconds.'),
-            video: '/assets/hero-video.mp4' // Placeholder: User needs to add different videos
-        },
-        {
-            id: 2,
-            title: t('hero.features.clientPortal', 'Client Portal'),
-            description: t('hero.features.clientPortalDesc', 'Secure client communication.'),
-            video: '/assets/hero-video.mp4' // Placeholder
-        }
-    ];
-
     React.useEffect(() => {
         const videoElement = videoRef.current;
         if (!videoElement) return;
 
-        // Reset video when feature changes
         videoElement.load();
 
         const observer = new IntersectionObserver(
@@ -57,7 +33,7 @@ const Hero: React.FC = () => {
                 });
             },
             {
-                threshold: 0.7, 
+                threshold: 0.7,
             }
         );
 
@@ -68,7 +44,7 @@ const Hero: React.FC = () => {
                 observer.unobserve(videoElement);
             }
         };
-    }, [activeFeature]); // Re-run when feature changes
+    }, []);
 
     return (
         <section className="relative bg-white pt-10 pb-20 lg:pt-16 lg:pb-28 overflow-hidden">
