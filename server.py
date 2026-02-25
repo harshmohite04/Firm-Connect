@@ -25,7 +25,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
-from rag.rag import ask
+from rag.rag import ask, ask_stream
 from ingestion.injector import ingest_document, delete_document
 from investigation.generator import DocumentGenerator
 
@@ -478,6 +478,112 @@ async def chat(
         raise HTTPException(
             status_code=500,
             detail="Failed to process chat request"
+        )
+
+
+@app.post("/chat/stream")
+@limiter.limit("30/minute")
+async def chat_stream(
+    request: Request,
+    body: ChatRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """SSE streaming endpoint for chat — tokens arrive in real-time."""
+    try:
+        validate_case_id(body.caseId)
+        if body.sessionId:
+            validate_session_id(body.sessionId)
+        validate_string_length(body.message, "Message", min_length=1, max_length=5000)
+
+        session_doc = None
+        user_id = get_user_id(current_user)
+
+        if body.sessionId:
+            session_doc = chat_collection.find_one({"session_id": body.sessionId})
+            if session_doc and session_doc.get("user_id") != user_id:
+                log_security_event("UNAUTHORIZED_CHAT_ACCESS", {
+                    "user_id": user_id,
+                    "session_id": body.sessionId
+                })
+                raise HTTPException(status_code=403, detail="Access denied")
+        else:
+            session_doc = chat_collection.find_one({
+                "case_id": body.caseId,
+                "session_id": {"$exists": False}
+            })
+
+        history = session_doc["messages"] if session_doc else []
+        recent_history = history[-10:]
+
+        async def event_generator():
+            full_answer = ""
+            contexts_list = []
+
+            try:
+                for event_str in await asyncio.to_thread(
+                    lambda: list(ask_stream(
+                        query=body.message,
+                        case_id=body.caseId,
+                        history=recent_history,
+                        top_k=body.top_k
+                    ))
+                ):
+                    # Parse event to capture answer/contexts for DB save
+                    try:
+                        data_line = event_str.replace("data: ", "").strip()
+                        if data_line:
+                            parsed = json_module.loads(data_line)
+                            if parsed.get("type") == "done":
+                                full_answer = parsed.get("answer", "")
+                            elif parsed.get("type") == "contexts":
+                                contexts_list = parsed.get("contexts", [])
+                    except Exception:
+                        pass
+
+                    yield event_str
+
+                # Save to MongoDB after streaming completes
+                new_user_msg = {"role": "user", "content": body.message}
+                new_ai_msg = {
+                    "role": "assistant",
+                    "content": full_answer,
+                    "contexts": contexts_list
+                }
+
+                if body.sessionId:
+                    chat_collection.update_one(
+                        {"session_id": body.sessionId},
+                        {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                        upsert=False
+                    )
+                else:
+                    chat_collection.update_one(
+                        {"case_id": body.caseId, "session_id": {"$exists": False}},
+                        {"$push": {"messages": {"$each": [new_user_msg, new_ai_msg]}}},
+                        upsert=True
+                    )
+
+            except Exception as e:
+                logger.error(f"Chat stream error: {e}", exc_info=True)
+                yield f"data: {json_module.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Chat stream setup error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to process streaming chat request"
         )
 
 

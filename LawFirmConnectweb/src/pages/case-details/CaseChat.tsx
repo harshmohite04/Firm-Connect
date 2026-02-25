@@ -73,6 +73,9 @@ const CaseChat: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const creatingSessionRef = useRef(false); // Guard against double session creation
 
+    // Streaming abort controller
+    const streamControllerRef = useRef<AbortController | null>(null);
+
     // File upload state
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFiles, setUploadingFiles] = useState<{name: string, status: 'uploading' | 'processing' | 'ready' | 'failed'}[]>([]);
@@ -538,32 +541,62 @@ const CaseChat: React.FC = () => {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isUser: true
         };
-        setMessages(prev => [...prev, newUserMsg]);
+
+        const botMsgId = Date.now() + 1;
+        const botMsg: Message = {
+            id: botMsgId,
+            sender: 'AI Assistant',
+            avatar: 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff',
+            content: '',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isUser: false,
+        };
+
+        setMessages(prev => [...prev, newUserMsg, botMsg]);
         setInputValue('');
         setIsLoading(true);
-        try {
-            const responseData = await ragService.chat(caseData._id, newUserMsg.content, 5, currentSessionId);
-            const botMsg: Message = {
-                id: Date.now() + 1,
-                sender: 'AI Assistant',
-                avatar: 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff',
-                content: responseData.answer,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: false,
-                contexts: responseData.contexts
-            };
-            setMessages(prev => [...prev, botMsg]);
-        } catch (error) {
-            console.error("Error sending message:", error);
-            setMessages(prev => [...prev, {
-                id: Date.now() + 1, sender: 'System',
-                content: "Sorry, I encountered an error processing your request.",
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: false
-            }]);
-        } finally {
-            setIsLoading(false);
+
+        // Abort any existing stream
+        if (streamControllerRef.current) {
+            streamControllerRef.current.abort();
         }
+
+        const controller = ragService.chatStream(
+            caseData._id,
+            newUserMsg.content,
+            5,
+            currentSessionId,
+            // onToken
+            (token: string) => {
+                setMessages(prev => prev.map(m =>
+                    m.id === botMsgId ? { ...m, content: m.content + token } : m
+                ));
+            },
+            // onContexts
+            (contexts) => {
+                setMessages(prev => prev.map(m =>
+                    m.id === botMsgId ? { ...m, contexts } : m
+                ));
+            },
+            // onDone
+            (_fullAnswer: string) => {
+                setIsLoading(false);
+                streamControllerRef.current = null;
+            },
+            // onError
+            (error: string) => {
+                console.error("Stream error:", error);
+                setMessages(prev => prev.map(m =>
+                    m.id === botMsgId
+                        ? { ...m, content: m.content || "Sorry, I encountered an error processing your request." }
+                        : m
+                ));
+                setIsLoading(false);
+                streamControllerRef.current = null;
+            }
+        );
+
+        streamControllerRef.current = controller;
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {

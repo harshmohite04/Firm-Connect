@@ -369,27 +369,6 @@ const UserPortal: React.FC = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="text-right hidden sm:block">
-                                            <div className="w-16 h-16">
-                                                <svg viewBox="0 0 36 36" className="w-full h-full">
-                                                    <path
-                                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                        fill="none"
-                                                        stroke="#e2e8f0"
-                                                        strokeWidth="3"
-                                                    />
-                                                    <path
-                                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                                        fill="none"
-                                                        stroke="#6366f1"
-                                                        strokeWidth="3"
-                                                        strokeDasharray="50, 100"
-                                                        strokeLinecap="round"
-                                                    />
-                                                    <text x="18" y="20.5" textAnchor="middle" className="text-xs font-bold fill-slate-700">50%</text>
-                                                </svg>
-                                            </div>
-                                        </div>
                                     </div>
                                 </Link>
                             ))}

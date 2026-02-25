@@ -287,9 +287,9 @@ const FirmConnect: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm text-slate-600">
                                             <span className="font-semibold text-slate-800">
-                                                ₹{org.plan === 'STARTER' ? 299 : 499}/seat/month
+                                                ₹{org.plan === 'STARTER' ? 4999 : 4999}/seat/month
                                             </span>
-                                            {' · '}Total: <span className="font-bold text-indigo-700">₹{(org.plan === 'STARTER' ? 299 : 499) * seatCount}/month</span>
+                                            {' · '}Total: <span className="font-bold text-indigo-700">₹{(org.plan === 'STARTER' ? 4999 : 4999) * seatCount}/month</span>
                                             {userEmail.endsWith('@harsh.com') && <span className="ml-2 text-xs text-amber-600 font-medium">(Bypass — no charge)</span>}
                                         </p>
                                         <div className="flex items-center gap-2">

@@ -184,6 +184,85 @@ const ragService = {
   },
 
   /**
+   * Streaming chat using SSE. Tokens arrive in real-time.
+   * Returns an AbortController so the caller can cancel mid-stream.
+   */
+  chatStream: (
+    caseId: string,
+    message: string,
+    top_k: number = 5,
+    sessionId: string | undefined,
+    onToken: (token: string) => void,
+    onContexts: (contexts: Array<{ content: string; source?: string; metadata?: any; score?: number }>) => void,
+    onDone: (fullAnswer: string) => void,
+    onError: (error: string) => void,
+  ): AbortController => {
+    const controller = new AbortController();
+    const headers = getAuthHeaders();
+
+    fetch(`${RAG_API_URL}/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(headers || {}),
+      } as HeadersInit,
+      body: JSON.stringify({ message, caseId, top_k, sessionId }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          onError(errData.detail || `HTTP ${response.status}`);
+          return;
+        }
+
+        const reader = response.body?.getReader();
+        if (!reader) {
+          onError("No response body");
+          return;
+        }
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const dataLine = line.replace(/^data: /, "").trim();
+            if (!dataLine) continue;
+            try {
+              const event = JSON.parse(dataLine);
+              if (event.type === "token") {
+                onToken(event.content);
+              } else if (event.type === "contexts") {
+                onContexts(event.contexts);
+              } else if (event.type === "done") {
+                onDone(event.answer);
+              } else if (event.type === "error") {
+                onError(event.detail || "Unknown streaming error");
+              }
+            } catch {
+              // skip malformed SSE data
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          onError(err.message || "Stream connection failed");
+        }
+      });
+
+    return controller;
+  },
+
+  /**
    * Re-rank contexts against selected text using backend cosine similarity.
    */
   checkSources: async (

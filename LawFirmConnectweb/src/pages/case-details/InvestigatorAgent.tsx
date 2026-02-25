@@ -676,7 +676,32 @@ const InvestigatorAgent: React.FC = () => {
         setShowAllFacts(false);
     };
 
-    const handlePrint = () => { window.print(); };
+    const handlePrint = () => {
+        const contentEl = document.getElementById('investigator-print-content');
+        if (!contentEl) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html><head><title>Investigation Report</title>
+            <style>
+                body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; line-height: 1.7; color: #1a1a1a; font-size: 14px; }
+                h1 { font-size: 1.5em; font-weight: 800; margin-bottom: 8px; }
+                h2 { font-size: 1.2em; font-weight: 700; margin-top: 1.5em; padding: 8px 12px; border-left: 4px solid #7c3aed; background: #f5f3ff; }
+                h3 { font-size: 1.05em; font-weight: 600; margin-top: 1.2em; }
+                p { margin: 0.6em 0; text-align: justify; }
+                ul, ol { padding-left: 24px; margin: 8px 0; }
+                li { margin: 4px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
+                th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+                th { background: #f8fafc; font-weight: 600; }
+                blockquote { border-left: 3px solid #cbd5e1; padding-left: 16px; margin: 12px 0; color: #475569; font-style: italic; }
+                @media print { body { margin: 0; } }
+            </style></head><body>${contentEl.innerHTML}</body></html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    };
 
     const fmtDate = (d: string) => {
         try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
@@ -866,7 +891,7 @@ const InvestigatorAgent: React.FC = () => {
             </div>
 
             {/* ===== CONTENT ===== */}
-            <div className="flex-1 overflow-y-auto" style={{ background: viewMode === 'intel' && (report || loading || (!loading && !report)) ? '#0a0f1e' : '#f8fafc' }}>
+            <div id="investigator-print-content" className="flex-1 overflow-y-auto" style={{ background: viewMode === 'intel' && (report || loading || (!loading && !report)) ? '#0a0f1e' : '#f8fafc' }}>
                 {/* Error Banner */}
                 {error && (
                     <div className="mx-6 mt-4 rounded-lg px-4 py-3 flex items-start gap-3"
@@ -889,12 +914,6 @@ const InvestigatorAgent: React.FC = () => {
                                 <div className="flex items-center justify-between mb-4">
                                     <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Investigation Pipeline</h3>
                                     <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-full" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>{progressPercent}%</span>
-                                </div>
-
-                                {/* Progress Bar */}
-                                <div className="w-full rounded-full h-2 mb-6 overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                                    <div className="h-2 rounded-full transition-all duration-700 ease-out"
-                                        style={{ width: `${progressPercent}%`, background: 'linear-gradient(to right, #22d3ee, #4ade80)' }} />
                                 </div>
 
                                 {/* Step Grid (constellation style) */}

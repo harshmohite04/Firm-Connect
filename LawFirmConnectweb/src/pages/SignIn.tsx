@@ -63,24 +63,24 @@ const SignIn: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-14">
+        <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-8 lg:p-14">
             <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden grid lg:grid-cols-2 min-h-[600px]">
             
                 {/* Left Side: Form */}
-                 <div className="flex flex-col p-8 sm:p-12 lg:p-16 overflow-y-auto">
+                 <div className="flex flex-col p-5 sm:p-8 lg:p-16 overflow-y-auto">
                     {/* Branding */}
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                             <div className="rounded-lg">
                                {/* <LogoIcon /> */}
-                               <img src={Logo} alt="" style={{ width: '6rem', height: '6rem' }}/>
+                               <img src={Logo} alt="" className="w-16 h-16 sm:w-24 sm:h-24"/>
                             </div>
-                            <span className="font-bold text-xl tracking-tight text-slate-900">LawFirmAI</span>
+                            <span className="font-bold text-lg sm:text-xl tracking-tight text-slate-900">LawFirmAI</span>
                         </div>
                     </div>
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">{t('signIn.title')}</h1>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mb-2">{t('signIn.title')}</h1>
                         <p className="text-slate-500 text-sm leading-relaxed mb-8">
                             {t('signIn.subtitle')}
                         </p>
@@ -168,7 +168,7 @@ const SignIn: React.FC = () => {
                             
                             <div className="text-center mt-6">
                                 <p className="text-sm text-slate-500">
-                                    {t('signIn.firstTime')} <Link to="/signup" state={{ from: location.state?.from }} className="font-bold text-blue-600 hover:text-blue-700">{t('signIn.activateAccount')}</Link>
+                                    {t('signIn.firstTime')} <Link to="/signin" state={{ from: location.state?.from }} className="font-bold text-blue-600 hover:text-blue-700">{t('signIn.activateAccount')}</Link>
                                 </p>
                             </div>
                         </form>

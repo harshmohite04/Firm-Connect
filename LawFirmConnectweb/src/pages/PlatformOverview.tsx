@@ -144,7 +144,7 @@ const PlatformOverview: React.FC = () => {
                         {t('platformOverview.heroSubtitle')}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                        <Link to="/signup" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">
+                        <Link to="/signin" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg">
                             {t('platformOverview.getStarted')}
                         </Link>
                         <Link to="/contact" className="bg-white/10 backdrop-blur-sm text-white px-8 py-3 rounded-lg font-bold hover:bg-white/20 transition-colors border border-white/20">
@@ -358,7 +358,7 @@ const PlatformOverview: React.FC = () => {
                         {t('platformOverview.ctaSubtitle')}
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link to="/signup" className="bg-white text-blue-600 px-8 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors shadow-lg">
+                        <Link to="/signin" className="bg-white text-blue-600 px-8 py-3 rounded-lg font-bold hover:bg-blue-50 transition-colors shadow-lg">
                             {t('platformOverview.ctaGetStarted')}
                         </Link>
                         <Link to="/contact" className="bg-blue-500/30 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-500/50 transition-colors border border-white/20">

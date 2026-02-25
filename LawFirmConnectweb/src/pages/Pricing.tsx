@@ -59,7 +59,7 @@ const Pricing: React.FC = () => {
         {
             id: 'STARTER',
             name: 'Starter',
-            price: 9999,
+            price: 4999,
             features: [
                 '5 Active Cases (Shared)',
                 '2 AI Investigations/mo',
@@ -320,7 +320,7 @@ const Pricing: React.FC = () => {
                         </p>
                         <div className="mt-6 flex flex-col gap-3">
                             <button
-                                onClick={() => navigate('/signup', { state: { from: '/pricing' } })}
+                                onClick={() => navigate('/signin', { state: { from: '/pricing' } })}
                                 className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-colors"
                             >
                                 Sign Up

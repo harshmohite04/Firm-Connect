@@ -358,7 +358,40 @@ const PortalBilling: React.FC = () => {
                                                         <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="View">
                                                             <EyeIcon />
                                                         </button>
-                                                        <button className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Print">
+                                                        <button
+                                                            onClick={() => {
+                                                                const printWindow = window.open('', '_blank');
+                                                                if (!printWindow) return;
+                                                                printWindow.document.write(`
+                                                                    <!DOCTYPE html>
+                                                                    <html><head><title>Invoice #${bill.id}</title>
+                                                                    <style>
+                                                                        body { font-family: system-ui, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; color: #1a1a1a; }
+                                                                        h1 { font-size: 1.5em; margin-bottom: 24px; }
+                                                                        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+                                                                        th, td { border: 1px solid #e2e8f0; padding: 10px 14px; text-align: left; }
+                                                                        th { background: #f8fafc; font-weight: 600; font-size: 0.85em; text-transform: uppercase; color: #64748b; }
+                                                                        .status { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; font-weight: 700; }
+                                                                        .paid { background: #d1fae5; color: #065f46; }
+                                                                        .pending { background: #fef3c7; color: #92400e; }
+                                                                        .overdue { background: #fee2e2; color: #991b1b; }
+                                                                        @media print { body { margin: 0; } }
+                                                                    </style></head><body>
+                                                                    <h1>Invoice #${bill.id}</h1>
+                                                                    <table>
+                                                                        <tr><th>Date</th><td>${new Date(bill.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td></tr>
+                                                                        <tr><th>Due Date</th><td>${dueDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td></tr>
+                                                                        <tr><th>Description</th><td>${bill.description}${relatedCase ? ' - ' + relatedCase.title : ''}</td></tr>
+                                                                        <tr><th>Amount</th><td style="font-weight:700">${formatINR(bill.amount)}</td></tr>
+                                                                        <tr><th>Status</th><td><span class="status ${bill.status === 'Paid' ? 'paid' : isOverdue ? 'overdue' : 'pending'}">${isOverdue && bill.status !== 'Paid' ? 'Overdue' : bill.status}</span></td></tr>
+                                                                    </table>
+                                                                    </body></html>
+                                                                `);
+                                                                printWindow.document.close();
+                                                                printWindow.print();
+                                                            }}
+                                                            className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors" title="Print"
+                                                        >
                                                             <PrintIcon />
                                                         </button>
                                                         {bill.status !== 'Paid' && (

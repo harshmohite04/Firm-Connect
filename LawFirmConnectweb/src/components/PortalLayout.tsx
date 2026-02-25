@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { dummyCases, dummyMessages, dummyCalendarEvents } from '../data/dummyData';
 import { messageService } from '../services/messageService';
+import caseService from '../services/caseService';
+import scheduleService from '../services/scheduleService';
+import organizationService from '../services/organizationService';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Logo from "../assets/logo.svg"
@@ -64,9 +66,16 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any>({ cases: [], messages: [], events: [], documents: [] });
     const [showResults, setShowResults] = useState(false);
     const searchRef = useRef<HTMLDivElement>(null);
+
+    // Real data for search
+    const [realCases, setRealCases] = useState<any[]>([]);
+    const [realConversations, setRealConversations] = useState<any[]>([]);
+    const [realEvents, setRealEvents] = useState<any[]>([]);
+    const [realMembers, setRealMembers] = useState<any[]>([]);
 
     // Notification State
     const [showNotifications, setShowNotifications] = useState(false);
@@ -97,15 +106,6 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             time: '1 hour ago',
             read: false,
             link: '/portal/calendar'
-        },
-        {
-            id: '4',
-            type: 'billing',
-            title: 'Payment Received',
-            description: 'Invoice #INV-2024-001 has been paid',
-            time: '2 hours ago',
-            read: true,
-            link: '/portal/billing'
         },
         {
             id: '5',
@@ -178,6 +178,33 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         };
     }, []);
 
+    // Fetch real data for search on mount
+    useEffect(() => {
+        const fetchSearchData = async () => {
+            try {
+                const [cases, conversations, events, membersData] = await Promise.allSettled([
+                    caseService.getCases(),
+                    messageService.getConversations(),
+                    scheduleService.getEvents(),
+                    organizationService.getMembers(),
+                ]);
+                if (cases.status === 'fulfilled' && Array.isArray(cases.value)) setRealCases(cases.value);
+                if (conversations.status === 'fulfilled' && Array.isArray(conversations.value)) setRealConversations(conversations.value);
+                if (events.status === 'fulfilled' && Array.isArray(events.value)) setRealEvents(events.value);
+                if (membersData.status === 'fulfilled' && membersData.value?.members) setRealMembers(membersData.value.members);
+            } catch (err) {
+                console.error('Failed to fetch search data', err);
+            }
+        };
+        fetchSearchData();
+    }, []);
+
+    // Debounce search query (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
     React.useEffect(() => {
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
@@ -214,35 +241,36 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         };
     }, []);
 
-    // Search Logic
+    // Search Logic (uses debounced query and real data)
     useEffect(() => {
-        if (!searchQuery.trim()) {
+        if (!debouncedQuery.trim()) {
             setSearchResults({ cases: [], messages: [], events: [], documents: [] });
             return;
         }
 
-        const query = searchQuery.toLowerCase();
+        const query = debouncedQuery.toLowerCase();
 
-        const cases = dummyCases.filter((c: any) =>
-            c.title.toLowerCase().includes(query) ||
-            c.description.toLowerCase().includes(query) ||
+        const cases = realCases.filter((c: any) =>
+            (c.title && c.title.toLowerCase().includes(query)) ||
+            (c.description && c.description.toLowerCase().includes(query)) ||
             (c.clientName && c.clientName.toLowerCase().includes(query))
         ).slice(0, 3);
 
-        const messages = dummyMessages.filter((m: any) =>
-            m.content.toLowerCase().includes(query) ||
-            m.sender.toLowerCase().includes(query)
-        ).slice(0, 3);
+        const messages = realConversations.filter((m: any) => {
+            const name = m.contactName || m.sender || '';
+            const content = m.lastMessage || m.content || '';
+            return name.toLowerCase().includes(query) || content.toLowerCase().includes(query);
+        }).slice(0, 3);
 
-        const events = dummyCalendarEvents.filter((e: any) =>
-            e.title.toLowerCase().includes(query)
+        const events = realEvents.filter((e: any) =>
+            e.title && e.title.toLowerCase().includes(query)
         ).slice(0, 3);
 
         const docs: any[] = [];
-        dummyCases.forEach((c: any) => {
+        realCases.forEach((c: any) => {
             if (c.documents) {
                 c.documents.forEach((d: any) => {
-                    if (d.name.toLowerCase().includes(query)) {
+                    if (d.name && d.name.toLowerCase().includes(query)) {
                         docs.push({ ...d, caseId: c._id, caseTitle: c.title });
                     }
                 });
@@ -250,7 +278,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         });
 
         setSearchResults({ cases, messages, events, documents: docs.slice(0, 3) });
-    }, [searchQuery]);
+    }, [debouncedQuery, realCases, realConversations, realEvents]);
 
     const isActive = (path: string) => {
         return location.pathname === path || (path !== '/portal' && location.pathname.startsWith(path));
@@ -344,9 +372,6 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         {t('portal.sidebar.caseLaw')}
                     </Link>
 
-                    <Link to="/portal/billing" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/billing') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <BillingIcon /> {t('portal.sidebar.billing')}
-                    </Link>
                     <Link to="/portal/calendar" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
                         <CalendarIcon /> {t('portal.sidebar.calendar')}
                     </Link>
@@ -436,48 +461,56 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                         <div className="p-4">
 
                                             {/* People Section */}
+                                            {realMembers.length > 0 && (
                                             <div className="mb-6">
                                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{t('portal.header.people')}</div>
                                                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                                                    {['Marcus Thorne', 'Sarah Jenkins', 'Jane Doe', 'Legal Team', 'Robert Johnson'].map((name, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
-                                                            onClick={() => {
-                                                                navigate(`/portal/messages?contact=${name}`);
-                                                                setShowResults(false);
-                                                            }}
-                                                        >
-                                                            <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-blue-100 text-slate-600 group-hover:text-blue-600 flex items-center justify-center font-bold text-lg transition-colors ring-2 ring-white shadow-sm">
-                                                                {name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                                                    {realMembers.slice(0, 5).map((member: any, i: number) => {
+                                                        const name = `${member.firstName || ''} ${member.lastName || ''}`.trim() || member.email || 'User';
+                                                        const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                                                        return (
+                                                            <div
+                                                                key={member._id || i}
+                                                                className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
+                                                                onClick={() => {
+                                                                    navigate(`/portal/messages?contact=${name}`);
+                                                                    setShowResults(false);
+                                                                }}
+                                                            >
+                                                                <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-blue-100 text-slate-600 group-hover:text-blue-600 flex items-center justify-center font-bold text-lg transition-colors ring-2 ring-white shadow-sm">
+                                                                    {initials}
+                                                                </div>
+                                                                <span className="text-[10px] font-medium text-slate-600 text-center leading-tight group-hover:text-blue-600">
+                                                                    {name.split(' ')[0]}<br />{name.split(' ')[1] || ''}
+                                                                </span>
                                                             </div>
-                                                            <span className="text-[10px] font-medium text-slate-600 text-center leading-tight group-hover:text-blue-600">
-                                                                {name.split(' ')[0]}<br />{name.split(' ')[1]}
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
+                                            )}
 
                                             {/* Recent/Suggested Files */}
                                             <div>
                                                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t('portal.header.suggestions')}</div>
                                                 <div className="space-y-1">
-                                                    {dummyCases[0].documents?.slice(0, 2).map((doc: any, i: number) => (
-                                                        <div
-                                                            key={i}
-                                                            onClick={() => { navigate(`/portal/cases/${dummyCases[0]._id}?tab=documents`); setShowResults(false); }}
-                                                            className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer group"
-                                                        >
-                                                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l5.414 5.414a1 1 0 01.586 1.414V19a2 2 0 01-2 2z" /></svg>
+                                                    {realCases.slice(0, 2).flatMap((c: any) =>
+                                                        (c.documents || []).slice(0, 1).map((doc: any, i: number) => (
+                                                            <div
+                                                                key={`${c._id}-${i}`}
+                                                                onClick={() => { navigate(`/portal/cases/${c._id}?tab=documents`); setShowResults(false); }}
+                                                                className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer group"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 011.414.586l5.414 5.414a1 1 0 01.586 1.414V19a2 2 0 01-2 2z" /></svg>
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-sm font-medium text-slate-900 group-hover:text-blue-700">{doc.name}</div>
+                                                                    <div className="text-xs text-slate-500">{c.title}</div>
+                                                                </div>
                                                             </div>
-                                                            <div>
-                                                                <div className="text-sm font-medium text-slate-900 group-hover:text-blue-700">{doc.name}</div>
-                                                                <div className="text-xs text-slate-500">{t('portal.header.recentlyModified')}</div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                                        ))
+                                                    )}
                                                     <div
                                                         onClick={() => { navigate(`/portal/calendar`); setShowResults(false); }}
                                                         className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer group"
@@ -529,24 +562,28 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                     {searchResults.messages.length > 0 && (
                                                         <div className="p-2">
                                                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3   py-2">{t('portal.header.messagesLabel')}</div>
-                                                            {searchResults.messages.map((m: any) => (
-                                                                <div
-                                                                    key={m.id}
-                                                                    onClick={() => { navigate(`/portal/messages?contact=${m.sender}`); setShowResults(false); }}
-                                                                    className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer group"
-                                                                >
-                                                                    <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                                                                        {m.sender[0]}
-                                                                    </div>
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="flex justify-between">
-                                                                            <div className="text-sm font-bold text-slate-900 truncate">{m.sender}</div>
-                                                                            <div className="text-xs text-slate-400">{m.time}</div>
+                                                            {searchResults.messages.map((m: any, idx: number) => {
+                                                                const name = m.contactName || m.sender || 'Unknown';
+                                                                const content = m.lastMessage || m.content || '';
+                                                                return (
+                                                                    <div
+                                                                        key={m._id || m.id || idx}
+                                                                        onClick={() => { navigate(`/portal/messages?contact=${name}`); setShowResults(false); }}
+                                                                        className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer group"
+                                                                    >
+                                                                        <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                                                                            {name[0]}
                                                                         </div>
-                                                                        <div className="text-xs text-slate-500 truncate">{m.content}</div>
+                                                                        <div className="flex-1 min-w-0">
+                                                                            <div className="flex justify-between">
+                                                                                <div className="text-sm font-bold text-slate-900 truncate">{name}</div>
+                                                                                <div className="text-xs text-slate-400">{m.time || ''}</div>
+                                                                            </div>
+                                                                            <div className="text-xs text-slate-500 truncate">{content}</div>
+                                                                        </div>
                                                                     </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
 
@@ -576,21 +613,25 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                                     {searchResults.events.length > 0 && (
                                                         <div className="p-2">
                                                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 py-2">{t('portal.header.calendarLabel')}</div>
-                                                            {searchResults.events.map((e: any) => (
-                                                                <div
-                                                                    key={e.id}
-                                                                    onClick={() => { navigate(`/portal/calendar`); setShowResults(false); }}
-                                                                    className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer group"
-                                                                >
-                                                                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
-                                                                        <CalendarIcon />
+                                                            {searchResults.events.map((e: any, idx: number) => {
+                                                                const dateStr = e.startDate ? new Date(e.startDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : (e.date || '');
+                                                                const timeStr = e.startTime || e.time || '';
+                                                                return (
+                                                                    <div
+                                                                        key={e._id || e.id || idx}
+                                                                        onClick={() => { navigate(`/portal/calendar`); setShowResults(false); }}
+                                                                        className="flex items-center gap-3 p-3 hover:bg-slate-50 rounded-lg cursor-pointer group"
+                                                                    >
+                                                                        <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                                                            <CalendarIcon />
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="text-sm font-bold text-slate-900">{e.title}</div>
+                                                                            <div className="text-xs text-slate-500">{dateStr}{timeStr ? ` • ${timeStr}` : ''}</div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
-                                                                        <div className="text-sm font-bold text-slate-900">{e.title}</div>
-                                                                        <div className="text-xs text-slate-500">{e.date} • {e.time}</div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
 
