@@ -60,6 +60,7 @@ async def _run_ingestion_background(
             {"$set": {"status": "Ready", "last_updated": datetime.utcnow()}}
         )
         logger.info(f"Background ingestion complete: {db_filename} for case {db_case_id}")
+        precedent_cache_collection.delete_one({"case_id": db_case_id})
     except Exception as e:
         logger.error(f"Background ingestion failed for {db_filename}: {e}", exc_info=True)
         # Update status to Failed upon error
@@ -128,9 +129,11 @@ db = mongo_client["lawfirm"]
 chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]
+draft_versions_collection = db["draft_versions"]
 investigation_reports_collection = db["investigation_reports"]
 investigation_jobs_collection = db["investigation_jobs"]
 case_law_bookmarks_collection = db["case_law_bookmarks"]
+precedent_cache_collection = db["precedent_cache"]
 
 # ---------- CORS Configuration ----------
 from fastapi.middleware.cors import CORSMiddleware
@@ -229,6 +232,23 @@ class DraftSessionResponse(BaseModel):
     session_id: str
     title: str
     template: str
+    created_at: datetime
+
+class CreateDraftVersionRequest(BaseModel):
+    label: str
+    content: str
+
+class DraftVersionSummary(BaseModel):
+    version_number: int
+    label: Optional[str] = None
+    type: str
+    created_at: datetime
+
+class DraftVersionFull(BaseModel):
+    version_number: int
+    label: Optional[str] = None
+    type: str
+    content: str
     created_at: datetime
 
 # ---------- ROUTES ----------
@@ -903,7 +923,10 @@ async def delete_document_endpoint(
         if result.matched_count == 0:
             logger.warning(f"Document {safe_filename} not found in MongoDB for case {caseId}")
 
-        # 3. Preserve file on disk (Do NOT delete)
+        # 3. Invalidate precedent cache since documents changed
+        precedent_cache_collection.delete_one({"case_id": caseId})
+
+        # 4. Preserve file on disk (Do NOT delete)
         logger.info(f"Document archived: {safe_filename} for case {caseId} by user {user_id}")
 
         return {
@@ -1243,7 +1266,24 @@ async def conversational_draft(
                 "$set": {"current_document": result["document_content"]}
             }
         )
-        
+
+        # Auto-save version
+        last_version = draft_versions_collection.find_one(
+            {"session_id": body.sessionId},
+            sort=[("version_number", -1)]
+        )
+        next_version = (last_version["version_number"] + 1) if last_version else 1
+        draft_versions_collection.insert_one({
+            "session_id": body.sessionId,
+            "case_id": body.caseId,
+            "user_id": user_id,
+            "version_number": next_version,
+            "content": result["document_content"],
+            "label": None,
+            "type": "auto",
+            "created_at": datetime.utcnow()
+        })
+
         return ConversationalDraftResponse(
             ai_message=result["ai_message"],
             document_content=result["document_content"]
@@ -1253,6 +1293,198 @@ async def conversational_draft(
     except Exception as e:
         logger.error(f"Error in conversational draft: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to process draft request")
+
+# ---------- DRAFT VERSION CONTROL ----------
+
+@app.get("/draft/session/{sessionId}/versions", response_model=List[DraftVersionSummary])
+@limiter.limit("60/minute")
+async def list_draft_versions(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """List all versions for a draft session (without content for performance)"""
+    try:
+        validate_session_id(sessionId)
+        user_id = get_user_id(current_user)
+
+        session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        cursor = draft_versions_collection.find(
+            {"session_id": sessionId},
+            {"content": 0, "_id": 0}
+        ).sort("version_number", -1)
+
+        versions = []
+        for doc in cursor:
+            versions.append(DraftVersionSummary(
+                version_number=doc["version_number"],
+                label=doc.get("label"),
+                type=doc.get("type", "auto"),
+                created_at=doc.get("created_at", datetime.utcnow())
+            ))
+        return versions
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error listing draft versions: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to list draft versions")
+
+@app.get("/draft/session/{sessionId}/version/{versionNumber}", response_model=DraftVersionFull)
+@limiter.limit("60/minute")
+async def get_draft_version(
+    request: Request,
+    sessionId: str,
+    versionNumber: int,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Get full content of a specific version"""
+    try:
+        validate_session_id(sessionId)
+        user_id = get_user_id(current_user)
+
+        session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        version_doc = draft_versions_collection.find_one({
+            "session_id": sessionId,
+            "version_number": versionNumber
+        })
+        if not version_doc:
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        return DraftVersionFull(
+            version_number=version_doc["version_number"],
+            label=version_doc.get("label"),
+            type=version_doc.get("type", "auto"),
+            content=version_doc["content"],
+            created_at=version_doc.get("created_at", datetime.utcnow())
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching draft version: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch draft version")
+
+@app.post("/draft/session/{sessionId}/version", response_model=DraftVersionSummary)
+@limiter.limit("30/minute")
+async def create_manual_draft_version(
+    request: Request,
+    sessionId: str,
+    body: CreateDraftVersionRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Create a manual (named) version snapshot"""
+    try:
+        validate_session_id(sessionId)
+        validate_string_length(body.label, "Label", min_length=1, max_length=100)
+        user_id = get_user_id(current_user)
+
+        session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        last_version = draft_versions_collection.find_one(
+            {"session_id": sessionId},
+            sort=[("version_number", -1)]
+        )
+        next_version = (last_version["version_number"] + 1) if last_version else 1
+
+        new_version = {
+            "session_id": sessionId,
+            "case_id": session_doc.get("case_id"),
+            "user_id": user_id,
+            "version_number": next_version,
+            "content": body.content,
+            "label": body.label,
+            "type": "manual",
+            "created_at": datetime.utcnow()
+        }
+        draft_versions_collection.insert_one(new_version)
+
+        return DraftVersionSummary(
+            version_number=next_version,
+            label=body.label,
+            type="manual",
+            created_at=new_version["created_at"]
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating manual draft version: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to create draft version")
+
+@app.post("/draft/session/{sessionId}/restore/{versionNumber}")
+@limiter.limit("20/minute")
+async def restore_draft_version(
+    request: Request,
+    sessionId: str,
+    versionNumber: int,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Restore a version: copies its content into current_document and creates a new auto-version"""
+    try:
+        validate_session_id(sessionId)
+        user_id = get_user_id(current_user)
+
+        session_doc = draft_sessions_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Draft session not found")
+        if session_doc.get("user_id") and session_doc.get("user_id") != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        version_doc = draft_versions_collection.find_one({
+            "session_id": sessionId,
+            "version_number": versionNumber
+        })
+        if not version_doc:
+            raise HTTPException(status_code=404, detail="Version not found")
+
+        restored_content = version_doc["content"]
+
+        # Update current_document in the session
+        draft_sessions_collection.update_one(
+            {"session_id": sessionId},
+            {"$set": {"current_document": restored_content}}
+        )
+
+        # Create a new auto-version for the restore action
+        last_version = draft_versions_collection.find_one(
+            {"session_id": sessionId},
+            sort=[("version_number", -1)]
+        )
+        next_version = (last_version["version_number"] + 1) if last_version else 1
+
+        draft_versions_collection.insert_one({
+            "session_id": sessionId,
+            "case_id": session_doc.get("case_id"),
+            "user_id": user_id,
+            "version_number": next_version,
+            "content": restored_content,
+            "label": f"Restored from v{versionNumber}",
+            "type": "auto",
+            "created_at": datetime.utcnow()
+        })
+
+        return {
+            "message": f"Restored to version {versionNumber}",
+            "document_content": restored_content,
+            "new_version_number": next_version
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error restoring draft version: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to restore draft version")
 
 @app.get("/draft/templates")
 @limiter.limit("60/minute")
@@ -1570,7 +1802,7 @@ async def get_investigation_reports(
     reports = list(
         investigation_reports_collection.find(
             {"case_id": caseId},
-            {"final_report": 1, "metadata": 1, "created_at": 1, "focus_questions": 1}
+            {"final_report": 1, "metadata": 1, "created_at": 1, "focus_questions": 1, "structured_data": 1}
         ).sort("created_at", -1).limit(20)
     )
     # Convert ObjectId to string
@@ -2038,6 +2270,7 @@ async def case_law_meta(
 async def find_precedents_from_embeddings(
     request: Request,
     caseId: str,
+    force: bool = False,
     current_user: Dict = Depends(get_current_user)
 ):
     """
@@ -2052,6 +2285,18 @@ async def find_precedents_from_embeddings(
 
         if not INDIAN_KANOON_API_TOKEN:
             raise HTTPException(status_code=503, detail="Indian Kanoon API not configured")
+
+        # --- Cache check ---
+        ready_count = document_status_collection.count_documents({"case_id": caseId, "status": "Ready"})
+        if not force:
+            cached = precedent_cache_collection.find_one({"case_id": caseId})
+            if cached and cached.get("doc_fingerprint") == ready_count:
+                logger.info(f"Returning cached precedents for case {caseId}")
+                return {
+                    "queries": cached["queries"],
+                    "docs": cached["docs"],
+                    "total": cached["total"],
+                }
 
         from qdrant_client import QdrantClient, models as qmodels
         from groq import Groq
@@ -2166,11 +2411,27 @@ async def find_precedents_from_embeddings(
                     logger.warning(f"IK search failed for query '{query}': {e}")
                     continue
 
-        return {
+        result_payload = {
             "queries": search_queries,
             "docs": all_results[:30],  # Cap total results
             "total": len(all_results),
         }
+
+        # --- Cache the result ---
+        precedent_cache_collection.update_one(
+            {"case_id": caseId},
+            {"$set": {
+                "case_id": caseId,
+                "queries": result_payload["queries"],
+                "docs": result_payload["docs"],
+                "total": result_payload["total"],
+                "doc_fingerprint": ready_count,
+                "cached_at": datetime.utcnow(),
+            }},
+            upsert=True,
+        )
+
+        return result_payload
 
     except HTTPException:
         raise

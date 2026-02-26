@@ -548,6 +548,45 @@ const caseService = {
     });
     return response.data;
   },
+
+  // -- Draft Version Control --
+  getDraftVersions: async (sessionId: string) => {
+    const response = await axios.get(
+      `${RAG_API_URL}/draft/session/${sessionId}/versions`,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  },
+
+  getDraftVersion: async (sessionId: string, versionNumber: number) => {
+    const response = await axios.get(
+      `${RAG_API_URL}/draft/session/${sessionId}/version/${versionNumber}`,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  },
+
+  createDraftVersion: async (
+    sessionId: string,
+    label: string,
+    content: string,
+  ) => {
+    const response = await axios.post(
+      `${RAG_API_URL}/draft/session/${sessionId}/version`,
+      { label, content },
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  },
+
+  restoreDraftVersion: async (sessionId: string, versionNumber: number) => {
+    const response = await axios.post(
+      `${RAG_API_URL}/draft/session/${sessionId}/restore/${versionNumber}`,
+      {},
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  },
 };
 
 export default caseService;

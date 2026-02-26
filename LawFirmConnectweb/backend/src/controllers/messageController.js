@@ -1,4 +1,5 @@
 const Message = require('../models/Message');
+const createNotification = require('../utils/createNotification');
 
 // Get messages for a specific conversation
 exports.getMessages = async (req, res) => {
@@ -45,6 +46,16 @@ exports.sendMessage = async (req, res) => {
             io.to(contactId).emit('newMessage', newMessage);
             io.to(userId.toString()).emit('newMessage', newMessage); // Also emit to sender (for other devices/tabs)
         }
+
+        // Create notification for the recipient
+        const senderName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+        await createNotification(io, {
+            recipient: contactId,
+            type: 'message',
+            title: 'New Message',
+            description: `${senderName} sent you a message`,
+            link: '/portal/messages'
+        });
 
         res.status(201).json(newMessage);
     } catch (error) {

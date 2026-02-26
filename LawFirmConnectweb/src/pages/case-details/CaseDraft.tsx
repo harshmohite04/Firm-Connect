@@ -44,6 +44,30 @@ const ClockIcon = () => (
     </svg>
 );
 
+const HistoryIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0zM3.05 11a9 9 0 010-2M5.64 5.64l1.42 1.42M3.05 13a9 9 0 002.59 4.36" />
+    </svg>
+);
+
+const RestoreIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+);
+
+const XIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+const BookmarkIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+);
+
 
 
 interface Message {
@@ -62,6 +86,13 @@ interface DraftSession {
     session_id: string;
     title: string;
     template: string;
+    created_at: string;
+}
+
+interface DraftVersion {
+    version_number: number;
+    label: string | null;
+    type: 'auto' | 'manual';
     created_at: string;
 }
 
@@ -88,7 +119,14 @@ const CaseDraft: React.FC = () => {
     const [showAddDocumentModal, setShowAddDocumentModal] = useState(false);
     const [isCustomDocument, setIsCustomDocument] = useState(false);
     const [customDocumentName, setCustomDocumentName] = useState('');
-    
+
+    // Version history state
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
+    const [versions, setVersions] = useState<DraftVersion[]>([]);
+    const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+    const [showSaveVersionModal, setShowSaveVersionModal] = useState(false);
+    const [versionLabel, setVersionLabel] = useState('');
+    const [isRestoringVersion, setIsRestoringVersion] = useState<number | null>(null);
 
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -257,6 +295,9 @@ const CaseDraft: React.FC = () => {
             // Update document
             setDocumentContent(response.document_content);
 
+            // Refresh versions if panel is open
+            if (showVersionHistory) loadVersions();
+
         } catch (error) {
             console.error('Generation failed', error);
             setMessages(prev => [...prev, {
@@ -292,6 +333,63 @@ const CaseDraft: React.FC = () => {
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const loadVersions = async () => {
+        if (!sessionId) return;
+        setIsLoadingVersions(true);
+        try {
+            const data = await caseService.getDraftVersions(sessionId);
+            setVersions(data);
+        } catch (error) {
+            console.error('Failed to load versions', error);
+            toast.error('Failed to load version history');
+        } finally {
+            setIsLoadingVersions(false);
+        }
+    };
+
+    const handleOpenVersionHistory = () => {
+        setShowVersionHistory(true);
+        loadVersions();
+    };
+
+    const handleSaveVersion = async () => {
+        if (!versionLabel.trim() || !sessionId) return;
+        try {
+            await caseService.createDraftVersion(sessionId, versionLabel, documentContent);
+            toast.success('Version saved!');
+            setShowSaveVersionModal(false);
+            setVersionLabel('');
+            loadVersions();
+        } catch (error) {
+            console.error('Failed to save version', error);
+            toast.error('Failed to save version');
+        }
+    };
+
+    const handleRestoreVersion = async (versionNumber: number) => {
+        if (!sessionId) return;
+        setIsRestoringVersion(versionNumber);
+        try {
+            const result = await caseService.restoreDraftVersion(sessionId, versionNumber);
+            setDocumentContent(result.document_content);
+            toast.success(`Restored to version ${versionNumber}`);
+            loadVersions();
+        } catch (error) {
+            console.error('Failed to restore version', error);
+            toast.error('Failed to restore version');
+        } finally {
+            setIsRestoringVersion(null);
+        }
+    };
+
+    const formatVersionTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            month: 'short', day: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+        });
     };
 
     const quickActions = [
@@ -487,7 +585,7 @@ const CaseDraft: React.FC = () => {
 
     // Conversational Editor Interface
     return (
-        <div className="flex-1 bg-slate-50 p-6 flex flex-col gap-4 h-[calc(100vh-140px)] overflow-hidden">
+        <div className="flex-1 bg-slate-50 p-6 flex flex-col gap-4 h-full min-h-0 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-3">
@@ -509,19 +607,37 @@ const CaseDraft: React.FC = () => {
                     <span className="text-slate-300">|</span>
                     <span className="text-sm font-medium text-slate-700">{documentTitle}</span>
                 </div>
-                {documentContent && (
-                    <button
-                        onClick={() => setShowSaveModal(true)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
-                    >
-                        <SaveIcon /> {t('portal.drafting.save')}
-                    </button>
-                )}
+                <div className="flex items-center gap-2">
+                    {documentContent && (
+                        <>
+                            <button
+                                onClick={() => setShowSaveVersionModal(true)}
+                                className="px-3 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                            >
+                                <BookmarkIcon /> Save Version
+                            </button>
+                            <button
+                                onClick={handleOpenVersionHistory}
+                                className="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                            >
+                                <HistoryIcon /> History
+                            </button>
+                        </>
+                    )}
+                    {documentContent && (
+                        <button
+                            onClick={() => setShowSaveModal(true)}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2"
+                        >
+                            <SaveIcon /> {t('portal.drafting.save')}
+                        </button>
+                    )}
+                </div>
             </div>
 
-            <div className="flex-1 flex gap-4 overflow-hidden">
+            <div className="flex-1 flex gap-4 min-h-0 overflow-hidden">
                 {/* Left Panel: Chat */}
-                <div className="w-2/5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                <div className="w-2/5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0">
                     <div className="p-4 border-b border-slate-200">
                         <h3 className="font-bold text-slate-800 flex items-center gap-2">
                             <div className="p-1.5 bg-blue-100 text-blue-600 rounded-lg">
@@ -605,7 +721,7 @@ const CaseDraft: React.FC = () => {
                 </div>
 
                 {/* Right Panel: Document Editor */}
-                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col relative">
+                <div className="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 relative">
                     <div className="p-4 border-b border-slate-200">
                         <h3 className="font-bold text-slate-800">{t('portal.drafting.liveDoc')}</h3>
                         <p className="text-xs text-slate-500 mt-1">{t('portal.drafting.liveDocDesc')}</p>
@@ -659,6 +775,129 @@ const CaseDraft: React.FC = () => {
                             >
                                 {isSaving ? 'Saving...' : t('portal.drafting.save')}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Save Version Modal */}
+            {showSaveVersionModal && (
+                <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => { setShowSaveVersionModal(false); setVersionLabel(''); }}>
+                    <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold text-slate-900 mb-4">Save Version</h3>
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Version Label</label>
+                            <input
+                                type="text"
+                                value={versionLabel}
+                                onChange={(e) => setVersionLabel(e.target.value)}
+                                placeholder="e.g., Final draft, After client review..."
+                                className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveVersion(); }}
+                                autoFocus
+                            />
+                            <p className="text-xs text-slate-500 mt-2">Give this version a meaningful name so you can find it later.</p>
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => { setShowSaveVersionModal(false); setVersionLabel(''); }}
+                                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveVersion}
+                                disabled={!versionLabel.trim()}
+                                className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg font-bold transition-colors disabled:opacity-50"
+                            >
+                                Save Version
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Version History Side Panel */}
+            {showVersionHistory && (
+                <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setShowVersionHistory(false)}>
+                    <div className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm" />
+                    <div
+                        className="relative w-full max-w-md bg-white shadow-2xl flex flex-col h-full animate-in slide-in-from-right duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Panel Header */}
+                        <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <HistoryIcon /> Version History
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {versions.length} version{versions.length !== 1 ? 's' : ''} saved
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowVersionHistory(false)}
+                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors text-slate-500"
+                            >
+                                <XIcon />
+                            </button>
+                        </div>
+
+                        {/* Version List */}
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                            {isLoadingVersions ? (
+                                <div className="flex items-center justify-center py-12">
+                                    <div className="flex gap-1">
+                                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                        <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                    </div>
+                                </div>
+                            ) : versions.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400">
+                                    <HistoryIcon />
+                                    <p className="mt-3 text-sm">No versions yet. Versions are created automatically when AI edits the document.</p>
+                                </div>
+                            ) : (
+                                versions.map((version) => (
+                                    <div
+                                        key={version.version_number}
+                                        className="bg-slate-50 rounded-lg border border-slate-200 p-4 hover:border-slate-300 transition-colors"
+                                    >
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-slate-700">
+                                                    v{version.version_number}
+                                                </span>
+                                                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                                                    version.type === 'manual'
+                                                        ? 'bg-violet-100 text-violet-700'
+                                                        : 'bg-blue-100 text-blue-700'
+                                                }`}>
+                                                    {version.type === 'manual' ? 'Manual' : 'Auto'}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => handleRestoreVersion(version.version_number)}
+                                                disabled={isRestoringVersion !== null}
+                                                className="px-3 py-1 text-xs bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
+                                            >
+                                                {isRestoringVersion === version.version_number ? (
+                                                    'Restoring...'
+                                                ) : (
+                                                    <><RestoreIcon /> Restore</>
+                                                )}
+                                            </button>
+                                        </div>
+                                        {version.label && (
+                                            <p className="text-sm text-slate-800 font-medium mb-1">{version.label}</p>
+                                        )}
+                                        <p className="text-xs text-slate-500">
+                                            {formatVersionTime(version.created_at)}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>

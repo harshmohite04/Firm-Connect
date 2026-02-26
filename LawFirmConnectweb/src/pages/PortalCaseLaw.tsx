@@ -146,6 +146,7 @@ const PortalCaseLaw: React.FC = () => {
                 setBookmarkedDocIds(prev => new Set(prev).add(doc.tid));
                 fetchBookmarks();
                 toast.success(t('caseLaw.bookmarkAdded'));
+                setActiveTab('saved');
             }
         } catch (error: any) {
             if (error?.response?.status === 409) {
@@ -216,7 +217,10 @@ const PortalCaseLaw: React.FC = () => {
                         <p className="text-2xl font-bold text-slate-900">{totalResults > 0 ? totalResults.toLocaleString() : '0'}</p>
                         <p className="text-sm text-slate-500 mt-1">{t('caseLaw.resultsFound')}</p>
                     </div>
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                    <div
+                        onClick={() => setActiveTab('saved')}
+                        className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group cursor-pointer"
+                    >
                         <div className="flex items-center justify-between mb-3">
                             <div className="w-11 h-11 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 group-hover:scale-110 transition-transform">
                                 <BookmarkIcon filled />

@@ -1,4 +1,5 @@
 const Event = require('../models/Event');
+const createNotification = require('../utils/createNotification');
 
 exports.getEvents = async (req, res) => {
     try {
@@ -16,6 +17,24 @@ exports.createEvent = async (req, res) => {
             ...req.body,
             user: req.user._id
         });
+
+        // Notify attendees if any
+        if (req.body.attendees && Array.isArray(req.body.attendees)) {
+            const io = req.app.get('socketio');
+            const creatorName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+            for (const attendeeId of req.body.attendees) {
+                if (attendeeId.toString() !== req.user._id.toString()) {
+                    await createNotification(io, {
+                        recipient: attendeeId,
+                        type: 'calendar',
+                        title: 'New Event',
+                        description: `${creatorName} invited you to "${event.title}"`,
+                        link: '/portal/calendar'
+                    });
+                }
+            }
+        }
+
         res.status(201).json(event);
     } catch (error) {
          console.error('Create event error:', error);

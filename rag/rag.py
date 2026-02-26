@@ -30,18 +30,31 @@ QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
 groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
+# LLM Provider toggle
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deepseek").lower()
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+RAG_MODEL = os.getenv("RAG_MODEL", "gpt-4o-mini")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
-llm = OpenAILLM(
-    model_name=DEEPSEEK_MODEL,
-    model_params={
-        "temperature": 0.1
-    },
-    api_key=DEEPSEEK_API_KEY,
-    base_url="https://api.deepseek.com"
-)
+if LLM_PROVIDER == "openai" and OPENAI_API_KEY:
+    llm = OpenAILLM(
+        model_name=RAG_MODEL,
+        model_params={"temperature": 0.1},
+        api_key=OPENAI_API_KEY,
+    )
+    stream_client = OpenAI(api_key=OPENAI_API_KEY)
+    stream_model = RAG_MODEL
+else:
+    llm = OpenAILLM(
+        model_name=DEEPSEEK_MODEL,
+        model_params={"temperature": 0.1},
+        api_key=DEEPSEEK_API_KEY,
+        base_url="https://api.deepseek.com"
+    )
+    stream_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+    stream_model = DEEPSEEK_MODEL
 
 
 from neo4j_graphrag.generation.prompts import RagTemplate
@@ -214,10 +227,6 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
     return result
 
 # ---------- STREAMING ASK FUNCTION ----------
-deepseek_client = OpenAI(
-    api_key=DEEPSEEK_API_KEY,
-    base_url="https://api.deepseek.com"
-)
 
 SYSTEM_INSTRUCTIONS = """You are a legal assistant and law firm operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
 
@@ -360,11 +369,11 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5):
             messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": user_prompt})
 
-    # 4. Stream from DeepSeek
+    # 4. Stream from LLM
     full_answer = ""
     try:
-        stream = deepseek_client.chat.completions.create(
-            model=DEEPSEEK_MODEL,
+        stream = stream_client.chat.completions.create(
+            model=stream_model,
             messages=messages,
             temperature=0.1,
             stream=True

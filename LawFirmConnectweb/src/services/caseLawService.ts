@@ -151,12 +151,12 @@ const updateBookmark = async (
 
 const findPrecedents = async (
   caseId: string,
+  forceRefresh: boolean = false,
 ): Promise<PrecedentFinderResult> => {
-  const response = await axios.post(
-    `${RAG_API_URL}/case-law/find-precedents/${caseId}`,
-    {},
-    { headers: getAuthHeaders() },
-  );
+  const url = forceRefresh
+    ? `${RAG_API_URL}/case-law/find-precedents/${caseId}?force=true`
+    : `${RAG_API_URL}/case-law/find-precedents/${caseId}`;
+  const response = await axios.post(url, {}, { headers: getAuthHeaders() });
   return response.data;
 };
 

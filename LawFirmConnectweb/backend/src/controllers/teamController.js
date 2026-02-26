@@ -3,6 +3,7 @@ const User = require('../models/User');
 const TeamInvitation = require('../models/TeamInvitation');
 const sendEmail = require('../utils/emailService');
 const teamInvitationTemplate = require('../utils/teamInvitationTemplate');
+const createNotification = require('../utils/createNotification');
 
 // @desc    Validate if email belongs to a registered user
 // @route   POST /cases/:caseId/team/validate
@@ -413,6 +414,18 @@ const addTeamMember = async (req, res, next) => {
         }
 
         await caseDoc.save();
+
+        // Notify the added user
+        const io = req.app.get('socketio');
+        const adderName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+        await createNotification(io, {
+            recipient: userToAdd._id,
+            type: 'case',
+            title: 'Added to Case Team',
+            description: `${adderName} added you to the team for "${caseDoc.title}"`,
+            link: `/portal/cases/${caseDoc._id}`,
+            metadata: { caseId: caseDoc._id }
+        });
 
         res.status(201).json({
             success: true,

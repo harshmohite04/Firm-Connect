@@ -90,13 +90,13 @@ const CasePrecedents: React.FC = () => {
         }
     };
 
-    const handleFindPrecedents = async () => {
+    const handleFindPrecedents = async (force: boolean = false) => {
         if (!caseId) return;
         setLoadingSuggestions(true);
         setSuggestionError(null);
         setHasSuggested(true);
         try {
-            const result = await caseLawService.findPrecedents(caseId);
+            const result = await caseLawService.findPrecedents(caseId, force);
             setSuggestedResults(result.docs || []);
             setSuggestedQueries(result.queries || []);
         } catch (error: any) {
@@ -276,7 +276,7 @@ const CasePrecedents: React.FC = () => {
                         </h3>
                         {hasSuggested && !loadingSuggestions && (
                             <button
-                                onClick={handleFindPrecedents}
+                                onClick={() => handleFindPrecedents(true)}
                                 className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                             >
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">

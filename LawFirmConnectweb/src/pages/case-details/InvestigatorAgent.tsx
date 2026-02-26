@@ -78,41 +78,18 @@ const PIPELINE_STEPS = [
 ];
 
 // ============================================================
-//  INTEL BOARD CSS (injected once)
+//  CSS (injected once)
 // ============================================================
-const INTEL_STYLES = `
-@keyframes nodePulse {
-  0%, 100% { filter: drop-shadow(0 0 4px rgba(34,211,238,0.4)); }
-  50% { filter: drop-shadow(0 0 12px rgba(34,211,238,0.8)); }
-}
-@keyframes dashFlow {
-  to { stroke-dashoffset: -20; }
-}
-@keyframes scanline {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100vh); }
-}
+const INVESTIGATOR_STYLES = `
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@keyframes sonarRing {
-  0% { r: 8; opacity: 0.8; }
-  100% { r: 80; opacity: 0; }
-}
-@keyframes radarSweep {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes intelFeedBlink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
-}
-.intel-fade-in { animation: fadeInUp 0.5s ease-out both; }
-.intel-fade-in-1 { animation-delay: 0.1s; }
-.intel-fade-in-2 { animation-delay: 0.2s; }
-.intel-fade-in-3 { animation-delay: 0.3s; }
-.intel-fade-in-4 { animation-delay: 0.4s; }
+.fade-in { animation: fadeInUp 0.3s ease-out both; }
+.fade-in-1 { animation-delay: 0.1s; }
+.fade-in-2 { animation-delay: 0.2s; }
+.fade-in-3 { animation-delay: 0.3s; }
+.fade-in-4 { animation-delay: 0.4s; }
 `;
 
 // ============================================================
@@ -168,7 +145,7 @@ function entityColorHeuristic(name: string): string {
     if (/inc\.|corp\.|llc|ltd|co\.|company|firm|bank|group/i.test(lower)) return '#a78bfa'; // violet - org
     if (/street|city|state|county|court|building|office|address|\d{5}/i.test(lower)) return '#4ade80'; // green - location
     if (/\d{4}[-/]\d{2}|\bjan\b|\bfeb\b|\bmar\b|\bapr\b|\bmay\b|\bjun\b|\bjul\b|\baug\b|\bsep\b|\boct\b|\bnov\b|\bdec\b/i.test(lower)) return '#fbbf24'; // amber - date
-    return '#22d3ee'; // cyan - person/default
+    return '#3b82f6'; // blue - person/default
 }
 
 // ============================================================
@@ -196,18 +173,17 @@ const AnimatedCounter: React.FC<{ target: number; duration?: number; suffix?: st
 
 // --- Stat Card ---
 const StatCard: React.FC<{ label: string; value: number | string; accent: string; icon: React.ReactNode; delay: string; isText?: boolean }> = ({ label, value, accent, icon, delay, isText }) => (
-    <div className={`intel-fade-in ${delay} relative overflow-hidden rounded-xl border border-white/[0.06] p-5`}
-        style={{ background: '#111827' }}>
+    <div className={`fade-in ${delay} relative overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm p-5`}>
         <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: accent }} />
         <div className="flex items-start justify-between mb-3">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${accent}18` }}>
                 <div style={{ color: accent }}>{icon}</div>
             </div>
         </div>
-        <div className="font-mono text-2xl font-bold" style={{ color: '#e2e8f0' }}>
+        <div className="text-2xl font-bold text-slate-900">
             {isText ? value : <AnimatedCounter target={value as number} />}
         </div>
-        <div className="text-xs mt-1" style={{ color: '#94a3b8' }}>{label}</div>
+        <div className="text-xs mt-1 text-slate-500">{label}</div>
     </div>
 );
 
@@ -226,19 +202,13 @@ const EntityGraph: React.FC<{ entities: string[]; facts: InvestigationFact[] }> 
     const hoveredEdges = hovered ? new Set(edges.filter(e => e.from === hovered || e.to === hovered).flatMap(e => [e.from, e.to])) : null;
 
     return (
-        <div className="intel-fade-in intel-fade-in-2 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: '#111827' }}>
-            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Entity Relationship Graph</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>{topEntities.length} entities</span>
+        <div className="fade-in fade-in-2 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-slate-800">Entity Relationship Graph</h3>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-600">{topEntities.length} entities</span>
             </div>
             <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ maxHeight: 420 }}>
-                {/* Grid background */}
-                <defs>
-                    <pattern id="intelGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-                        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(34,211,238,0.03)" strokeWidth="0.5" />
-                    </pattern>
-                </defs>
-                <rect width={width} height={height} fill="url(#intelGrid)" />
+                <rect width={width} height={height} fill="#f8fafc" />
 
                 {/* Edges */}
                 {edges.map((edge, i) => {
@@ -248,9 +218,9 @@ const EntityGraph: React.FC<{ entities: string[]; facts: InvestigationFact[] }> 
                     const baseOpacity = Math.min(0.3 + edge.factCount * 0.15, 0.9);
                     return (
                         <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                            stroke="#22d3ee" strokeWidth={Math.min(1 + edge.factCount * 0.5, 3)}
+                            stroke="#cbd5e1" strokeWidth={Math.min(1 + edge.factCount * 0.5, 3)}
                             strokeDasharray="4,4" opacity={dimmed ? 0.08 : baseOpacity}
-                            style={{ animation: 'dashFlow 1.5s linear infinite', transition: 'opacity 0.3s' }} />
+                            style={{ transition: 'opacity 0.3s' }} />
                     );
                 })}
 
@@ -264,19 +234,16 @@ const EntityGraph: React.FC<{ entities: string[]; facts: InvestigationFact[] }> 
                             onMouseEnter={() => setHovered(node.entity)}
                             onMouseLeave={() => setHovered(null)}
                             style={{ cursor: 'pointer', transition: 'opacity 0.3s', opacity: dimmed ? 0.15 : 1 }}>
-                            {/* Glow */}
-                            <circle cx={node.x} cy={node.y} r={r + 4} fill="none" stroke={color} strokeWidth="1" opacity="0.3"
-                                style={hovered === node.entity ? { animation: 'nodePulse 1.5s ease-in-out infinite' } : {}} />
                             {/* Circle */}
                             <circle cx={node.x} cy={node.y} r={r} fill={`${color}22`} stroke={color} strokeWidth="1.5" />
                             {/* Label */}
                             <text x={node.x} y={node.y + r + 14} textAnchor="middle"
-                                fill="#e2e8f0" fontSize="9" fontFamily="monospace" fontWeight="500">
+                                fill="#334155" fontSize="9" fontWeight="500">
                                 {node.entity.length > 18 ? node.entity.slice(0, 16) + '..' : node.entity}
                             </text>
                             {/* Short label inside */}
                             <text x={node.x} y={node.y + 3} textAnchor="middle"
-                                fill={color} fontSize="8" fontFamily="monospace" fontWeight="700">
+                                fill={color} fontSize="8" fontWeight="700">
                                 {node.entity.slice(0, 3).toUpperCase()}
                             </text>
                         </g>
@@ -292,26 +259,26 @@ const FactCard: React.FC<{ fact: InvestigationFact }> = ({ fact }) => {
     const conf = fact.confidence ?? 0;
     const barColor = conf >= 0.7 ? '#4ade80' : conf >= 0.4 ? '#fbbf24' : '#f87171';
     return (
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden" style={{ background: '#1e293b' }}>
+        <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
             <div className="flex">
                 <div className="w-1 flex-shrink-0" style={{ background: barColor }} />
                 <div className="p-3 flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-1">
-                        <p className="text-xs leading-relaxed" style={{ color: '#e2e8f0' }}>{fact.description}</p>
-                        {fact.id && <span className="text-[9px] font-mono flex-shrink-0 px-1.5 py-0.5 rounded" style={{ color: '#94a3b8', background: 'rgba(148,163,184,0.1)' }}>#{fact.id}</span>}
+                        <p className="text-xs leading-relaxed text-slate-700">{fact.description}</p>
+                        {fact.id && <span className="text-[9px] font-mono flex-shrink-0 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">#{fact.id}</span>}
                     </div>
                     {fact.source_quote && (
-                        <p className="text-[11px] italic mt-1.5 leading-relaxed" style={{ color: '#94a3b8' }}>"{fact.source_quote}"</p>
+                        <p className="text-[11px] italic mt-1.5 leading-relaxed text-slate-500">"{fact.source_quote}"</p>
                     )}
                     {fact.entities && fact.entities.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                             {fact.entities.map(e => (
-                                <span key={e} className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>{e}</span>
+                                <span key={e} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-600">{e}</span>
                             ))}
                         </div>
                     )}
                     {/* Confidence bar */}
-                    <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <div className="mt-2 h-1 rounded-full overflow-hidden bg-slate-100">
                         <div className="h-full rounded-full transition-all" style={{ width: `${conf * 100}%`, background: barColor }} />
                     </div>
                 </div>
@@ -326,17 +293,17 @@ const TimelineView: React.FC<{ timeline: Record<string, any>[] }> = ({ timeline 
     return (
         <div className="relative pl-6">
             {/* Center line */}
-            <div className="absolute left-3 top-0 bottom-0 w-px" style={{ background: 'rgba(34,211,238,0.2)', borderLeft: '1px dashed rgba(34,211,238,0.3)' }} />
+            <div className="absolute left-3 top-0 bottom-0 w-px bg-slate-200" />
             {timeline.map((item, i) => (
                 <div key={i} className="relative mb-4 last:mb-0">
                     {/* Dot */}
-                    <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2" style={{ borderColor: '#22d3ee', background: '#0a0f1e' }} />
+                    <div className="absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 border-blue-500 bg-white" />
                     {/* Card */}
-                    <div className="rounded-lg border border-white/[0.06] p-3" style={{ background: '#1e293b' }}>
+                    <div className="rounded-lg border border-slate-200 bg-white shadow-sm p-3">
                         {(item.date || item.time) && (
-                            <div className="text-[10px] font-mono mb-1" style={{ color: '#22d3ee' }}>{item.date || item.time}</div>
+                            <div className="text-[10px] font-mono mb-1 text-blue-600">{item.date || item.time}</div>
                         )}
-                        <p className="text-xs leading-relaxed" style={{ color: '#e2e8f0' }}>{item.event || item.description || JSON.stringify(item)}</p>
+                        <p className="text-xs leading-relaxed text-slate-700">{item.event || item.description || JSON.stringify(item)}</p>
                     </div>
                 </div>
             ))}
@@ -348,23 +315,22 @@ const TimelineView: React.FC<{ timeline: Record<string, any>[] }> = ({ timeline 
 const ConflictCard: React.FC<{ conflict: InvestigationConflict }> = ({ conflict }) => {
     const resolved = /resolved/i.test(conflict.resolution_status || '');
     return (
-        <div className="rounded-lg border border-white/[0.06] p-4" style={{ background: '#1e293b' }}>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
             <div className="flex items-start justify-between gap-2 mb-2">
-                <p className="text-xs leading-relaxed" style={{ color: '#e2e8f0' }}>{conflict.description}</p>
-                <span className="text-[9px] font-bold uppercase tracking-wider flex-shrink-0 px-2 py-0.5 rounded"
-                    style={{ color: resolved ? '#4ade80' : '#f87171', background: resolved ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)' }}>
+                <p className="text-xs leading-relaxed text-slate-700">{conflict.description}</p>
+                <span className={`text-[9px] font-bold uppercase tracking-wider flex-shrink-0 px-2 py-0.5 rounded ${resolved ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                     {resolved ? 'RESOLVED' : 'UNRESOLVED'}
                 </span>
             </div>
             {conflict.conflicting_fact_ids?.length > 0 && (
                 <div className="flex gap-1 mt-2">
                     {conflict.conflicting_fact_ids.map(id => (
-                        <span key={id} className="text-[9px] font-mono px-1.5 py-0.5 rounded" style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)' }}>#{id}</span>
+                        <span key={id} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-50 text-amber-700">#{id}</span>
                     ))}
                 </div>
             )}
             {conflict.resolution_note && (
-                <p className="text-[11px] mt-2 italic" style={{ color: '#94a3b8' }}>{conflict.resolution_note}</p>
+                <p className="text-[11px] mt-2 italic text-slate-500">{conflict.resolution_note}</p>
             )}
         </div>
     );
@@ -376,22 +342,22 @@ const RiskCard: React.FC<{ risk: Record<string, any>; index: number }> = ({ risk
     const severityPercent = severity === 'critical' ? 100 : severity === 'high' ? 75 : severity === 'medium' ? 50 : 25;
     const barColor = severityPercent >= 75 ? '#f87171' : severityPercent >= 50 ? '#fbbf24' : '#4ade80';
     return (
-        <div className="rounded-lg border border-white/[0.06] p-4" style={{ background: '#1e293b' }}>
-            <p className="text-xs leading-relaxed mb-2" style={{ color: '#e2e8f0' }}>{risk.description || risk.risk || `Risk #${index + 1}`}</p>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs leading-relaxed mb-2 text-slate-700">{risk.description || risk.risk || `Risk #${index + 1}`}</p>
             {/* Severity bar */}
             <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <div className="flex-1 h-2 rounded-full overflow-hidden bg-slate-100">
                     <div className="h-full rounded-full transition-all" style={{ width: `${severityPercent}%`, background: barColor }} />
                 </div>
                 {severity && <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: barColor }}>{severity}</span>}
             </div>
-            {risk.mitigation && <p className="text-[11px] mt-2 italic" style={{ color: '#94a3b8' }}>{risk.mitigation}</p>}
+            {risk.mitigation && <p className="text-[11px] mt-2 italic text-slate-500">{risk.mitigation}</p>}
         </div>
     );
 };
 
-// --- Intel Feed (loading terminal) ---
-const IntelFeed: React.FC<{ label: string; step: string }> = ({ label, step }) => {
+// --- Progress Log (loading feed) ---
+const ProgressLog: React.FC<{ label: string; step: string }> = ({ label, step }) => {
     const { t } = useTranslation();
     const [lines, setLines] = useState<string[]>([]);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -412,58 +378,42 @@ const IntelFeed: React.FC<{ label: string; step: string }> = ({ label, step }) =
     }, [lines]);
 
     return (
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden" style={{ background: '#0a0f1e' }}>
-            <div className="px-3 py-1.5 border-b border-white/[0.06] flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ background: '#4ade80' }} />
-                <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: '#4ade80' }}>INTEL FEED</span>
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-3 py-1.5 border-b border-slate-200 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <span className="text-xs font-medium uppercase tracking-wider text-slate-600">Progress Log</span>
             </div>
-            <div ref={containerRef} className="p-3 max-h-40 overflow-y-auto font-mono text-[11px] leading-relaxed" style={{ color: '#4ade80' }}>
+            <div ref={containerRef} className="p-3 max-h-40 overflow-y-auto font-mono text-xs leading-relaxed text-slate-600">
                 {lines.map((line, i) => <div key={i}>{line}</div>)}
-                <span style={{ animation: 'intelFeedBlink 1s infinite' }}>_</span>
             </div>
         </div>
     );
 };
 
-// --- Radar Empty State ---
-const RadarEmpty: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ onRun, loadingHistory }) => {
+// --- Empty State ---
+const EmptyState: React.FC<{ onRun: () => void; loadingHistory: boolean }> = ({ onRun, loadingHistory }) => {
     const { t } = useTranslation();
     return (
-    <div className="flex flex-col items-center justify-center h-full py-24 px-6" style={{ background: '#0a0f1e' }}>
+    <div className="flex flex-col items-center justify-center h-full py-24 px-6 bg-slate-50">
         <div className="max-w-sm text-center">
-            {/* Radar SVG */}
-            <svg width="160" height="160" viewBox="0 0 160 160" className="mx-auto mb-6">
-                <circle cx="80" cy="80" r="60" fill="none" stroke="rgba(34,211,238,0.1)" strokeWidth="1" />
-                <circle cx="80" cy="80" r="40" fill="none" stroke="rgba(34,211,238,0.08)" strokeWidth="1" />
-                <circle cx="80" cy="80" r="20" fill="none" stroke="rgba(34,211,238,0.06)" strokeWidth="1" />
-                {/* Sweep line */}
-                <line x1="80" y1="80" x2="80" y2="20" stroke="rgba(34,211,238,0.5)" strokeWidth="1.5"
-                    style={{ transformOrigin: '80px 80px', animation: 'radarSweep 3s linear infinite' }} />
-                {/* Sonar rings */}
-                <circle cx="80" cy="80" r="8" fill="none" stroke="#22d3ee" strokeWidth="1">
-                    <animate attributeName="r" from="8" to="70" dur="2.5s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" from="0.6" to="0" dur="2.5s" repeatCount="indefinite" />
-                </circle>
-                <circle cx="80" cy="80" r="8" fill="none" stroke="#22d3ee" strokeWidth="1">
-                    <animate attributeName="r" from="8" to="70" dur="2.5s" begin="1.25s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" from="0.6" to="0" dur="2.5s" begin="1.25s" repeatCount="indefinite" />
-                </circle>
-                {/* Center dot */}
-                <circle cx="80" cy="80" r="3" fill="#22d3ee" />
-            </svg>
+            {/* Search Icon */}
+            <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-6">
+                <svg className="w-10 h-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+            </div>
 
-            <h3 className="text-sm font-mono uppercase tracking-[0.2em] font-bold mb-3" style={{ color: '#e2e8f0' }}>{t('portal.investigator.awaitingOrders')}</h3>
-            <p className="text-xs leading-relaxed mb-6" style={{ color: '#94a3b8' }}>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('portal.investigator.awaitingOrders')}</h3>
+            <p className="text-sm leading-relaxed text-slate-500 mb-6">
                 {t('portal.investigator.initialDescription')}
             </p>
             {loadingHistory ? (
-                <div className="inline-flex items-center gap-2 text-xs" style={{ color: '#94a3b8' }}>
+                <div className="inline-flex items-center gap-2 text-sm text-slate-500">
                     <SpinnerIcon /> Loading previous reports...
                 </div>
             ) : (
                 <button onClick={onRun}
-                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-mono font-bold uppercase tracking-wider rounded-lg transition-all hover:shadow-lg hover:shadow-cyan-500/20"
-                    style={{ color: '#22d3ee', border: '1px solid rgba(34,211,238,0.4)', background: 'rgba(34,211,238,0.05)' }}>
+                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-semibold rounded-lg transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
                     <PlayIcon /> {t('portal.investigator.initiate')}
                 </button>
             )}
@@ -495,7 +445,7 @@ const InvestigatorAgent: React.FC = () => {
     const [stats, setStats] = useState<InvestigationStats | null>(null);
 
     // View mode
-    const [viewMode, setViewMode] = useState<'intel' | 'report'>('intel');
+    const [viewMode, setViewMode] = useState<'dashboard' | 'report'>('dashboard');
 
     // Progress
     const [activeStep, setActiveStep] = useState('');
@@ -513,8 +463,9 @@ const InvestigatorAgent: React.FC = () => {
     const [loadingHistory, setLoadingHistory] = useState(false);
     const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
-    // Evidence cards expand
-    const [showAllFacts, setShowAllFacts] = useState(false);
+    // Evidence cards pagination
+    const FACTS_PER_PAGE = 6;
+    const [factsPage, setFactsPage] = useState(0);
 
     // Background job polling
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -610,12 +561,12 @@ const InvestigatorAgent: React.FC = () => {
         return () => stopPolling();
     }, [caseData?._id]);
 
-    // Inject intel styles once
+    // Inject styles once
     useEffect(() => {
-        if (document.getElementById('intel-board-styles')) return;
+        if (document.getElementById('investigator-styles')) return;
         const style = document.createElement('style');
-        style.id = 'intel-board-styles';
-        style.textContent = INTEL_STYLES;
+        style.id = 'investigator-styles';
+        style.textContent = INVESTIGATOR_STYLES;
         document.head.appendChild(style);
     }, []);
 
@@ -648,7 +599,7 @@ const InvestigatorAgent: React.FC = () => {
         setProgressLabel(t('portal.investigator.status.ready'));
         setCompletedSteps(new Set());
         setSelectedReportId(null);
-        setShowAllFacts(false);
+        setFactsPage(0);
 
         const focusQuestions = focusText.split('\n').map(q => q.trim()).filter(Boolean);
 
@@ -673,7 +624,7 @@ const InvestigatorAgent: React.FC = () => {
         setStructuredData(r.structured_data || null);
         setStats(r.metadata || null);
         setShowHistory(false);
-        setShowAllFacts(false);
+        setFactsPage(0);
     };
 
     const handlePrint = () => {
@@ -732,44 +683,34 @@ const InvestigatorAgent: React.FC = () => {
     //  RENDER
     // ============================================================
     return (
-        <div className="flex flex-col h-full" style={{ background: viewMode === 'intel' && (report || loading) ? '#0a0f1e' : undefined }}>
+        <div className="flex flex-col h-full">
             {/* ===== HEADER ===== */}
-            <div className="border-b px-6 py-4 space-y-3"
-                style={viewMode === 'intel' && (report || loading) ? { background: '#111827', borderColor: 'rgba(255,255,255,0.06)' } : { background: '#fff', borderColor: '#e2e8f0' }}>
+            <div className="border-b border-slate-200 bg-white px-6 py-4 space-y-3">
                 {/* Top Row */}
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
-                            style={viewMode === 'intel' && (report || loading)
-                                ? { background: 'linear-gradient(135deg, #22d3ee, #a78bfa)' }
-                                : { background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm text-white"
+                            style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}>
                             <FileSearchIcon />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold" style={{ color: viewMode === 'intel' && (report || loading) ? '#e2e8f0' : '#0f172a' }}>{t('portal.investigator.title')}</h2>
-                            <p className="text-xs" style={{ color: viewMode === 'intel' && (report || loading) ? '#94a3b8' : '#94a3b8' }}>{t('portal.investigator.subtitle')}</p>
+                            <h2 className="text-lg font-bold text-slate-900">{t('portal.investigator.title')}</h2>
+                            <p className="text-xs text-slate-500">{t('portal.investigator.subtitle')}</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                         {/* View Toggle */}
                         {report && !loading && (
-                            <div className="flex rounded-lg overflow-hidden border"
-                                style={viewMode === 'intel' ? { borderColor: 'rgba(255,255,255,0.1)' } : { borderColor: '#e2e8f0' }}>
+                            <div className="flex border border-slate-200 rounded-lg overflow-hidden">
                                 <button
-                                    onClick={() => setViewMode('intel')}
-                                    className="px-3 py-1.5 text-xs font-semibold transition-colors"
-                                    style={viewMode === 'intel'
-                                        ? { background: 'rgba(34,211,238,0.15)', color: '#22d3ee' }
-                                        : { background: 'transparent', color: '#94a3b8' }}>
+                                    onClick={() => setViewMode('dashboard')}
+                                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:text-slate-700'}`}>
                                     {t('portal.investigator.intelBoard')}
                                 </button>
                                 <button
                                     onClick={() => setViewMode('report')}
-                                    className="px-3 py-1.5 text-xs font-semibold transition-colors"
-                                    style={viewMode === 'report'
-                                        ? { background: '#8b5cf6', color: '#fff' }
-                                        : { background: 'transparent', color: '#94a3b8' }}>
+                                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${viewMode === 'report' ? 'bg-blue-600 text-white' : 'bg-white text-slate-500 hover:text-slate-700'}`}>
                                     {t('portal.investigator.report')}
                                 </button>
                             </div>
@@ -779,16 +720,10 @@ const InvestigatorAgent: React.FC = () => {
                         {reportHistory.length > 0 && (
                             <button
                                 onClick={() => setShowHistory(!showHistory)}
-                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors"
-                                style={viewMode === 'intel' && (report || loading)
-                                    ? { color: '#94a3b8', background: 'rgba(255,255,255,0.05)' }
-                                    : { color: '#475569', background: '#f1f5f9' }}>
+                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors text-slate-600 bg-slate-100 hover:bg-slate-200">
                                 <ClockIcon />
                                 <span className="hidden sm:inline">{t('portal.investigator.history')}</span>
-                                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold"
-                                    style={viewMode === 'intel' && (report || loading)
-                                        ? { color: '#e2e8f0', background: 'rgba(255,255,255,0.1)' }
-                                        : { color: '#334155', background: '#cbd5e1' }}>
+                                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600">
                                     {reportHistory.length}
                                 </span>
                                 {showHistory ? <ChevronUpIcon /> : <ChevronDownIcon />}
@@ -807,15 +742,11 @@ const InvestigatorAgent: React.FC = () => {
                         {/* Run Button */}
                         {!loading ? (
                             <button onClick={handleRun}
-                                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition-all"
-                                style={viewMode === 'intel' && report
-                                    ? { color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.1)' }
-                                    : { color: '#fff', background: 'linear-gradient(to right, #8b5cf6, #7c3aed)' }}>
+                                className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg shadow-sm transition-all bg-blue-600 hover:bg-blue-700 text-white">
                                 <PlayIcon /> {t('portal.investigator.runInvestigation')}
                             </button>
                         ) : (
-                            <button disabled className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg cursor-not-allowed"
-                                style={viewMode === 'intel' ? { color: '#22d3ee', background: 'rgba(34,211,238,0.1)' } : { color: '#7c3aed', background: '#f5f3ff' }}>
+                            <button disabled className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-lg cursor-not-allowed bg-blue-50 text-blue-600">
                                 <SpinnerIcon /> {t('portal.investigator.status.running')}...
                             </button>
                         )}
@@ -825,8 +756,7 @@ const InvestigatorAgent: React.FC = () => {
                 {/* Focus Questions */}
                 <div>
                     <button onClick={() => setShowFocus(!showFocus)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors"
-                        style={{ color: viewMode === 'intel' && (report || loading) ? '#22d3ee' : '#7c3aed' }}>
+                        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors text-blue-600">
                         <TargetIcon />
                         {showFocus ? t('portal.investigator.hideFocus') : t('portal.investigator.addFocus')}
                         {showFocus ? <ChevronUpIcon /> : <ChevronDownIcon />}
@@ -843,10 +773,7 @@ const InvestigatorAgent: React.FC = () => {
                                     }
                                 }}
                                 placeholder={"Enter questions to focus the investigation (one per line):\n\u2022 Was there a breach of contract?\n\u2022 What are the payment discrepancies?"}
-                                className="w-full rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2"
-                                style={viewMode === 'intel' && (report || loading)
-                                    ? { background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.2)', color: '#e2e8f0' }
-                                    : { background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#334155' }}
+                                className="w-full rounded-lg p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 border border-slate-200 text-slate-700 placeholder-slate-400"
                                 rows={3}
                             />
                         </div>
@@ -855,32 +782,27 @@ const InvestigatorAgent: React.FC = () => {
 
                 {/* History Dropdown */}
                 {showHistory && reportHistory.length > 0 && (
-                    <div className="rounded-lg shadow-sm max-h-56 overflow-y-auto divide-y"
-                        style={viewMode === 'intel' && (report || loading)
-                            ? { background: '#1e293b', borderColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.06)' }
-                            : { background: '#fff', border: '1px solid #e2e8f0' }}>
+                    <div className="rounded-lg shadow-sm max-h-56 overflow-y-auto divide-y bg-white border border-slate-200">
                         {reportHistory.map((r) => (
                             <button key={r._id} onClick={() => handleSelectReport(r)}
-                                className="w-full text-left px-4 py-3 transition-colors"
+                                className="w-full text-left px-4 py-3 transition-colors hover:bg-slate-50"
                                 style={{
-                                    borderLeft: selectedReportId === r._id ? '2px solid #8b5cf6' : '2px solid transparent',
-                                    background: selectedReportId === r._id
-                                        ? (viewMode === 'intel' ? 'rgba(139,92,246,0.1)' : '#f5f3ff')
-                                        : 'transparent',
+                                    borderLeft: selectedReportId === r._id ? '2px solid #3b82f6' : '2px solid transparent',
+                                    background: selectedReportId === r._id ? '#eff6ff' : 'transparent',
                                 }}>
                                 <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ background: selectedReportId === r._id ? '#8b5cf6' : '#94a3b8' }} />
-                                        <span className="text-sm font-medium" style={{ color: viewMode === 'intel' && (report || loading) ? '#e2e8f0' : '#334155' }}>{fmtDate(r.created_at)}</span>
+                                        <div className="w-2 h-2 rounded-full" style={{ background: selectedReportId === r._id ? '#3b82f6' : '#94a3b8' }} />
+                                        <span className="text-sm font-medium text-slate-700">{fmtDate(r.created_at)}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-[11px]" style={{ color: '#94a3b8' }}>
+                                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
                                         <span>{r.metadata?.document_count || 0} docs</span>
                                         <span>{r.metadata?.fact_count || 0} facts</span>
                                         <span>{r.metadata?.revision_count || 0} revisions</span>
                                     </div>
                                 </div>
                                 {r.focus_questions && r.focus_questions.length > 0 && (
-                                    <p className="text-[11px] mt-1 ml-4 truncate" style={{ color: '#94a3b8' }}>
+                                    <p className="text-[11px] mt-1 ml-4 truncate text-slate-400">
                                         Focus: {r.focus_questions.join(' | ')}
                                     </p>
                                 )}
@@ -891,219 +813,214 @@ const InvestigatorAgent: React.FC = () => {
             </div>
 
             {/* ===== CONTENT ===== */}
-            <div id="investigator-print-content" className="flex-1 overflow-y-auto" style={{ background: viewMode === 'intel' && (report || loading || (!loading && !report)) ? '#0a0f1e' : '#f8fafc' }}>
+            <div id="investigator-print-content" className="flex-1 overflow-y-auto bg-slate-50 p-6 space-y-6">
                 {/* Error Banner */}
                 {error && (
-                    <div className="mx-6 mt-4 rounded-lg px-4 py-3 flex items-start gap-3"
-                        style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
-                        <div className="mt-0.5" style={{ color: '#f87171' }}><AlertIcon /></div>
+                    <div className="rounded-lg px-4 py-3 flex items-start gap-3 bg-red-50 border border-red-200">
+                        <div className="mt-0.5 text-red-500"><AlertIcon /></div>
                         <div className="flex-1">
-                            <p className="text-sm font-semibold" style={{ color: '#f87171' }}>{t('portal.investigator.status.error')}</p>
-                            <p className="text-sm mt-0.5" style={{ color: '#fca5a5' }}>{error}</p>
+                            <p className="text-sm font-semibold text-red-700">{t('portal.investigator.status.error')}</p>
+                            <p className="text-sm mt-0.5 text-red-600">{error}</p>
                         </div>
-                        <button onClick={() => setError(null)} className="text-lg leading-none" style={{ color: '#f87171' }}>&times;</button>
+                        <button onClick={() => setError(null)} className="text-lg leading-none text-red-500">&times;</button>
                     </div>
                 )}
 
                 {/* === LOADING STATE === */}
                 {loading && (
-                    <div className="px-6 py-8">
-                        <div className="max-w-3xl mx-auto space-y-6">
-                            {/* Pipeline Constellation */}
-                            <div className="rounded-xl border p-6" style={{ background: '#111827', borderColor: 'rgba(255,255,255,0.06)' }}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Investigation Pipeline</h3>
-                                    <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-full" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>{progressPercent}%</span>
-                                </div>
-
-                                {/* Step Grid (constellation style) */}
-                                <svg viewBox="0 0 600 60" className="w-full mb-4">
-                                    {/* Connecting lines */}
-                                    {PIPELINE_STEPS.map((_, i) => {
-                                        if (i === 0) return null;
-                                        const x1 = (i - 1) * (600 / (PIPELINE_STEPS.length - 1));
-                                        const x2 = i * (600 / (PIPELINE_STEPS.length - 1));
-                                        const s1 = getStepStatus(PIPELINE_STEPS[i - 1].key);
-                                        const s2 = getStepStatus(PIPELINE_STEPS[i].key);
-                                        const done = s1 === 'done' && (s2 === 'done' || s2 === 'active');
-                                        return (
-                                            <line key={i} x1={x1} y1={20} x2={x2} y2={20}
-                                                stroke={done ? '#4ade80' : 'rgba(148,163,184,0.2)'}
-                                                strokeWidth="1.5" strokeDasharray={done ? 'none' : '4,4'}
-                                                style={!done ? { animation: 'dashFlow 1.5s linear infinite' } : {}} />
-                                        );
-                                    })}
-                                    {/* Nodes */}
-                                    {PIPELINE_STEPS.map((step, i) => {
-                                        const x = i * (600 / (PIPELINE_STEPS.length - 1));
-                                        const status = getStepStatus(step.key);
-                                        const color = status === 'done' ? '#4ade80' : status === 'active' ? '#22d3ee' : '#475569';
-                                        return (
-                                            <g key={step.key}>
-                                                {status === 'active' && (
-                                                    <circle cx={x} cy={20} r={12} fill="none" stroke="#22d3ee" strokeWidth="1" opacity="0.3"
-                                                        style={{ animation: 'nodePulse 1.5s ease-in-out infinite' }} />
-                                                )}
-                                                <circle cx={x} cy={20} r={6} fill={status === 'pending' ? '#1e293b' : `${color}33`} stroke={color} strokeWidth="1.5" />
-                                                {status === 'done' && <circle cx={x} cy={20} r={2.5} fill={color} />}
-                                                <text x={x} y={48} textAnchor="middle" fill={color} fontSize="8" fontFamily="monospace" fontWeight="500">
-                                                    {t(`portal.investigator.pipeline.${step.key}`)}
-                                                </text>
-                                            </g>
-                                        );
-                                    })}
-                                </svg>
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {/* Pipeline */}
+                        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-sm font-semibold text-slate-800">Investigation Pipeline</h3>
+                                <span className="text-xs font-bold font-mono px-2.5 py-1 rounded-full bg-blue-50 text-blue-600">{progressPercent}%</span>
                             </div>
 
-                            {/* Intel Feed */}
-                            <IntelFeed label={progressLabel} step={activeStep} />
+                            {/* Step Grid */}
+                            <svg viewBox="0 0 600 60" className="w-full mb-4">
+                                {/* Connecting lines */}
+                                {PIPELINE_STEPS.map((_, i) => {
+                                    if (i === 0) return null;
+                                    const x1 = (i - 1) * (600 / (PIPELINE_STEPS.length - 1));
+                                    const x2 = i * (600 / (PIPELINE_STEPS.length - 1));
+                                    const s1 = getStepStatus(PIPELINE_STEPS[i - 1].key);
+                                    const s2 = getStepStatus(PIPELINE_STEPS[i].key);
+                                    const done = s1 === 'done' && (s2 === 'done' || s2 === 'active');
+                                    return (
+                                        <line key={i} x1={x1} y1={20} x2={x2} y2={20}
+                                            stroke={done ? '#4ade80' : '#e2e8f0'}
+                                            strokeWidth="1.5" strokeDasharray={done ? 'none' : '4,4'} />
+                                    );
+                                })}
+                                {/* Nodes */}
+                                {PIPELINE_STEPS.map((step, i) => {
+                                    const x = i * (600 / (PIPELINE_STEPS.length - 1));
+                                    const status = getStepStatus(step.key);
+                                    const color = status === 'done' ? '#4ade80' : status === 'active' ? '#3b82f6' : '#cbd5e1';
+                                    const textColor = status === 'pending' ? '#94a3b8' : '#334155';
+                                    return (
+                                        <g key={step.key}>
+                                            <circle cx={x} cy={20} r={6} fill={status === 'pending' ? '#f8fafc' : `${color}33`} stroke={color} strokeWidth="1.5" />
+                                            {status === 'done' && <circle cx={x} cy={20} r={2.5} fill={color} />}
+                                            <text x={x} y={48} textAnchor="middle" fill={textColor} fontSize="8" fontFamily="monospace" fontWeight="500">
+                                                {t(`portal.investigator.pipeline.${step.key}`)}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+                            </svg>
+                        </div>
 
-                            {/* Status */}
-                            <div className="text-center space-y-2">
-                                <p className="text-sm font-medium" style={{ color: '#e2e8f0' }}>{progressLabel}</p>
-                                <p className="text-xs" style={{ color: '#94a3b8' }}>
-                                    Analyzing documents, extracting evidence, and generating a comprehensive intelligence report.
-                                </p>
-                            </div>
+                        {/* Progress Log */}
+                        <ProgressLog label={progressLabel} step={activeStep} />
+
+                        {/* Status */}
+                        <div className="text-center space-y-2">
+                            <p className="text-sm font-medium text-slate-700">{progressLabel}</p>
+                            <p className="text-xs text-slate-500">
+                                Analyzing documents, extracting evidence, and generating a comprehensive intelligence report.
+                            </p>
                         </div>
                     </div>
                 )}
 
-                {/* === INTEL BOARD VIEW === */}
-                {!loading && report && viewMode === 'intel' && (
-                    <div className="p-6">
-                        <div className="max-w-6xl mx-auto space-y-6">
-                            {/* Scanline overlay */}
-                            <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden" style={{ opacity: 0.02 }}>
-                                <div className="w-full h-1" style={{ background: 'rgba(34,211,238,0.5)', animation: 'scanline 8s linear infinite' }} />
+                {/* === DASHBOARD VIEW === */}
+                {!loading && report && viewMode === 'dashboard' && (
+                    <div className="max-w-6xl mx-auto space-y-6">
+                        {/* Stats Dashboard */}
+                        {stats && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                                <StatCard label="Documents Analyzed" value={stats.document_count} accent="#a78bfa" delay="fade-in-1" icon={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                } />
+                                <StatCard label="Facts Extracted" value={stats.fact_count} accent="#3b82f6" delay="fade-in-1" icon={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+                                } />
+                                <StatCard label="Entities Found" value={stats.entity_count} accent="#4ade80" delay="fade-in-2" icon={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                } />
+                                <StatCard label="Conflicts" value={stats.conflict_count} accent="#fbbf24" delay="fade-in-3" icon={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                } />
+                                <StatCard label="Risk Level" value={stats.overall_risk_level} accent={riskLevelColor(stats.overall_risk_level)} delay="fade-in-4" isText icon={
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                                } />
                             </div>
+                        )}
 
-                            {/* Stats Dashboard */}
-                            {stats && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                                    <StatCard label="Documents Analyzed" value={stats.document_count} accent="#a78bfa" delay="intel-fade-in-1" icon={
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                    } />
-                                    <StatCard label="Facts Extracted" value={stats.fact_count} accent="#22d3ee" delay="intel-fade-in-1" icon={
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
-                                    } />
-                                    <StatCard label="Entities Found" value={stats.entity_count} accent="#4ade80" delay="intel-fade-in-2" icon={
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                    } />
-                                    <StatCard label="Conflicts" value={stats.conflict_count} accent="#fbbf24" delay="intel-fade-in-3" icon={
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                    } />
-                                    <StatCard label="Risk Level" value={stats.overall_risk_level} accent={riskLevelColor(stats.overall_risk_level)} delay="intel-fade-in-4" isText icon={
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                                    } />
-                                </div>
-                            )}
+                        {/* Entity Graph */}
+                        {hasIntelData && structuredData && (
+                            <EntityGraph entities={structuredData.entities} facts={structuredData.facts} />
+                        )}
 
-                            {/* Entity Graph */}
-                            {hasIntelData && structuredData && (
-                                <EntityGraph entities={structuredData.entities} facts={structuredData.facts} />
-                            )}
-
-                            {/* Evidence + Timeline Row */}
-                            {structuredData && (structuredData.facts.length > 0 || structuredData.timeline.length > 0) && (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Evidence Cards */}
-                                    {structuredData.facts.length > 0 && (
-                                        <div className="intel-fade-in intel-fade-in-3 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: '#111827' }}>
-                                            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                                                <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Evidence Cards</h3>
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>
-                                                    {structuredData.facts.length} facts
-                                                </span>
-                                            </div>
-                                            <div className="p-4 space-y-3" style={{ maxHeight: showAllFacts ? 'none' : '480px', overflow: showAllFacts ? 'visible' : 'hidden' }}>
-                                                {(showAllFacts ? structuredData.facts : structuredData.facts.slice(0, 8)).map((fact, i) => (
-                                                    <FactCard key={fact.id || i} fact={fact} />
-                                                ))}
-                                            </div>
-                                            {structuredData.facts.length > 8 && (
-                                                <button onClick={() => setShowAllFacts(!showAllFacts)}
-                                                    className="w-full py-2.5 text-xs font-semibold border-t transition-colors"
-                                                    style={{ color: '#22d3ee', borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(34,211,238,0.03)' }}>
-                                                    {showAllFacts ? 'Show less' : `Show all ${structuredData.facts.length} facts`}
-                                                </button>
-                                            )}
+                        {/* Evidence + Timeline Row */}
+                        {structuredData && (structuredData.facts.length > 0 || structuredData.timeline.length > 0) && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Evidence Cards */}
+                                {structuredData.facts.length > 0 && (
+                                    <div className="fade-in fade-in-3 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold text-slate-800">Evidence Cards</h3>
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-600">
+                                                {structuredData.facts.length} facts
+                                            </span>
                                         </div>
-                                    )}
-
-                                    {/* Timeline */}
-                                    {structuredData.timeline.length > 0 && (
-                                        <div className="intel-fade-in intel-fade-in-3 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: '#111827' }}>
-                                            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                                                <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Visual Timeline</h3>
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ color: '#22d3ee', background: 'rgba(34,211,238,0.1)' }}>
-                                                    {structuredData.timeline.length} events
-                                                </span>
-                                            </div>
-                                            <div className="p-4" style={{ maxHeight: 480, overflowY: 'auto' }}>
-                                                <TimelineView timeline={structuredData.timeline} />
-                                            </div>
+                                        <div className="p-4 space-y-3">
+                                            {structuredData.facts.slice(factsPage * FACTS_PER_PAGE, (factsPage + 1) * FACTS_PER_PAGE).map((fact, i) => (
+                                                <FactCard key={fact.id || i} fact={fact} />
+                                            ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                        {structuredData.facts.length > FACTS_PER_PAGE && (() => {
+                                            const totalPages = Math.ceil(structuredData.facts.length / FACTS_PER_PAGE);
+                                            return (
+                                                <div className="flex items-center justify-center gap-3 py-2.5 border-t border-slate-100 bg-slate-50">
+                                                    <button onClick={() => setFactsPage(p => p - 1)} disabled={factsPage === 0}
+                                                        className="px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-30 text-blue-600 hover:bg-blue-50">
+                                                        &#8592; Prev
+                                                    </button>
+                                                    <span className="text-[11px] font-mono text-slate-500">
+                                                        Page {factsPage + 1} of {totalPages}
+                                                    </span>
+                                                    <button onClick={() => setFactsPage(p => p + 1)} disabled={factsPage >= totalPages - 1}
+                                                        className="px-2 py-1 rounded text-xs font-semibold transition-colors disabled:opacity-30 text-blue-600 hover:bg-blue-50">
+                                                        Next &#8594;
+                                                    </button>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                )}
 
-                            {/* Conflicts & Risks */}
-                            {structuredData && (structuredData.conflicts.length > 0 || structuredData.risks.length > 0) && (
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 intel-fade-in intel-fade-in-4">
-                                    {/* Conflicts */}
-                                    {structuredData.conflicts.length > 0 && (
-                                        <div className="rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: '#111827' }}>
-                                            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                                                <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Conflicts</h3>
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded" style={{ color: '#fbbf24', background: 'rgba(251,191,36,0.1)' }}>
-                                                    {structuredData.conflicts.length}
-                                                </span>
-                                            </div>
-                                            <div className="p-4 space-y-3" style={{ maxHeight: 400, overflowY: 'auto' }}>
-                                                {structuredData.conflicts.map((c, i) => <ConflictCard key={i} conflict={c} />)}
-                                            </div>
+                                {/* Timeline */}
+                                {structuredData.timeline.length > 0 && (
+                                    <div className="fade-in fade-in-3 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold text-slate-800">Visual Timeline</h3>
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-600">
+                                                {structuredData.timeline.length} events
+                                            </span>
                                         </div>
-                                    )}
-
-                                    {/* Risks */}
-                                    {structuredData.risks.length > 0 && (
-                                        <div className="rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: '#111827' }}>
-                                            <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-                                                <h3 className="text-sm font-semibold" style={{ color: '#e2e8f0' }}>Risk Assessment</h3>
-                                                <span className="text-[10px] font-mono px-2 py-0.5 rounded"
-                                                    style={{ color: '#f87171', background: 'rgba(248,113,113,0.1)' }}>
-                                                    {structuredData.risks.length}
-                                                </span>
-                                            </div>
-                                            <div className="p-4 space-y-3" style={{ maxHeight: 400, overflowY: 'auto' }}>
-                                                {structuredData.risks.map((r, i) => <RiskCard key={i} risk={r} index={i} />)}
-                                            </div>
+                                        <div className="p-4" style={{ maxHeight: 480, overflowY: 'auto' }}>
+                                            <TimelineView timeline={structuredData.timeline} />
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                            {/* Fallback if no structured data */}
-                            {!hasIntelData && (
-                                <div className="text-center py-16">
-                                    <p className="text-sm" style={{ color: '#94a3b8' }}>
-                                        No structured intelligence data available for this report. Switch to the Report view for the full analysis.
-                                    </p>
-                                    <button onClick={() => setViewMode('report')}
-                                        className="mt-4 px-4 py-2 text-xs font-semibold rounded-lg"
-                                        style={{ color: '#22d3ee', border: '1px solid rgba(34,211,238,0.3)', background: 'rgba(34,211,238,0.05)' }}>
-                                        View Report
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        {/* Conflicts & Risks */}
+                        {structuredData && (structuredData.conflicts.length > 0 || structuredData.risks.length > 0) && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 fade-in fade-in-4">
+                                {/* Conflicts */}
+                                {structuredData.conflicts.length > 0 && (
+                                    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold text-slate-800">Conflicts</h3>
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-50 text-amber-700">
+                                                {structuredData.conflicts.length}
+                                            </span>
+                                        </div>
+                                        <div className="p-4 space-y-3" style={{ maxHeight: 400, overflowY: 'auto' }}>
+                                            {structuredData.conflicts.map((c, i) => <ConflictCard key={i} conflict={c} />)}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Risks */}
+                                {structuredData.risks.length > 0 && (
+                                    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                                        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold text-slate-800">Risk Assessment</h3>
+                                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-50 text-red-700">
+                                                {structuredData.risks.length}
+                                            </span>
+                                        </div>
+                                        <div className="p-4 space-y-3" style={{ maxHeight: 400, overflowY: 'auto' }}>
+                                            {structuredData.risks.map((r, i) => <RiskCard key={i} risk={r} index={i} />)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Fallback if no structured data */}
+                        {!hasIntelData && (
+                            <div className="text-center py-16">
+                                <p className="text-sm text-slate-500">
+                                    No structured intelligence data available for this report. Switch to the Report view for the full analysis.
+                                </p>
+                                <button onClick={() => setViewMode('report')}
+                                    className="mt-4 px-4 py-2 text-xs font-semibold rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-colors">
+                                    View Report
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* === REPORT VIEW === */}
                 {!loading && report && viewMode === 'report' && (
-                    <div className="p-6 print:p-0">
+                    <div className="print:p-0">
                         <div className="max-w-4xl mx-auto space-y-4">
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                                 {/* Report Header Bar */}
@@ -1224,7 +1141,7 @@ const InvestigatorAgent: React.FC = () => {
 
                 {/* === EMPTY STATE === */}
                 {!loading && !report && (
-                    <RadarEmpty onRun={handleRun} loadingHistory={loadingHistory} />
+                    <EmptyState onRun={handleRun} loadingHistory={loadingHistory} />
                 )}
             </div>
         </div>

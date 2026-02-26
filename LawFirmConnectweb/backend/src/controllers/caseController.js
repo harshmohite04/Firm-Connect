@@ -1,4 +1,5 @@
 const Case = require('../models/Case');
+const createNotification = require('../utils/createNotification');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -133,6 +134,22 @@ const createCase = async (req, res, next) => {
                  throw new Error(`Validation Error: ${dbError.message}`);
              }
              throw dbError; 
+        }
+
+        // Notify assigned lawyers about the new case
+        const io = req.app.get('socketio');
+        const creatorName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+        for (const lawyerId of lawyers) {
+            if (lawyerId.toString() !== req.user._id.toString()) {
+                await createNotification(io, {
+                    recipient: lawyerId,
+                    type: 'case',
+                    title: 'New Case Assigned',
+                    description: `${creatorName} assigned you to "${title}"`,
+                    link: `/portal/cases/${newCase._id}`,
+                    metadata: { caseId: newCase._id }
+                });
+            }
         }
 
         res.status(201).json(newCase);
@@ -391,6 +408,27 @@ const uploadDocument = async (req, res, next) => {
         });
         
         await caseDoc.save();
+
+        // Notify case team about document upload
+        const io = req.app.get('socketio');
+        const uploaderName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+        const teamIds = [
+            ...(caseDoc.assignedLawyers || []),
+            ...(caseDoc.teamMembers || []).map(m => m.userId)
+        ];
+        for (const memberId of teamIds) {
+            if (memberId && memberId.toString() !== req.user._id.toString()) {
+                await createNotification(io, {
+                    recipient: memberId,
+                    type: 'case',
+                    title: 'Document Uploaded',
+                    description: `${uploaderName} uploaded ${req.files.length} file(s) to "${caseDoc.title}"`,
+                    link: `/portal/cases/${caseDoc._id}`,
+                    metadata: { caseId: caseDoc._id }
+                });
+            }
+        }
+
         res.status(201).json(caseDoc.documents.filter(d => d.recordStatus === 1));
     } catch (error) { next(error); }
 };
@@ -510,6 +548,27 @@ const addCaseBilling = async (req, res, next) => {
             amount, description, status, date: date || new Date(), receiptUrl
         });
         await caseDoc.save();
+
+        // Notify team about new billing entry
+        const io = req.app.get('socketio');
+        const billerName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+        const billingTeamIds = [
+            ...(caseDoc.assignedLawyers || []),
+            ...(caseDoc.teamMembers || []).map(m => m.userId)
+        ];
+        for (const memberId of billingTeamIds) {
+            if (memberId && memberId.toString() !== req.user._id.toString()) {
+                await createNotification(io, {
+                    recipient: memberId,
+                    type: 'billing',
+                    title: 'New Billing Entry',
+                    description: `${billerName} added a billing entry of ${amount} to "${caseDoc.title}"`,
+                    link: `/portal/cases/${caseDoc._id}`,
+                    metadata: { caseId: caseDoc._id }
+                });
+            }
+        }
+
         res.status(201).json(caseDoc.billing);
     } catch (error) { next(error); }
 };
@@ -534,6 +593,29 @@ const updateCaseSettings = async (req, res, next) => {
         }
 
         await caseDoc.save();
+
+        // Notify team when status changes
+        if (updates.status) {
+            const io = req.app.get('socketio');
+            const updaterName = `${req.user.firstName} ${req.user.lastName || ''}`.trim();
+            const teamIds = [
+                ...(caseDoc.assignedLawyers || []),
+                ...(caseDoc.teamMembers || []).map(m => m.userId)
+            ];
+            for (const memberId of teamIds) {
+                if (memberId && memberId.toString() !== req.user._id.toString()) {
+                    await createNotification(io, {
+                        recipient: memberId,
+                        type: 'case',
+                        title: 'Case Status Updated',
+                        description: `${updaterName} changed "${caseDoc.title}" status to ${updates.status}`,
+                        link: `/portal/cases/${caseDoc._id}`,
+                        metadata: { caseId: caseDoc._id }
+                    });
+                }
+            }
+        }
+
         res.json(caseDoc);
     } catch (error) { next(error); }
 };

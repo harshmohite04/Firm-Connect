@@ -92,6 +92,7 @@ app.use('/contact-inquiry', require('./src/routes/contactInquiryRoutes'));
 app.use('/team', teamRoutes);
 app.use('/organization', require('./src/routes/organizationRoutes'));
 app.use('/payments', require('./src/routes/paymentRoutes'));
+app.use('/notifications', require('./src/routes/notificationRoutes'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health Check

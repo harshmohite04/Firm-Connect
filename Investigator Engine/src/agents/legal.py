@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate
 from src.state import InvestigatorState
 from src.utils import (
-    get_llm_with_retry, get_json_parser,
+    get_llm_with_retry, get_json_parser, get_perplexity_llm,
     format_challenges, format_evidence_gaps, format_facts,
     format_timeline, format_legal_issues, format_risks,
     smart_truncate, rate_limiter
@@ -16,22 +16,28 @@ class ResearchOutput(BaseModel):
 
 def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
     """
-    Identifies legal issues and simulates finding precedents.
+    Identifies legal issues and finds real precedents via Perplexity (web search).
+    Falls back to standard LLM if Perplexity is not configured.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_perplexity_llm()
+    if hasattr(llm, "with_retry"):
+        llm = llm.with_retry(stop_after_attempt=3, wait_exponential_jitter=True)
     parser = get_json_parser(pydantic_object=ResearchOutput)
 
     prompt = ChatPromptTemplate.from_template(
         """
-        You are a Legal Research Assistant.
+        You are a Legal Research Assistant specializing in Indian law.
         Analyze the case facts and narrative to identify key Legal Issues.
 
         Narrative: {narrative}
 
-        For each issue, cite RELEVANT LAWS (Mock them if needed, e.g. "Section X of Contract Act") and PRECEDENTS.
+        Search for and cite REAL Indian statutes, sections, and landmark judgments.
+        Include specific Section numbers from IPC, CrPC, Indian Contract Act, Indian Evidence Act,
+        Companies Act, Arbitration and Conciliation Act, and other relevant Indian legislation.
+        Cite real Supreme Court of India and High Court judgments with case names and year.
 
-        return a list of "issues".
-        Each issue has: "description", "relevant_laws" (list), "precedents" (list of case names).
+        Return a list of "issues".
+        Each issue has: "description", "relevant_laws" (list of specific sections), "precedents" (list of real case names with citations).
 
         {format_instructions}
         """

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { messageService } from '../services/messageService';
+import { notificationService } from '../services/notificationService';
 import caseService from '../services/caseService';
 import scheduleService from '../services/scheduleService';
 import organizationService from '../services/organizationService';
@@ -48,14 +49,31 @@ const BellIcon = () => (
 
 // Notification type
 interface Notification {
-    id: string;
+    _id: string;
     type: 'case' | 'message' | 'calendar' | 'billing' | 'system';
     title: string;
     description: string;
-    time: string;
+    createdAt: string;
     read: boolean;
     link?: string;
+    metadata?: any;
 }
+
+// Format relative time from ISO date string
+const formatRelativeTime = (dateStr: string): string => {
+    const now = Date.now();
+    const diff = now - new Date(dateStr).getTime();
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return 'Just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return new Date(dateStr).toLocaleDateString();
+};
 
 const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { t } = useTranslation();
@@ -79,46 +97,48 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Notification State
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState<Notification[]>([
-        {
-            id: '1',
-            type: 'case',
-            title: 'Case Update',
-            description: 'New document uploaded to "Property Dispute - Mumbai"',
-            time: '5 min ago',
-            read: false,
-            link: '/portal/cases'
-        },
-        {
-            id: '2',
-            type: 'message',
-            title: 'New Message',
-            description: 'Marcus Thorne sent you a message',
-            time: '15 min ago',
-            read: false,
-            link: '/portal/messages'
-        },
-        {
-            id: '3',
-            type: 'calendar',
-            title: 'Upcoming Hearing',
-            description: 'Court hearing tomorrow at 10:30 AM',
-            time: '1 hour ago',
-            read: false,
-            link: '/portal/calendar'
-        },
-        {
-            id: '5',
-            type: 'system',
-            title: 'Welcome!',
-            description: 'Your portal account is now active',
-            time: 'Yesterday',
-            read: true,
-        }
-    ]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const notificationRef = useRef<HTMLDivElement>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [, setTimeTick] = useState(0);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    // Fetch notifications from API on mount
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const data = await notificationService.getNotifications();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unreadCount || 0);
+            } catch (error) {
+                console.error('Failed to fetch notifications', error);
+            }
+        };
+        fetchNotifications();
+    }, []);
+
+    // Periodic tick to refresh relative time strings
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeTick(prev => prev + 1);
+        }, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const dismissNotification = useCallback((e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        setNotifications(prev => prev.filter(n => n._id !== id));
+        setUnreadCount(prev => {
+            const dismissed = notifications.find(n => n._id === id);
+            return dismissed && !dismissed.read ? Math.max(0, prev - 1) : prev;
+        });
+        notificationService.dismiss(id).catch(console.error);
+    }, [notifications]);
+
+    const clearAllNotifications = useCallback(() => {
+        setNotifications([]);
+        setUnreadCount(0);
+        notificationService.clearAll().catch(console.error);
+    }, []);
 
     // Unread messages count for Messages tab
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
@@ -161,6 +181,16 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         // When I read messages, refetch the count
         socketRef.current.on('messagesRead', () => {
             fetchUnreadCount();
+        });
+
+        // Listen for real-time notifications
+        socketRef.current.on('newNotification', (notification: Notification) => {
+            setNotifications(prev => [notification, ...prev].slice(0, 50));
+            setUnreadCount(prev => prev + 1);
+            toast(notification.title + ': ' + notification.description, {
+                duration: 3000,
+                style: { fontSize: '13px', maxWidth: '360px' },
+            });
         });
 
         // Single-device session enforcement: kicked out by another login
@@ -286,18 +316,24 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     const markAsRead = (id: string) => {
         setNotifications(prev =>
-            prev.map(n => n.id === id ? { ...n, read: true } : n)
+            prev.map(n => n._id === id ? { ...n, read: true } : n)
         );
+        setUnreadCount(prev => Math.max(0, prev - 1));
+        notificationService.markAsRead(id).catch(console.error);
     };
 
     const markAllAsRead = () => {
         setNotifications(prev =>
             prev.map(n => ({ ...n, read: true }))
         );
+        setUnreadCount(0);
+        notificationService.markAllAsRead().catch(console.error);
     };
 
     const handleNotificationClick = (notification: Notification) => {
-        markAsRead(notification.id);
+        if (!notification.read) {
+            markAsRead(notification._id);
+        }
         setShowNotifications(false);
         if (notification.link) {
             navigate(notification.link);
@@ -422,10 +458,10 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 min-w-0">
+            <main className="flex-1 ml-64 min-w-0 h-screen flex flex-col overflow-hidden">
 
                 {/* Top Header */}
-                <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center sticky top-0 z-20">
+                <header className="h-20 shrink-0 bg-white border-b border-slate-200 px-8 flex items-center z-20">
                     <div className="flex-1 flex justify-center">
                         <div className="w-full max-w-2xl relative" ref={searchRef}>
                             <div className="relative">
@@ -663,67 +699,105 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                             <div className="absolute top-16 right-8 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
                                 {/* Header */}
                                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                    <h3 className="font-bold text-slate-900">{t('portal.notifications.title')}</h3>
-                                    {unreadCount > 0 && (
-                                        <button
-                                            onClick={markAllAsRead}
-                                            className="text-xs font-medium text-blue-600 hover:text-blue-700"
-                                        >
-                                            {t('portal.notifications.markAllRead')}
-                                        </button>
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-slate-900">{t('portal.notifications.title')}</h3>
+                                        {unreadCount > 0 && (
+                                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                                                {unreadCount}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        {unreadCount > 0 && (
+                                            <button
+                                                onClick={markAllAsRead}
+                                                className="text-xs font-medium text-blue-600 hover:text-blue-700"
+                                            >
+                                                {t('portal.notifications.markAllRead')}
+                                            </button>
+                                        )}
+                                        {notifications.length > 0 && (
+                                            <button
+                                                onClick={clearAllNotifications}
+                                                className="text-xs font-medium text-red-500 hover:text-red-600"
+                                            >
+                                                Clear all
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {/* Notification List */}
                                 <div className="max-h-96 overflow-y-auto divide-y divide-slate-100">
-                                    {notifications.map((notification) => (
-                                        <div
-                                            key={notification.id}
-                                            onClick={() => handleNotificationClick(notification)}
-                                            className={`p-4 hover:bg-slate-50 cursor-pointer transition-colors ${!notification.read ? 'bg-blue-50/50' : ''
-                                                }`}
-                                        >
-                                            <div className="flex gap-3">
-                                                {getNotificationIcon(notification.type)}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
-                                                            {notification.title}
+                                    {notifications.length === 0 ? (
+                                        <div className="px-4 py-12 text-center">
+                                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <BellIcon />
+                                            </div>
+                                            <p className="text-sm font-medium text-slate-500">No notifications</p>
+                                            <p className="text-xs text-slate-400 mt-1">You're all caught up!</p>
+                                        </div>
+                                    ) : (
+                                        notifications.map((notification) => (
+                                            <div
+                                                key={notification._id}
+                                                onClick={() => handleNotificationClick(notification)}
+                                                className={`p-4 hover:bg-slate-50 cursor-pointer transition-all group ${!notification.read ? 'bg-blue-50/50' : ''}`}
+                                            >
+                                                <div className="flex gap-3">
+                                                    {getNotificationIcon(notification.type)}
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <p className={`text-sm ${!notification.read ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>
+                                                                {notification.title}
+                                                            </p>
+                                                            <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                                {!notification.read && (
+                                                                    <span className="w-2 h-2 bg-blue-600 rounded-full mt-1.5"></span>
+                                                                )}
+                                                                <button
+                                                                    onClick={(e) => dismissNotification(e, notification._id)}
+                                                                    className="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-red-500 transition-all rounded"
+                                                                    title="Dismiss"
+                                                                >
+                                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
+                                                            {notification.description}
                                                         </p>
-                                                        {!notification.read && (
-                                                            <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-1.5"></span>
-                                                        )}
+                                                        <p className="text-xs text-slate-400 mt-1">
+                                                            {formatRelativeTime(notification.createdAt)}
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">
-                                                        {notification.description}
-                                                    </p>
-                                                    <p className="text-xs text-slate-400 mt-1">
-                                                        {notification.time}
-                                                    </p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    )}
                                 </div>
 
                                 {/* Footer */}
-                                <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
-                                    <button
-                                        onClick={() => {
-                                            setShowNotifications(false);
-                                            // Could navigate to a full notifications page
-                                        }}
-                                        className="w-full text-center text-sm font-medium text-slate-600 hover:text-slate-900"
-                                    >
-                                        {t('portal.notifications.viewAll')}
-                                    </button>
-                                </div>
+                                {notifications.length > 0 && (
+                                    <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+                                        <button
+                                            onClick={() => {
+                                                setShowNotifications(false);
+                                            }}
+                                            className="w-full text-center text-sm font-medium text-slate-600 hover:text-slate-900"
+                                        >
+                                            {t('portal.notifications.viewAll')}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                 </header>
 
-                <div className="p-8 space-y-8">
+                <div className="flex-1 p-8 space-y-8 overflow-y-auto">
                     {children}
                 </div>
             </main>

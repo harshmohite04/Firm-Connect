@@ -182,7 +182,7 @@ def mock_llm_func(input_val):
     print("  [MockLLM] Processing request...")
     return AIMessage(content="{}")
 
-def get_llm(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"):
+def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard"):
     """
     Get an LLM instance.
 
@@ -205,11 +205,19 @@ def get_llm(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"
             target_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
             return ChatOllama(model=target_model, temperature=0.1)
 
-    # Check for DeepSeek
+    # Check LLM_PROVIDER toggle
+    provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
+
+    if provider == "openai":
+        api_key = os.getenv("OPENAI_API_KEY")
+        if api_key:
+            return ChatOpenAI(model=model_name, api_key=api_key, temperature=0.1)
+
+    # Default waterfall: DeepSeek → Groq → OpenAI → Mock
     deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
     if deepseek_api_key:
         target_model = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
-        if model_name != "gpt-4-turbo" and model_name != "openai/gpt-oss-120b":
+        if model_name != "gpt-4o-mini" and model_name != "gpt-4o":
              target_model = model_name
 
         return ChatOpenAI(
@@ -219,11 +227,10 @@ def get_llm(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"
             temperature=0.1
         )
 
-    # Check for Groq next
     groq_api_key = os.getenv("GROQ_API_KEY")
     if groq_api_key:
         target_model = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
-        if model_name != "gpt-4-turbo" and model_name != "openai/gpt-oss-120b":
+        if model_name != "gpt-4o-mini" and model_name != "gpt-4o":
              target_model = model_name
 
         return ChatGroq(model_name=target_model, temperature=0.1)
@@ -234,6 +241,20 @@ def get_llm(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"
         return RunnableLambda(mock_llm_func)
 
     return ChatOpenAI(model=model_name, temperature=0.1)
+
+
+def get_perplexity_llm(model: str = "sonar-pro"):
+    """Get a Perplexity LLM instance for real-time web search (legal research)."""
+    api_key = os.getenv("PERPLEXITY_API_KEY")
+    if not api_key:
+        print("Warning: PERPLEXITY_API_KEY not set, falling back to standard LLM")
+        return get_llm(task_tier="standard")
+    return ChatOpenAI(
+        model=model,
+        api_key=api_key,
+        base_url="https://api.perplexity.ai",
+        temperature=0.1
+    )
 
 
 def get_llm_with_retry(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"):
