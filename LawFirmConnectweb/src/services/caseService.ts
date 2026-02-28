@@ -56,6 +56,20 @@ export interface BillingRecord {
   receiptUrl?: string;
 }
 
+export interface PropertyDetails {
+  surveyNumber?: string;
+  ctsNumber?: string;
+  district?: string;
+  taluka?: string;
+  village?: string;
+  propertyType?: "Agricultural" | "Residential" | "Commercial" | "Industrial";
+}
+
+// Update Case interface to include propertyDetails
+export interface CaseWithProperty extends Case {
+  propertyDetails?: PropertyDetails;
+}
+
 // -- Main Case Endpoints --
 
 const getCases = async (userId?: string): Promise<Case[]> => {

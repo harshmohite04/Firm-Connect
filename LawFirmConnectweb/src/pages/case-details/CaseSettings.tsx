@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import toast from 'react-hot-toast';
-import caseService, { type Case } from "../../services/caseService";
+import caseService, { type Case, type PropertyDetails } from "../../services/caseService";
 import ConfirmationModal from "../../components/ConfirmationModal";
 
 interface OutletContextType {
@@ -25,8 +25,18 @@ const CaseSettings: React.FC = () => {
         sms: false
     });
 
+    const [propertyDetails, setPropertyDetails] = useState<PropertyDetails>({
+        surveyNumber: "",
+        ctsNumber: "",
+        district: "",
+        taluka: "",
+        village: "",
+        propertyType: "Residential"
+    });
+
     const [saving, setSaving] = useState(false);
-    const [teamMembers, setTeamMembers] = useState<any[]>([]); 
+    const [propertyDetailsSaving, setPropertyDetailsSaving] = useState(false);
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
     
     // Add Member Modal State
     const [showAddMember, setShowAddMember] = useState(false);
@@ -63,7 +73,12 @@ const CaseSettings: React.FC = () => {
             if (caseData.settings?.notifications) {
                 setNotifications(caseData.settings.notifications);
             }
-            
+
+            // Load property details if available
+            if ((caseData as any).propertyDetails) {
+                setPropertyDetails((caseData as any).propertyDetails);
+            }
+
             // Map real team members
             if (caseData.teamMembers && caseData.teamMembers.length > 0) {
                  const mappedMembers = caseData.teamMembers.map((tm: any) => ({
@@ -104,8 +119,8 @@ const CaseSettings: React.FC = () => {
     const toggleNotification = async (type: 'email' | 'sms') => {
         if (!id) return;
         const newNotifs = { ...notifications, [type]: !notifications[type] };
-        setNotifications(newNotifs); 
-        
+        setNotifications(newNotifs);
+
         try {
             const updatedCase = await caseService.updateCaseSettings(id, {
                 notifications: newNotifs
@@ -114,7 +129,24 @@ const CaseSettings: React.FC = () => {
         } catch (error) {
             console.error(error);
             toast.error("Failed to update notification settings");
-            setNotifications(notifications);  
+            setNotifications(notifications);
+        }
+    };
+
+    const handlePropertyDetailsSave = async () => {
+        if (!id) return;
+        setPropertyDetailsSaving(true);
+        try {
+            const updatedCase = await caseService.updateCaseSettings(id, {
+                propertyDetails
+            });
+            setCaseData(updatedCase);
+            toast.success("Property details saved successfully!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to save property details.");
+        } finally {
+            setPropertyDetailsSaving(false);
         }
     };
 
@@ -300,6 +332,101 @@ const CaseSettings: React.FC = () => {
                 />
                 <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Property Details */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <h3 className="font-bold text-slate-900">Property Details</h3>
+            <p className="text-xs text-slate-500 mt-1">For property-related cases and IGR lookups</p>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Survey Number
+                </label>
+                <input
+                  type="text"
+                  value={propertyDetails.surveyNumber || ""}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, surveyNumber: e.target.value})}
+                  placeholder="e.g., 23/A"
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  CTS Number
+                </label>
+                <input
+                  type="text"
+                  value={propertyDetails.ctsNumber || ""}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, ctsNumber: e.target.value})}
+                  placeholder="e.g., 456"
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  District
+                </label>
+                <input
+                  type="text"
+                  value={propertyDetails.district || ""}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, district: e.target.value})}
+                  placeholder="e.g., Pune"
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Taluka
+                </label>
+                <input
+                  type="text"
+                  value={propertyDetails.taluka || ""}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, taluka: e.target.value})}
+                  placeholder="e.g., Haveli"
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Village
+                </label>
+                <input
+                  type="text"
+                  value={propertyDetails.village || ""}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, village: e.target.value})}
+                  placeholder="e.g., Wagholi"
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Property Type
+                </label>
+                <select
+                  value={propertyDetails.propertyType || "Residential"}
+                  onChange={(e) => setPropertyDetails({...propertyDetails, propertyType: e.target.value as "Agricultural" | "Residential" | "Commercial" | "Industrial"})}
+                  className="block w-full px-4 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all bg-white"
+                >
+                  <option value="Residential">Residential</option>
+                  <option value="Commercial">Commercial</option>
+                  <option value="Agricultural">Agricultural</option>
+                  <option value="Industrial">Industrial</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end pt-4 border-t border-slate-100">
+              <button
+                onClick={handlePropertyDetailsSave}
+                disabled={propertyDetailsSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow-sm transition-colors text-sm disabled:opacity-50">
+                {propertyDetailsSaving ? "Saving..." : "Save Property Details"}
+              </button>
             </div>
           </div>
         </div>

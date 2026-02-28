@@ -20,7 +20,8 @@
       "Bash(npm uninstall:*)",
       "Bash(done)",
       "WebFetch(domain:api.indiankanoon.org)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(python:*)"
     ]
   }
 }

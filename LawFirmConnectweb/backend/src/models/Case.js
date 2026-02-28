@@ -39,12 +39,14 @@ const caseSchema = new mongoose.Schema({
         filePath: { type: String, required: true },
         category: {
             type: String,
-            enum: ['Court Filings', 'Evidence', 'Correspondence', 'General'],
+            enum: ['Court Filings', 'Evidence', 'Correspondence', 'IGR Record', 'General'],
             default: 'General'
         },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         uploadedAt: { type: Date, default: Date.now },
         fileSize: { type: Number },
+        source: { type: String, default: 'Upload' }, // 'Upload', 'IGR', etc.
+        igr_metadata: mongoose.Schema.Types.Mixed, // Metadata from IGR scraper
         recordStatus: { type: Number, enum: [0, 1], default: 1 }
     }],
 
@@ -76,6 +78,18 @@ const caseSchema = new mongoose.Schema({
         notifications: {
             email: { type: Boolean, default: true },
             sms: { type: Boolean, default: false }
+        }
+    },
+    propertyDetails: {
+        surveyNumber: { type: String },
+        ctsNumber: { type: String },
+        district: { type: String },
+        taluka: { type: String },
+        village: { type: String },
+        propertyType: {
+            type: String,
+            enum: ['Agricultural', 'Residential', 'Commercial', 'Industrial'],
+            default: 'Residential'
         }
     },
     recordStatus: {

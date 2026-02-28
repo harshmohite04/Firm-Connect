@@ -28,6 +28,7 @@ from slowapi.errors import RateLimitExceeded
 from rag.rag import ask, ask_stream
 from ingestion.injector import ingest_document, delete_document
 from investigation.generator import DocumentGenerator
+from igr.scraper import search_igr, download_igr_pdf
 
 # Import security utilities
 from utils.auth import verify_token, get_current_user, get_user_id
@@ -250,6 +251,34 @@ class DraftVersionFull(BaseModel):
     type: str
     content: str
     created_at: datetime
+
+# ---------- IGR Models ----------
+class IGRRecordModel(BaseModel):
+    doc_number: str
+    year: int
+    district: str
+    taluka: str
+    village: str
+    party_name_1: str
+    party_name_2: str
+    property_description: str
+    consideration_amount: Optional[int] = None
+    registration_date: Optional[str] = None
+    doc_type: str
+    pdf_url: Optional[str] = None
+
+class IGRSearchRequest(BaseModel):
+    caseId: str
+    district: str
+    taluka: str
+    yearFrom: int
+    yearTo: int
+    partyName: str = ""
+    surveyNumber: str = ""
+
+class IGRImportRequest(BaseModel):
+    caseId: str
+    records: List[IGRRecordModel]
 
 # ---------- ROUTES ----------
 import uuid
@@ -2580,6 +2609,198 @@ async def update_case_law_bookmark(
     except Exception as e:
         logger.error(f"Bookmark update error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to update bookmark")
+
+
+# ---------- IGR ROUTES ----------
+
+def _build_igr_text_summary(record: Dict) -> str:
+    """Create a structured text summary of IGR record for RAG ingestion."""
+    return f"""IGR PROPERTY REGISTRATION RECORD
+========================================
+
+Document Number: {record.get('doc_number', 'N/A')}
+Year: {record.get('year', 'N/A')}
+Document Type: {record.get('doc_type', 'N/A')}
+Registration Date: {record.get('registration_date', 'N/A')}
+
+LOCATION DETAILS
+================
+District: {record.get('district', 'N/A')}
+Taluka: {record.get('taluka', 'N/A')}
+Village: {record.get('village', 'N/A')}
+
+PARTIES INVOLVED
+================
+Party 1: {record.get('party_name_1', 'N/A')}
+Party 2: {record.get('party_name_2', 'N/A')}
+
+PROPERTY DETAILS
+================
+Description: {record.get('property_description', 'N/A')}
+Consideration Amount: {record.get('consideration_amount', 'N/A')}
+
+SOURCE
+======
+Source: IGR Maharashtra Free Search Service
+URL: https://freesearchigrservice.maharashtra.gov.in
+Retrieved: {datetime.now().isoformat()}
+"""
+
+
+@app.post("/igr/search")
+@limiter.limit("10/minute")
+async def igr_search(
+    request: Request,
+    body: IGRSearchRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Search for property documents in IGR Maharashtra."""
+    try:
+        validate_case_id(body.caseId)
+
+        logger.info(f"IGR search: {body.district}/{body.taluka} ({body.yearFrom}-{body.yearTo})")
+
+        results = await search_igr(
+            body.district,
+            body.taluka,
+            body.yearFrom,
+            body.yearTo,
+            party_name=body.partyName,
+            survey_number=body.surveyNumber
+        )
+
+        return {
+            "results": results,
+            "count": len(results),
+            "message": f"Found {len(results)} document(s)"
+        }
+
+    except Exception as e:
+        logger.error(f"IGR search error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)[:100]}")
+
+
+@app.post("/igr/import")
+@limiter.limit("5/minute")
+async def igr_import(
+    request: Request,
+    body: IGRImportRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Import selected IGR records into case documents."""
+    try:
+        validate_case_id(body.caseId)
+        user_id = get_user_id(current_user)
+
+        logger.info(f"IGR import: {len(body.records)} records for case {body.caseId}")
+
+        imported_files = []
+        failed_files = []
+
+        for record in body.records:
+            try:
+                # Create filename
+                filename = sanitize_filename(
+                    f"IGR_{record.district}_{record.year}_{record.doc_number}.pdf"
+                )
+                dest_path = f"documents/{filename}"
+
+                # Download PDF or create text summary
+                success = await download_igr_pdf(
+                    record.doc_number,
+                    record.year,
+                    record.district,
+                    dest_path,
+                    record.dict()
+                )
+
+                if not success:
+                    failed_files.append(filename)
+                    continue
+
+                # Set status to Processing
+                document_status_collection.update_one(
+                    {"case_id": body.caseId, "filename": filename},
+                    {
+                        "$set": {
+                            "status": "Processing",
+                            "filename": filename,
+                            "case_id": body.caseId,
+                            "user_id": user_id,
+                            "source": "IGR",
+                            "igr_metadata": {
+                                "doc_number": record.doc_number,
+                                "year": record.year,
+                                "district": record.district,
+                                "taluka": record.taluka,
+                                "doc_type": record.doc_type,
+                            },
+                            "last_updated": datetime.utcnow()
+                        }
+                    },
+                    upsert=True
+                )
+
+                # Parse document content
+                from ingestion.loader import parse_file_with_pages
+                try:
+                    page_data = parse_file_with_pages(dest_path)
+                    text = "\n".join(p.get("text", "") for p in page_data)
+                except Exception as parse_err:
+                    # Fallback to text summary
+                    logger.warning(f"Failed to parse {filename}, using text summary: {parse_err}")
+                    text = _build_igr_text_summary(record.dict())
+                    page_data = [{"text": text, "page_number": 1, "file_type": "txt"}]
+
+                if text.strip():
+                    # Cache extracted text
+                    document_status_collection.update_one(
+                        {"case_id": body.caseId, "filename": filename},
+                        {"$set": {"extracted_pages": page_data}}
+                    )
+
+                    # Start background ingestion
+                    asyncio.create_task(_run_ingestion_background(
+                        ingest_document,
+                        body.caseId,
+                        filename,
+                        document_status_collection,
+                        logger,
+                        text=text,
+                        source_name=filename,
+                        case_id=body.caseId,
+                        page_metadata=page_data
+                    ))
+
+                    imported_files.append(filename)
+                    logger.info(f"Queued IGR ingestion: {filename}")
+
+                    # Optional: POST to Node.js to sync UI document list (non-blocking)
+                    # This would update the documents array in case data
+                    # For now, rely on fetchAIStatuses() polling
+                else:
+                    document_status_collection.update_one(
+                        {"case_id": body.caseId, "filename": filename},
+                        {"$set": {"status": "Failed", "error": "Empty file", "last_updated": datetime.utcnow()}}
+                    )
+                    failed_files.append(filename)
+
+            except Exception as record_err:
+                logger.error(f"Error importing record {record.doc_number}: {record_err}")
+                failed_files.append(f"{record.doc_number}/{record.year}")
+
+        return {
+            "imported": imported_files,
+            "failed": failed_files,
+            "message": f"Imported {len(imported_files)} document(s), {len(failed_files)} failed"
+        }
+
+    except ValueError as ve:
+        logger.error(f"Validation error in IGR import: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"IGR import error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)[:100]}")
 
 
 if __name__ == "__main__":
