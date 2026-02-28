@@ -27,12 +27,6 @@ const MessageIcon = () => (
     </svg>
 );
 
-const WalletIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-    </svg>
-);
-
 const FolderIcon = () => (
     <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
@@ -314,15 +308,6 @@ const UserPortal: React.FC = () => {
                         <p className="text-sm text-slate-500 mt-1">{t('userPortal.nextHearing')}</p>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
-                                <WalletIcon />
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold text-slate-900">₹0</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.dueAmount')}</p>
-                    </div>
                 </div>
 
                 {/* Main Content Grid */}
@@ -460,16 +445,7 @@ const UserPortal: React.FC = () => {
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
                             <h3 className="font-bold text-slate-900 mb-4">{t('userPortal.quickActions')}</h3>
                             <div className="grid grid-cols-2 gap-3">
-                                <Link 
-                                    to="/portal/billing"
-                                    className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors text-center group"
-                                >
-                                    <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                                        <WalletIcon />
-                                    </div>
-                                    <p className="text-xs font-semibold text-slate-700">{t('userPortal.billing')}</p>
-                                </Link>
-                                <Link 
+                                <Link
                                     to="/portal/calendar"
                                     className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors text-center group"
                                 >

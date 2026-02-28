@@ -144,6 +144,17 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
     const socketRef = useRef<Socket | null>(null);
 
+    // Sidebar open/close state - persisted in localStorage
+    const [sidebarOpen, setSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem('sidebarOpen');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    // Persist sidebar state to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen));
+    }, [sidebarOpen]);
+
     // Socket.IO for real-time unread count updates
     useEffect(() => {
         // Initial fetch
@@ -378,87 +389,101 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
 
-            <aside className="w-64 bg-white border-r border-slate-200 fixed inset-y-0 left-0 flex flex-col z-10 transition-transform">
+            <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-slate-200 fixed inset-y-0 left-0 flex flex-col z-10 transition-all duration-300 ease-in-out`}>
                 {/* Logo */}
-                <div className="h-20 flex items-center px-6 gap-3 cursor-pointer" onClick={() => window.location.href = '/'}>
-                    {/* <div className="bg-amber-900/10 p-2 rounded-lg">
-                        <svg className="w-6 h-6 text-amber-900" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2L1 21h22L12 2zm0 3.516L20.297 19H3.703L12 5.516z M11 16h2v2h-2v-2zm0-6h2v4h-2v-4z" />
-                        </svg>
-                    </div> */}
-                    <img src={Logo} alt="" style={{width:"5rem" , height:"5rem"}}/>
-                    <div>
-                        <h1 className="font-bold text-slate-900 leading-none">LawFirmAI</h1>
-                        <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
-                    </div>
+                <div className={`h-20 flex items-center ${sidebarOpen ? 'px-6 gap-3' : 'justify-center'} cursor-pointer relative`} onClick={() => window.location.href = '/'}>
+                    <img src={Logo} alt="LawFirmAI" style={{width:"2.5rem" , height:"2.5rem"}}/>
+                    {sidebarOpen && (
+                        <div>
+                            <h1 className="font-bold text-slate-900 leading-none">LawFirmAI</h1>
+                            <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Toggle Button */}
+                <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="absolute -right-4 top-6 w-10 h-10 bg-white border border-slate-300 rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 z-20"
+                    title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                    aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                >
+                    <svg className={`w-4 h-4 text-slate-700 transition-transform duration-300 ease-in-out ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
 
                 {/* Nav Links */}
                 <nav className="flex-1 px-3 py-6 space-y-1">
-                    <Link to="/portal" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal') && location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <HomeIcon /> {t('portal.sidebar.home')}
+                    <Link to="/portal" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal') && location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.home') : undefined}>
+                        <HomeIcon /> {sidebarOpen && <span>{t('portal.sidebar.home')}</span>}
                     </Link>
-                    <Link to="/portal/cases" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/cases') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <CaseIcon /> {t('portal.sidebar.myCases')}
+                    <Link to="/portal/cases" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/cases') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.myCases') : undefined}>
+                        <CaseIcon /> {sidebarOpen && <span>{t('portal.sidebar.myCases')}</span>}
                     </Link>
-                    <Link to="/portal/case-law" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/case-law') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                    <Link to="/portal/case-law" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/case-law') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.caseLaw') : undefined}>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                         </svg>
-                        {t('portal.sidebar.caseLaw')}
+                        {sidebarOpen && <span>{t('portal.sidebar.caseLaw')}</span>}
                     </Link>
 
-                    <Link to="/portal/calendar" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
-                        <CalendarIcon /> {t('portal.sidebar.calendar')}
+                    <Link to="/portal/calendar" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.calendar') : undefined}>
+                        <CalendarIcon /> {sidebarOpen && <span>{t('portal.sidebar.calendar')}</span>}
                     </Link>
-                    <Link to="/portal/messages" className={`flex items-center justify-between px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/messages') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                    <Link to="/portal/messages" className={`flex items-center ${sidebarOpen ? 'justify-between px-3' : 'justify-center px-0'} relative py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/messages') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.messages') : undefined}>
                         <div className="flex items-center gap-3">
-                            <MessageIcon /> {t('portal.sidebar.messages')}
+                            <MessageIcon /> {sidebarOpen && <span>{t('portal.sidebar.messages')}</span>}
                         </div>
                         {unreadMessagesCount > 0 && (
-                            <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
-                                {unreadMessagesCount}
-                            </span>
+                            sidebarOpen ? (
+                                <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                                    {unreadMessagesCount}
+                                </span>
+                            ) : (
+                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                            )
                         )}
                     </Link>
 
                     {/* Firm Management Section */}
                     <div className="pt-4 mt-4 border-t border-slate-100">
-                        <div className="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Firm</div>
-                        <Link to="/portal/firm-connect" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/firm-connect') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                        {sidebarOpen && <div className="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Firm</div>}
+                        <Link to="/portal/firm-connect" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/firm-connect') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? 'Firm Connect' : undefined}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
-                            Firm Connect
+                            {sidebarOpen && <span>Firm Connect</span>}
                         </Link>
                         {user?.role === 'ADMIN' && (
-                            <Link to="/portal/organization" className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/organization') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                            <Link to="/portal/organization" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/organization') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? 'Organization' : undefined}>
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
-                                Organization
+                                {sidebarOpen && <span>Organization</span>}
                             </Link>
                         )}
                     </div>
                 </nav>
 
                 {/* User Profile */}
-                <div className="p-4 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm">
+                <div className={`p-4 border-t border-slate-100 ${!sidebarOpen ? 'flex justify-center' : ''}`}>
+                    <div className={`flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'}`}>
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm cursor-pointer" onClick={() => navigate('/portal/profile')} title={!sidebarOpen ? `${user?.firstName} ${user?.lastName}` : undefined}>
                             {initials}
                         </div>
-                        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate('/portal/profile')}>
-                            <p className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 transition-colors">{user ? `${user.firstName} ${user.lastName}` : 'Loading...'}</p>
-                            <p className="text-xs text-slate-500 truncate">{user?.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
-                        </div>
-
+                        {sidebarOpen && (
+                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate('/portal/profile')}>
+                                <p className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 transition-colors">{user ? `${user.firstName} ${user.lastName}` : 'Loading...'}</p>
+                                <p className="text-xs text-slate-500 truncate">{user?.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 min-w-0 h-screen flex flex-col overflow-hidden">
+            <main className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-16'} min-w-0 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out`}>
 
                 {/* Top Header */}
                 <header className="h-20 shrink-0 bg-white border-b border-slate-200 px-8 flex items-center z-20">
