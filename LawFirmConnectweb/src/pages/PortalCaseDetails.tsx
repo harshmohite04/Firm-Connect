@@ -68,7 +68,7 @@ const PortalCaseDetails: React.FC = () => {
   return (
     <PortalLayout>
       <div
-        className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col ${location.pathname.includes("/chat") || location.pathname.includes("/draft") ? "h-[calc(100vh-140px)]" : "min-h-[calc(100vh-140px)]"}`}
+        className={`bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col ${location.pathname.includes("/chat") || location.pathname.includes("/draft") ? "h-[calc(100vh-96px)]" : "min-h-[calc(100vh-140px)]"}`}
       >
         {/* Custom Page Header */}
         <div className="border-b border-slate-200 px-6 pt-6 pb-0 bg-white">
