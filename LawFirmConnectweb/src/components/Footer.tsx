@@ -6,78 +6,106 @@ const Footer: React.FC = () => {
     const { t } = useTranslation();
 
     return (
-        <footer className="bg-slate-900 text-slate-300 py-16 text-sm">
+        <footer className="py-16 text-sm" style={{ backgroundColor: 'var(--color-footer-bg)' }}>
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
-                     
-                     <div className="col-span-2 lg:col-span-2">
-                         <div className="flex items-center gap-2 mb-1 text-white">
-                             <div className="rounded">
-                                 {/* <LogoIcon /> */}
-                                <img src={Logo} alt="" className="w-20 h-20 md:w-40 md:h-40"/>
-                             </div>
-                             <span className="font-bold text-lg">LawFirmAI</span>
-                         </div>
-                         <p className="text-slate-400 leading-relaxed max-w-xs mb-6">
-                             {t('footer.tagline')}
-                         </p>
-                         <div className="flex gap-4">
-                             {/* Social Placeholder Icons */}
-                             <a href="#" className="hover:text-blue-500 transition-colors"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"></path></svg></a>
-                             <a href="#" className="hover:text-blue-500 transition-colors"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"></path></svg></a>
-                             <a href="#" className="hover:text-blue-500 transition-colors"><svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"></path><circle cx="4" cy="4" r="2"></circle></svg></a>
-                         </div>
-                     </div>
 
-                     <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.practiceAreas')}</h4>
-                         <ul className="space-y-4">
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.corporateLaw')}</a></li>
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.realEstate')}</a></li>
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.familyLaw')}</a></li>
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.criminalDefense')}</a></li>
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.intellectualProperty')}</a></li>
-                         </ul>
-                     </div>
+                    {/* Brand */}
+                    <div className="col-span-2 lg:col-span-2">
+                        <div className="flex items-center gap-2 mb-1">
+                            <div className="rounded">
+                                <img src={Logo} alt="LawFirmAI" className="w-14 h-14 md:w-20 md:h-20" />
+                            </div>
+                            <span className="font-bold text-lg" style={{ color: 'var(--color-footer-heading)' }}>LawFirmAI</span>
+                        </div>
+                        <p className="leading-relaxed max-w-xs mb-6" style={{ color: 'var(--color-footer-text)' }}>
+                            {t('footer.tagline')}
+                        </p>
+                        <div className="flex gap-4">
+                            <a href="#" className="transition-colors hover:opacity-80" style={{ color: 'var(--color-footer-text)' }}
+                               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"></path></svg>
+                            </a>
+                            <a href="#" className="transition-colors hover:opacity-80" style={{ color: 'var(--color-footer-text)' }}
+                               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"></path></svg>
+                            </a>
+                            <a href="#" className="transition-colors hover:opacity-80" style={{ color: 'var(--color-footer-text)' }}
+                               onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                               onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"></path><circle cx="4" cy="4" r="2"></circle></svg>
+                            </a>
+                        </div>
+                    </div>
 
-                      <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.company')}</h4>
-                         <ul className="space-y-4">
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.aboutUs')}</a></li>
-                             <li><a href="/platform" className="hover:text-blue-500 transition-colors">{t('footer.attorneys')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.careers')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.blog')}</a></li>
-                             <li><a href="#" className="hover:text-blue-500 transition-colors">{t('footer.contact')}</a></li>
-                         </ul>
-                     </div>
+                    {/* Practice Areas */}
+                    <div>
+                        <h4 className="font-bold mb-6 uppercase tracking-wider text-xs" style={{ color: 'var(--color-footer-heading)' }}>{t('footer.practiceAreas')}</h4>
+                        <ul className="space-y-3">
+                            {['corporateLaw', 'realEstate', 'familyLaw', 'criminalDefense', 'intellectualProperty'].map((key) => (
+                                <li key={key}>
+                                    <a href="/platform" className="transition-colors" style={{ color: 'var(--color-footer-text)' }}
+                                       onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                                       onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                                    >
+                                        {t(`footer.${key}`)}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
 
-                      <div>
-                         <h4 className="font-bold text-white mb-6 uppercase tracking-wider text-xs">{t('footer.contactUs')}</h4>
-                         <ul className="space-y-4">
+                    {/* Company */}
+                    <div>
+                        <h4 className="font-bold mb-6 uppercase tracking-wider text-xs" style={{ color: 'var(--color-footer-heading)' }}>{t('footer.company')}</h4>
+                        <ul className="space-y-3">
+                            {['aboutUs', 'attorneys', 'careers', 'blog', 'contact'].map((key) => (
+                                <li key={key}>
+                                    <a href="#" className="transition-colors" style={{ color: 'var(--color-footer-text)' }}
+                                       onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'}
+                                       onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-footer-text)'}
+                                    >
+                                        {t(`footer.${key}`)}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Contact */}
+                    <div>
+                        <h4 className="font-bold mb-6 uppercase tracking-wider text-xs" style={{ color: 'var(--color-footer-heading)' }}>{t('footer.contactUs')}</h4>
+                        <ul className="space-y-3" style={{ color: 'var(--color-footer-text)' }}>
                             <li className="flex gap-3">
-                                 <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                 <span>Pune, Maharashtra, India</span>
+                                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--color-accent)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                <span>Pune, Maharashtra, India</span>
                             </li>
                             <li className="flex gap-3">
-                                 <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
-                                 <span>+91 93568 36581</span>
+                                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--color-accent)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                                <span>+91 93568 36581</span>
                             </li>
                             <li className="flex gap-3">
-                                 <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                                 <span>contact@lawfirmai.com</span>
+                                <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: 'var(--color-accent)' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                <span>contact@lawfirmai.com</span>
                             </li>
-                         </ul>
-                     </div>
-                </div>
-
-                <div className="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                        {t('footer.copyright')}
-                    <div className="flex gap-6 text-slate-500 text-xs">
-                        <a href="#" className="hover:text-slate-300">{t('footer.privacyPolicy')}</a>
-                        <a href="#" className="hover:text-slate-300">{t('footer.termsOfService')}</a>
+                        </ul>
                     </div>
                 </div>
-                <div className="mt-8 text-center text-xs text-slate-600">
+
+                {/* Bottom */}
+                <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-4" style={{ borderTop: '1px solid var(--color-surface-border)' }}>
+                    <span style={{ color: 'var(--color-footer-text)' }}>{t('footer.copyright')}</span>
+                    <div className="flex gap-6 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                        <a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}>{t('footer.privacyPolicy')}</a>
+                        <a href="#" className="transition-colors" onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-accent)'} onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-tertiary)'}>{t('footer.termsOfService')}</a>
+                    </div>
+                </div>
+                <div className="mt-8 text-center text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                     {t('footer.disclaimer')}
                 </div>
             </div>

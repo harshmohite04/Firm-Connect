@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../contexts/ThemeContext';
 import { messageService } from '../services/messageService';
 import { notificationService } from '../services/notificationService';
 import caseService from '../services/caseService';
@@ -9,6 +10,18 @@ import organizationService from '../services/organizationService';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Logo from "../assets/logo.svg"
+
+const SunIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+    </svg>
+);
+
+const MoonIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+    </svg>
+);
 // Icons
 const HomeIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -77,6 +90,7 @@ const formatRelativeTime = (dateStr: string): string => {
 
 const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { t } = useTranslation();
+    const { isDark, toggleTheme } = useTheme();
     const location = useLocation();
     const navigate = useNavigate();
     const [user, setUser] = React.useState<any>(null);
@@ -144,7 +158,11 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
     const socketRef = useRef<Socket | null>(null);
 
-    // Sidebar open/close state - persisted in localStorage
+    // Mobile responsiveness state
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    // Sidebar open/close state - persisted in localStorage (desktop only)
     const [sidebarOpen, setSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebarOpen');
         return saved !== null ? JSON.parse(saved) : true;
@@ -154,6 +172,20 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     useEffect(() => {
         localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen));
     }, [sidebarOpen]);
+
+    // Handle responsive breakpoint
+    useEffect(() => {
+        const handleResize = () => {
+            const newIsMobile = window.innerWidth < 768;
+            setIsMobile(newIsMobile);
+            // Close mobile menu when switching to desktop
+            if (!newIsMobile) {
+                setMobileMenuOpen(false);
+            }
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Socket.IO for real-time unread count updates
     useEffect(() => {
@@ -387,51 +419,62 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+        <div className="min-h-screen flex font-sans transition-colors duration-200" style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-primary)' }}>
 
-            <aside className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white border-r border-slate-200 fixed inset-y-0 left-0 flex flex-col z-10 transition-all duration-300 ease-in-out`}>
+            {/* Mobile Menu Backdrop */}
+            {isMobile && mobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/20 z-40 md:hidden"
+                    onClick={() => setMobileMenuOpen(false)}
+                />
+            )}
+
+            <aside className={`${isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : (sidebarOpen ? 'w-64' : 'w-16')} ${isMobile ? 'fixed inset-y-0 left-0 w-64' : 'relative'} flex flex-col z-50 transition-all duration-300 ease-in-out md:z-10 md:relative md:translate-x-0`} style={{ backgroundColor: 'var(--color-surface)', borderRight: '1px solid var(--color-surface-border)' }}>
                 {/* Logo */}
-                <div className={`h-20 flex items-center ${sidebarOpen ? 'px-6 gap-3' : 'justify-center'} cursor-pointer relative`} onClick={() => window.location.href = '/'}>
+                <div className={`h-16 md:h-16 flex items-center ${isMobile ? 'px-4 gap-3' : (sidebarOpen ? 'px-6 gap-3' : 'justify-center')} cursor-pointer relative`} onClick={() => window.location.href = '/'}>
                     <img src={Logo} alt="LawFirmAI" style={{width:"2.5rem" , height:"2.5rem"}}/>
-                    {sidebarOpen && (
+                    {(isMobile || sidebarOpen) && (
                         <div>
-                            <h1 className="font-bold text-slate-900 leading-none">LawFirmAI</h1>
-                            <span className="text-xs text-blue-600 font-medium">Legal Portal</span>
+                            <h1 className="font-bold leading-none text-sm md:text-base" style={{ color: 'var(--color-text-primary)' }}>LawFirmAI</h1>
+                            <span className="text-xs font-medium" style={{ color: 'var(--color-accent)' }}>Legal Portal</span>
                         </div>
                     )}
                 </div>
 
-                {/* Toggle Button */}
-                <button
-                    onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="absolute -right-4 top-6 w-10 h-10 bg-white border border-slate-300 rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 z-20"
-                    title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-                    aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-                >
-                    <svg className={`w-4 h-4 text-slate-700 transition-transform duration-300 ease-in-out ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
+                {/* Toggle Button - Desktop only */}
+                {!isMobile && (
+                    <button
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="absolute -right-4 top-6 w-10 h-10 rounded-full flex items-center justify-center shadow-md hover:shadow-lg focus:outline-none transition-all duration-200 z-20 hidden md:flex"
+                        style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)', color: 'var(--color-text-secondary)' }}
+                        title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                        aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+                    >
+                        <svg className={`w-4 h-4 transition-transform duration-300 ease-in-out ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                )}
 
                 {/* Nav Links */}
-                <nav className="flex-1 px-3 py-6 space-y-1">
-                    <Link to="/portal" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal') && location.pathname === '/portal' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.home') : undefined}>
+                <nav className={`flex-1 ${isMobile ? 'px-4' : 'px-3'} py-6 space-y-1`}>
+                    <Link to="/portal" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal') && location.pathname === '/portal' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? t('portal.sidebar.home') : undefined}>
                         <HomeIcon /> {sidebarOpen && <span>{t('portal.sidebar.home')}</span>}
                     </Link>
-                    <Link to="/portal/cases" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/cases') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.myCases') : undefined}>
+                    <Link to="/portal/cases" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/cases') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? t('portal.sidebar.myCases') : undefined}>
                         <CaseIcon /> {sidebarOpen && <span>{t('portal.sidebar.myCases')}</span>}
                     </Link>
-                    <Link to="/portal/case-law" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/case-law') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.caseLaw') : undefined}>
+                    <Link to="/portal/case-law" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/case-law') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? t('portal.sidebar.caseLaw') : undefined}>
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                         </svg>
                         {sidebarOpen && <span>{t('portal.sidebar.caseLaw')}</span>}
                     </Link>
 
-                    <Link to="/portal/calendar" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/calendar') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.calendar') : undefined}>
+                    <Link to="/portal/calendar" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/calendar') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? t('portal.sidebar.calendar') : undefined}>
                         <CalendarIcon /> {sidebarOpen && <span>{t('portal.sidebar.calendar')}</span>}
                     </Link>
-                    <Link to="/portal/messages" className={`flex items-center ${sidebarOpen ? 'justify-between px-3' : 'justify-center px-0'} relative py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/messages') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? t('portal.sidebar.messages') : undefined}>
+                    <Link to="/portal/messages" className={`flex items-center ${isMobile || sidebarOpen ? 'justify-between px-3' : 'justify-center px-0'} relative py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/messages') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? t('portal.sidebar.messages') : undefined}>
                         <div className="flex items-center gap-3">
                             <MessageIcon /> {sidebarOpen && <span>{t('portal.sidebar.messages')}</span>}
                         </div>
@@ -447,16 +490,16 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </Link>
 
                     {/* Firm Management Section */}
-                    <div className="pt-4 mt-4 border-t border-slate-100">
-                        {sidebarOpen && <div className="px-3 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Firm</div>}
-                        <Link to="/portal/firm-connect" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/firm-connect') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? 'Firm Connect' : undefined}>
+                    <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--color-surface-border)' }}>
+                        {(isMobile || sidebarOpen) && <div className="px-3 mb-2 text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>Firm</div>}
+                        <Link to="/portal/firm-connect" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/firm-connect') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? 'Firm Connect' : undefined}>
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                             {sidebarOpen && <span>Firm Connect</span>}
                         </Link>
                         {user?.role === 'ADMIN' && (
-                            <Link to="/portal/organization" className={`flex items-center ${sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium transition-colors ${isActive('/portal/organization') ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={!sidebarOpen ? 'Organization' : undefined}>
+                            <Link to="/portal/organization" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/organization') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? 'Organization' : undefined}>
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                 </svg>
@@ -467,15 +510,15 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 </nav>
 
                 {/* User Profile */}
-                <div className={`p-4 border-t border-slate-100 ${!sidebarOpen ? 'flex justify-center' : ''}`}>
+                <div className={`p-4 ${!sidebarOpen ? 'flex justify-center' : ''}`} style={{ borderTop: '1px solid var(--color-surface-border)' }}>
                     <div className={`flex items-center ${sidebarOpen ? 'gap-3' : 'justify-center'}`}>
-                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm ring-2 ring-white shadow-sm cursor-pointer" onClick={() => navigate('/portal/profile')} title={!sidebarOpen ? `${user?.firstName} ${user?.lastName}` : undefined}>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm cursor-pointer" style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }} onClick={() => navigate('/portal/profile')} title={!sidebarOpen ? `${user?.firstName} ${user?.lastName}` : undefined}>
                             {initials}
                         </div>
                         {sidebarOpen && (
                             <div className="flex-1 min-w-0 cursor-pointer" onClick={() => navigate('/portal/profile')}>
-                                <p className="text-sm font-bold text-slate-900 truncate hover:text-blue-600 transition-colors">{user ? `${user.firstName} ${user.lastName}` : 'Loading...'}</p>
-                                <p className="text-xs text-slate-500 truncate">{user?.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
+                                <p className="text-sm font-bold truncate transition-colors" style={{ color: 'var(--color-text-primary)' }}>{user ? `${user.firstName} ${user.lastName}` : 'Loading...'}</p>
+                                <p className="text-xs truncate" style={{ color: 'var(--color-text-tertiary)' }}>{user?.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
                             </div>
                         )}
                     </div>
@@ -483,12 +526,26 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             </aside>
 
             {/* Main Content */}
-            <main className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-16'} min-w-0 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out`}>
+            <main className={`flex-1 min-w-0 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out`}>
 
                 {/* Top Header */}
-                <header className="h-20 shrink-0 bg-white border-b border-slate-200 px-8 flex items-center z-20">
-                    <div className="flex-1 flex justify-center">
-                        <div className="w-full max-w-2xl relative" ref={searchRef}>
+                <header className="h-16 shrink-0 px-4 md:px-6 flex items-center gap-4 z-20" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-surface-border)' }}>
+                    {/* Hamburger Menu - Mobile Only */}
+                    {isMobile && (
+                        <button
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            className="p-2 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 md:hidden"
+                            title="Toggle menu"
+                            aria-label="Toggle menu"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    )}
+
+                    <div className="flex-1 flex justify-center min-w-0">
+                        <div className={`${isMobile ? 'w-full' : 'w-full max-w-2xl'} relative`} ref={searchRef}>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <SearchIcon />
@@ -509,13 +566,14 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                                     }}
                                     onFocus={() => setShowResults(true)}
                                     placeholder={t('portal.header.searchPlaceholder')}
-                                    className="block w-full pl-11 pr-4 py-2.5 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                    className="block w-full pl-11 pr-4 py-2.5 rounded-xl leading-5 placeholder-slate-400 focus:outline-none focus:ring-2 transition-all shadow-sm"
+                                    style={{ backgroundColor: 'var(--color-bg-tertiary)', border: '1px solid var(--color-surface-border)', color: 'var(--color-text-primary)' }}
                                 />
                             </div>
 
                             {/* Search Results Dropdown */}
                             {showResults && (
-                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-slate-100 max-h-[80vh] overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="absolute top-full left-0 right-0 mt-2 rounded-xl shadow-2xl max-h-[80vh] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)' }}>
 
                                     {!searchQuery.trim() ? (
                                         // Default View (Suggestions)
@@ -706,10 +764,21 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div>
 
                     {/* Notification Bell */}
-                    <div className="flex items-center gap-4 flex-none ml-2" ref={notificationRef}>
+                    <div className="flex items-center gap-3 flex-none ml-2" ref={notificationRef}>
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-lg transition-colors cursor-pointer"
+                            style={{ color: 'var(--color-text-secondary)', backgroundColor: 'var(--color-accent-soft)' }}
+                            aria-label="Toggle theme"
+                        >
+                            {isDark ? <SunIcon /> : <MoonIcon />}
+                        </button>
+
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="relative p-2 rounded-lg transition-colors"
+                            style={{ color: 'var(--color-text-secondary)' }}
                         >
                             {unreadCount > 0 && (
                                 <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
@@ -721,7 +790,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
                         {/* Notification Dropdown */}
                         {showNotifications && (
-                            <div className="absolute top-16 right-8 w-96 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden z-50">
+                            <div className={`absolute top-16 ${isMobile ? 'inset-x-4 sm:right-4' : 'right-8'} ${isMobile ? 'max-w-full' : 'w-96'} rounded-xl shadow-2xl overflow-hidden z-50`} style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)' }}>
                                 {/* Header */}
                                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                                     <div className="flex items-center gap-2">
@@ -822,7 +891,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     </div>
                 </header>
 
-                <div className="flex-1 p-8 space-y-8 overflow-y-auto">
+                <div className="flex-1 p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto">
                     {children}
                 </div>
             </main>

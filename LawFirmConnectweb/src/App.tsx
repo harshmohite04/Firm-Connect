@@ -1,162 +1,215 @@
-import React from 'react';
-import { BrowserRouter, Route, Routes, useLocation, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import Footer from './components/Footer';
-import Navbar from './components/Navbar';
-import AboutUs from './pages/AboutUs';
-import PlatformOverview from './pages/PlatformOverview';
-import ContactUs from './pages/ContactUs';
-import Home from './pages/Home';
-import PortalCalendar from './pages/PortalCalendar';
-import PortalCaseDetails from './pages/PortalCaseDetails';
-import PortalCases from './pages/PortalCases';
-import PortalMessages from './pages/PortalMessages';
-import AuthPage from './pages/AuthPage';
-import StartCase from './pages/StartCase';
-import UserPortal from './pages/UserPortal';
-import PortalProfile from './pages/PortalProfile';
-import ProfileInfo from './pages/profile/ProfileInfo';
-import ProfileSecurity from './pages/profile/ProfileSecurity';
-import ProfileNotifications from './pages/profile/ProfileNotifications';
-import CaseActivity from './pages/case-details/CaseActivity';
-import CaseDocuments from './pages/case-details/CaseDocuments';
-import CaseChat from './pages/case-details/CaseChat';
-import CaseSettings from './pages/case-details/CaseSettings';
-import InvestigatorAgent from './pages/case-details/InvestigatorAgent';
-import CaseDraft from './pages/case-details/CaseDraft';
-import CasePrecedents from './pages/case-details/CasePrecedents';
-import PortalCaseLaw from './pages/PortalCaseLaw';
-import NotFound from './pages/NotFound';
+import React from "react";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import { Toaster } from "react-hot-toast";
+import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
+import AboutUs from "./pages/AboutUs";
+import PlatformOverview from "./pages/PlatformOverview";
+import ContactUs from "./pages/ContactUs";
+import Home from "./pages/Home";
+import PortalCalendar from "./pages/PortalCalendar";
+import PortalCaseDetails from "./pages/PortalCaseDetails";
+import PortalCases from "./pages/PortalCases";
+import PortalMessages from "./pages/PortalMessages";
+import AuthPage from "./pages/AuthPage";
+import StartCase from "./pages/StartCase";
+import UserPortal from "./pages/UserPortal";
+import PortalProfile from "./pages/PortalProfile";
+import ProfileInfo from "./pages/profile/ProfileInfo";
+import ProfileSecurity from "./pages/profile/ProfileSecurity";
+import ProfileNotifications from "./pages/profile/ProfileNotifications";
+import CaseActivity from "./pages/case-details/CaseActivity";
+import CaseDocuments from "./pages/case-details/CaseDocuments";
+import CaseChat from "./pages/case-details/CaseChat";
+import CaseSettings from "./pages/case-details/CaseSettings";
+import InvestigatorAgent from "./pages/case-details/InvestigatorAgent";
+import CaseDraft from "./pages/case-details/CaseDraft";
+import CasePrecedents from "./pages/case-details/CasePrecedents";
+import PortalCaseLaw from "./pages/PortalCaseLaw";
+import NotFound from "./pages/NotFound";
 
 // Payment & Subscription Imports
-import Pricing from './pages/Pricing';
-import SubscriptionGuard from './components/SubscriptionGuard';
+import Pricing from "./pages/Pricing";
+import SubscriptionGuard from "./components/SubscriptionGuard";
 
 // Firm Management Imports
-import FirmConnect from './pages/FirmConnect';
-import OrganizationPage from './pages/Organization';
-import InviteAccept from './pages/InviteAccept';
+import FirmConnect from "./pages/FirmConnect";
+import OrganizationPage from "./pages/Organization";
+import InviteAccept from "./pages/InviteAccept";
 
 // ScrollToTop component to handle scroll position on route change
 const ScrollToTop = () => {
-    const { pathname } = useLocation();
-    
-    React.useEffect(() => {
-        window.scrollTo(0, 0);
-    }, [pathname]);
-    
-    return null;
-}
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+};
 
 const App: React.FC = () => {
   const { pathname } = useLocation();
   // Hide Navbar and Footer on Sign In, Portal pages, and Pricing page
-  const isAuthPage = pathname === '/signin' || pathname === '/signup' || pathname.startsWith('/portal') || pathname === '/pricing' || pathname.startsWith('/invite');
+  const isAuthPage =
+    pathname === "/signin" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/portal") ||
+    pathname === "/pricing" ||
+    pathname.startsWith("/invite");
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900 leading-normal selection:bg-blue-100 selection:text-blue-900 flex flex-col">
-       {!isAuthPage && <Navbar />}
-       <main className="flex-grow">
+    <div
+      className="min-h-screen font-sans leading-normal flex flex-col"
+      style={{
+        backgroundColor: "var(--color-bg-primary)",
+        color: "var(--color-text-primary)",
+      }}
+    >
+      {!isAuthPage && <Navbar />}
+      <main className="flex-grow">
         <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/practice-areas" element={<Navigate to="/platform" replace />} />
-            <Route path="/about-us" element={<AboutUs />} />
-            <Route path="/platform" element={<PlatformOverview />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/practice-areas/:id" element={<Navigate to="/platform" replace />} />
-            <Route path="/signin" element={<AuthPage initialMode="signin" />} />
-            <Route path="/signup" element={<Navigate to="/signin" replace />} />
-            <Route path="/pricing" element={<Pricing />} />
-            
-            {/* Protected Portal Routes */}
-            <Route path="/portal" element={
-                <SubscriptionGuard>
-                    <UserPortal />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/cases" element={
-                <SubscriptionGuard>
-                    <PortalCases />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/start-case" element={
-                <SubscriptionGuard>
-                    <StartCase />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/cases/:id" element={
-                <SubscriptionGuard>
-                    <PortalCaseDetails />
-                </SubscriptionGuard>
-            }>
-                <Route index element={<Navigate to="activity" replace />} />
-                <Route path="activity" element={<CaseActivity />} />
-                <Route path="documents" element={<CaseDocuments />} />
-                <Route path="chat" element={<CaseChat />} />
-                <Route path="investigator" element={<InvestigatorAgent />} />
-                <Route path="draft" element={<CaseDraft />} />
-                <Route path="precedents" element={<CasePrecedents />} />
-                <Route path="settings" element={<CaseSettings />} />
-            </Route>
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/practice-areas"
+            element={<Navigate to="/platform" replace />}
+          />
+          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/platform" element={<PlatformOverview />} />
+          <Route path="/contact" element={<ContactUs />} />
+          <Route
+            path="/practice-areas/:id"
+            element={<Navigate to="/platform" replace />}
+          />
+          <Route path="/signin" element={<AuthPage initialMode="signin" />} />
+          <Route path="/signup" element={<Navigate to="/signin" replace />} />
+          <Route path="/pricing" element={<Pricing />} />
 
-            <Route path="/portal/case-law" element={
-                <SubscriptionGuard>
-                    <PortalCaseLaw />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/calendar" element={
-                <SubscriptionGuard>
-                    <PortalCalendar />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/messages" element={
-                <SubscriptionGuard>
-                    <PortalMessages />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/profile" element={
-                <SubscriptionGuard>
-                    <PortalProfile />
-                </SubscriptionGuard>
-            }>
-                <Route index element={<Navigate to="info" replace />} />
-                <Route path="info" element={<ProfileInfo />} />
-                <Route path="security" element={<ProfileSecurity />} />
-                <Route path="notifications" element={<ProfileNotifications />} />
-            </Route>
+          {/* Protected Portal Routes */}
+          <Route
+            path="/portal"
+            element={
+              <SubscriptionGuard>
+                <UserPortal />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/cases"
+            element={
+              <SubscriptionGuard>
+                <PortalCases />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/start-case"
+            element={
+              <SubscriptionGuard>
+                <StartCase />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/cases/:id"
+            element={
+              <SubscriptionGuard>
+                <PortalCaseDetails />
+              </SubscriptionGuard>
+            }
+          >
+            <Route index element={<Navigate to="activity" replace />} />
+            <Route path="activity" element={<CaseActivity />} />
+            <Route path="documents" element={<CaseDocuments />} />
+            <Route path="chat" element={<CaseChat />} />
+            <Route path="investigator" element={<InvestigatorAgent />} />
+            <Route path="draft" element={<CaseDraft />} />
+            <Route path="precedents" element={<CasePrecedents />} />
+            <Route path="settings" element={<CaseSettings />} />
+          </Route>
 
-            {/* Firm Management Routes */}
-            <Route path="/portal/firm-connect" element={
-                <SubscriptionGuard>
-                    <FirmConnect />
-                </SubscriptionGuard>
-            } />
-            <Route path="/portal/organization" element={
-                <SubscriptionGuard>
-                    <OrganizationPage />
-                </SubscriptionGuard>
-            } />
+          <Route
+            path="/portal/case-law"
+            element={
+              <SubscriptionGuard>
+                <PortalCaseLaw />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/calendar"
+            element={
+              <SubscriptionGuard>
+                <PortalCalendar />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/messages"
+            element={
+              <SubscriptionGuard>
+                <PortalMessages />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/profile"
+            element={
+              <SubscriptionGuard>
+                <PortalProfile />
+              </SubscriptionGuard>
+            }
+          >
+            <Route index element={<Navigate to="info" replace />} />
+            <Route path="info" element={<ProfileInfo />} />
+            <Route path="security" element={<ProfileSecurity />} />
+            <Route path="notifications" element={<ProfileNotifications />} />
+          </Route>
 
-            {/* Invitation Routes (semi-public) */}
-            <Route path="/invite/:token/accept" element={<InviteAccept />} />
-            <Route path="/invite/:token/reject" element={<InviteAccept />} />
+          {/* Firm Management Routes */}
+          <Route
+            path="/portal/firm-connect"
+            element={
+              <SubscriptionGuard>
+                <FirmConnect />
+              </SubscriptionGuard>
+            }
+          />
+          <Route
+            path="/portal/organization"
+            element={
+              <SubscriptionGuard>
+                <OrganizationPage />
+              </SubscriptionGuard>
+            }
+          />
 
-        <Route path="*" element={<NotFound />} />
+          {/* Invitation Routes (semi-public) */}
+          <Route path="/invite/:token/accept" element={<InviteAccept />} />
+          <Route path="/invite/:token/reject" element={<InviteAccept />} />
+
+          <Route path="*" element={<NotFound />} />
         </Routes>
-       </main>
-       {!isAuthPage && <Footer />}
+      </main>
+      {!isAuthPage && <Footer />}
     </div>
   );
 };
 
 const AppWrapper: React.FC = () => {
-   return (
+  return (
     <BrowserRouter>
-        <ScrollToTop />
-        <Toaster position="top-right" />
-        <App />
+      <ScrollToTop />
+      <Toaster position="top-right" />
+      <App />
     </BrowserRouter>
-   )
-}
+  );
+};
 
 export default AppWrapper;

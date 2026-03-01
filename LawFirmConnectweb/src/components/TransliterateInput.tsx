@@ -7,6 +7,7 @@ interface TransliterateInputProps {
     onChangeText: (text: string) => void;
     placeholder?: string;
     className?: string;
+    style?: React.CSSProperties;
     disabled?: boolean;
     onKeyDown?: (e: React.KeyboardEvent) => void;
     type?: 'input' | 'textarea';
@@ -121,6 +122,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
     onChangeText,
     placeholder,
     className,
+    style,
     disabled,
     onKeyDown,
     type = 'input',
@@ -324,6 +326,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                     onChange={(e) => onChangeText(e.target.value)}
                     placeholder={placeholder}
                     className={className}
+                    style={style}
                     disabled={disabled}
                     onKeyDown={onKeyDown}
                     rows={rows}
@@ -337,6 +340,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                 onChange={(e) => onChangeText(e.target.value)}
                 placeholder={placeholder}
                 className={className}
+                style={style}
                 disabled={disabled}
                 onKeyDown={onKeyDown}
             />
@@ -351,6 +355,7 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
         onKeyDown: handleKeyDown,
         placeholder,
         className,
+        style,
         disabled,
     };
 
@@ -371,10 +376,10 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                             top: dropdownPos.top,
                             left: Math.min(dropdownPos.left, window.innerWidth - 290),
                             zIndex: 99999,
-                            backgroundColor: '#fff',
-                            border: '1px solid #e2e8f0',
+                            backgroundColor: 'var(--color-surface, #fff)',
+                            border: '1px solid var(--color-surface-border, #e2e8f0)',
                             borderRadius: '8px',
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                            boxShadow: 'var(--shadow-lg, 0 4px 16px rgba(0,0,0,0.12))',
                             listStyle: 'none',
                             padding: '4px',
                             margin: 0,
@@ -400,8 +405,8 @@ const TransliterateInput: React.FC<TransliterateInputProps> = ({
                                     borderRadius: '6px',
                                     textAlign: 'center',
                                     backgroundColor:
-                                        i === selectedIdx ? '#3b82f6' : '#f8fafc',
-                                    color: i === selectedIdx ? '#fff' : '#1e293b',
+                                        i === selectedIdx ? 'var(--color-accent, #3b82f6)' : 'var(--color-bg-tertiary, #f8fafc)',
+                                    color: i === selectedIdx ? '#fff' : 'var(--color-text-primary, #1e293b)',
                                     fontWeight: 500,
                                     transition: 'background-color 0.1s',
                                     userSelect: 'none',

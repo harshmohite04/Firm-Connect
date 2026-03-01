@@ -8,65 +8,83 @@ import type { CalendarEvent } from '../services/scheduleService';
 import { messageService } from '../services/messageService';
 import { useTranslation } from 'react-i18next';
 
-// Icons
-const CaseIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+/* ─────────────── SVG Icons ─────────────── */
+const PlusIcon = () => (
+    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
     </svg>
 );
 
-const CalendarIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+const SparklesIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
     </svg>
 );
 
-const MessageIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+const DraftIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
     </svg>
 );
 
-const FolderIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+const UploadIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+    </svg>
+);
+
+const SearchIcon2 = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+);
+
+const PenSquareIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+    </svg>
+);
+
+const MoreHorizIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
     </svg>
 );
 
 const ArrowRightIcon = () => (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+    </svg>
+);
+
+const CalendarSmallIcon = () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
     </svg>
 );
 
-const ClockIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+const ExternalLinkIcon = () => (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
     </svg>
 );
 
-const CheckCircleIcon = () => (
-    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+const CheckSmallIcon = () => (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
     </svg>
 );
 
-const BellIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-    </svg>
-);
-
+/* ─────────────── Component ─────────────── */
 const UserPortal: React.FC = () => {
     const [stats, setStats] = useState<any>(null);
     const [activeCases, setActiveCases] = useState<Case[]>([]);
-    const [activities, setActivities] = useState<ActivityLog[]>([]);
-    const [upcomingBooking, setUpcomingBooking] = useState<Date | null>(null);
-    const [nextEventTitle, setNextEventTitle] = useState<string>('Appointment');
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState('');
+    const [userRole, setUserRole] = useState('');
     const [error, setError] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
     const { t } = useTranslation();
 
     // Update time every minute
@@ -78,129 +96,139 @@ const UserPortal: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // User Name
+                // User info
                 const userStr = localStorage.getItem('user');
                 if (userStr) {
                     try {
                         const user = JSON.parse(userStr);
                         setUserName(user.firstName || 'User');
-                    } catch (e) {
-                        setUserName("User");
-                    }
+                        setUserRole(user.role === 'ADMIN' ? 'Senior Partner' : 'Attorney');
+                    } catch { setUserName("User"); }
                 } else {
                     setUserName('Client');
                 }
 
-                // 1. Fetch Cases
+                // Cases
                 let activeCount = 0;
+                let pendingCount = 0;
                 let recentCases: Case[] = [];
                 try {
                     const casesData = await caseService.getCases();
                     if (Array.isArray(casesData)) {
                         const openCases = casesData.filter(c => c.status !== 'Closed');
                         activeCount = openCases.length;
+                        pendingCount = casesData.filter(c => c.status?.toLowerCase() === 'pending' || c.status?.toLowerCase() === 'in progress').length;
                         recentCases = openCases
                             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                             .slice(0, 3);
                         setActiveCases(recentCases);
                     }
-                } catch (err) {
-                    console.error("Failed to fetch cases:", err);
-                }
+                } catch (err) { console.error("Failed to fetch cases:", err); }
 
-                // 2. Fetch Activities
-                let allActivities: ActivityLog[] = [];
-                if (recentCases.length > 0) {
-                    try {
-                        const activityPromises = recentCases.map(c => caseService.getCaseActivity(c._id));
-                        const results = await Promise.all(activityPromises);
-                        results.forEach(logs => {
-                            if (Array.isArray(logs)) {
-                                allActivities = [...allActivities, ...logs];
-                            }
-                        });
-                        allActivities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                        allActivities = allActivities.slice(0, 5);
-                    } catch (e) {
-                        console.error("Failed to fetch activities", e);
-                    }
-                }
-                setActivities(allActivities);
-
-                // 3. Fetch Unread Messages Count
+                // Messages
                 let unreadCount = 0;
                 try {
                     const msgData = await messageService.getUnreadCount();
                     unreadCount = msgData.count || 0;
-                } catch (e) {
-                    console.error("Failed to fetch message count", e);
-                }
+                } catch (e) { console.error("Failed to fetch message count", e); }
 
-                // 4. Fetch Calendar Events
-                let nextEventDate: Date | null = null;
+                // Calendar Events
                 try {
                     const eventsData = await scheduleService.getEvents();
                     if (Array.isArray(eventsData)) {
                         const now = new Date();
-                        const futureEvent = eventsData.find((e: CalendarEvent) => {
-                            if (!e.startDate || !e.startTime) return false;
-                            try {
-                                const startStr = typeof e.startDate === 'string' ? e.startDate.split('T')[0] : new Date(e.startDate).toISOString().split('T')[0];
-                                const eventDate = new Date(`${startStr}T${e.startTime}`);
-                                return eventDate > now;
-                            } catch (err) {
-                                return false;
-                            }
-                        });
-
-                        if (futureEvent) {
-                            const startStr = typeof futureEvent.startDate === 'string' ? futureEvent.startDate.split('T')[0] : new Date(futureEvent.startDate).toISOString().split('T')[0];
-                            nextEventDate = new Date(`${startStr}T${futureEvent.startTime}`);
-                            setNextEventTitle(futureEvent.title || 'Appointment');
-                        }
+                        const future = eventsData
+                            .filter((e: CalendarEvent) => {
+                                if (!e.startDate) return false;
+                                try {
+                                    const startStr = typeof e.startDate === 'string' ? e.startDate.split('T')[0] : new Date(e.startDate).toISOString().split('T')[0];
+                                    const eventDate = new Date(`${startStr}T${e.startTime || '00:00'}`);
+                                    return eventDate > now;
+                                } catch { return false; }
+                            })
+                            .sort((a: any, b: any) => {
+                                const aDate = new Date(`${typeof a.startDate === 'string' ? a.startDate.split('T')[0] : new Date(a.startDate).toISOString().split('T')[0]}T${a.startTime || '00:00'}`);
+                                const bDate = new Date(`${typeof b.startDate === 'string' ? b.startDate.split('T')[0] : new Date(b.startDate).toISOString().split('T')[0]}T${b.startTime || '00:00'}`);
+                                return aDate.getTime() - bDate.getTime();
+                            })
+                            .slice(0, 3);
+                        setUpcomingEvents(future);
                     }
-                } catch (e) {
-                    console.error("Failed to fetch events", e);
-                }
+                } catch (e) { console.error("Failed to fetch events", e); }
 
-                setStats({
-                    activeCases: activeCount,
-                    unreadMessages: unreadCount,
-                });
-
-                setUpcomingBooking(nextEventDate);
+                setStats({ activeCases: activeCount, unreadMessages: unreadCount, pendingDeadlines: pendingCount });
                 setLoading(false);
-
             } catch (globalError: any) {
                 console.error("Critical error loading dashboard", globalError);
                 setError(globalError.message || "Unknown error");
                 setLoading(false);
             }
         };
-
         fetchData();
     }, []);
 
     const getGreeting = () => {
         const hour = currentTime.getHours();
-        if (hour < 12) return t('userPortal.greeting.morning');
-        if (hour < 17) return t('userPortal.greeting.afternoon');
-        return t('userPortal.greeting.evening');
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
     };
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
-            case 'active':
-            case 'open':
-                return 'bg-emerald-100 text-emerald-700';
-            case 'pending':
-            case 'in progress':
-                return 'bg-amber-100 text-amber-700';
+            case 'active': case 'open':
+                return 'bg-emerald-50 text-emerald-600 border border-emerald-200';
+            case 'pending': case 'in progress':
+                return 'bg-amber-50 text-amber-600 border border-amber-200';
+            case 'closed':
+                return 'bg-slate-100 text-slate-500 border border-slate-200';
             case 'review':
-                return 'bg-blue-100 text-blue-700';
+                return 'bg-blue-50 text-blue-600 border border-blue-200';
             default:
-                return 'bg-slate-100 text-slate-700';
+                return 'bg-slate-100 text-slate-600 border border-slate-200';
         }
+    };
+
+    const getRelativeTime = (dateStr: string) => {
+        const now = new Date();
+        const date = new Date(dateStr);
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
+
+    const formatEventDate = (event: CalendarEvent) => {
+        try {
+            const startStr = typeof event.startDate === 'string' ? event.startDate.split('T')[0] : new Date(event.startDate).toISOString().split('T')[0];
+            const d = new Date(startStr);
+            return {
+                month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
+                day: d.getDate()
+            };
+        } catch { return { month: '—', day: '—' }; }
+    };
+
+    const formatEventTime = (event: CalendarEvent) => {
+        try {
+            const start = event.startTime || '';
+            const end = event.endTime || '';
+            if (!start) return '';
+            const fmt = (t: string) => {
+                const [h, m] = t.split(':');
+                const hr = parseInt(h);
+                const ampm = hr >= 12 ? 'PM' : 'AM';
+                const hr12 = hr % 12 || 12;
+                return `${hr12}:${m} ${ampm}`;
+            };
+            return end ? `${fmt(start)} - ${fmt(end)}` : fmt(start);
+        } catch { return ''; }
     };
 
     if (loading) {
@@ -235,225 +263,260 @@ const UserPortal: React.FC = () => {
     return (
         <PortalLayout>
             <div className="max-w-7xl mx-auto space-y-6">
-                
-                {/* Welcome Header */}
-                <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div>
-                            <p className="text-slate-500 text-sm font-medium mb-1">
-                                {currentTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                            </p>
-                            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-                                {getGreeting()}, {userName}! 👋
-                            </h1>
-                            <p className="text-slate-500 mt-2">{t('userPortal.subtitle')}</p>
-                        </div>
-                        <div className="flex gap-3">
-                            <Link 
-                                to="/portal/cases"
-                                className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
-                            >
-                                <CaseIcon /> {t('userPortal.viewCases')}
-                            </Link>
-                            <Link 
-                                to="/portal/messages"
-                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
-                            >
-                                <MessageIcon /> {t('userPortal.messagesBtn')}
-                                {stats?.unreadMessages > 0 && (
-                                    <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">{stats.unreadMessages}</span>
-                                )}
-                            </Link>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                                <CaseIcon />
-                            </div>
-                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{t('userPortal.active')}</span>
-                        </div>
-                        <p className="text-2xl font-bold text-slate-900">{stats?.activeCases || 0}</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.activeCases')}</p>
+                {/* ═══════ Welcome Header ═══════ */}
+                <div className="relative overflow-hidden rounded-2xl p-6 lg:p-8" style={{ background: 'linear-gradient(135deg, #f8f9ff 0%, #f0f1ff 50%, #eef0ff 100%)', border: '1px solid #e5e7ff' }}>
+                    {/* Decorative Sparkle */}
+                    <div className="absolute top-4 right-6 lg:right-10 opacity-20">
+                        <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+                            <path d="M50 0L56 38L90 25L62 50L90 75L56 62L50 100L44 62L10 75L38 50L10 25L44 38L50 0Z" fill="#6366f1" />
+                        </svg>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600 group-hover:scale-110 transition-transform">
-                                <MessageIcon />
-                            </div>
-                            {stats?.unreadMessages > 0 && (
-                                <span className="text-xs font-semibold text-red-600 bg-red-50 px-2 py-1 rounded-full">{t('userPortal.new')}</span>
-                            )}
-                        </div>
-                        <p className="text-2xl font-bold text-slate-900">{stats?.unreadMessages || 0}</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.unreadMessages')}</p>
-                    </div>
-
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                                <CalendarIcon />
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold text-slate-900">
-                            {upcomingBooking && !isNaN(upcomingBooking.getTime())
-                                ? upcomingBooking.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
-                                : '—'}
+                    <div className="relative">
+                        <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                            {getGreeting()}, {userName} 👋
+                        </h1>
+                        <p className="text-slate-500 mt-2 max-w-lg text-sm lg:text-base">
+                            Welcome back to your LawFirmAI dashboard. You have {stats?.activeCases || 0} active cases and {stats?.unreadMessages || 0} updates pending review.
                         </p>
-                        <p className="text-sm text-slate-500 mt-1">{t('userPortal.nextHearing')}</p>
+                        <div className="flex flex-wrap gap-3 mt-5">
+                            <Link
+                                to="/portal/cases/new"
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+                            >
+                                <PlusIcon /> Start New Case
+                            </Link>
+                            <button
+                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 rounded-xl font-semibold text-sm hover:bg-slate-50 transition-colors shadow-sm border border-slate-200"
+                            >
+                                <DraftIcon /> Quick Draft
+                            </button>
+                        </div>
                     </div>
-
                 </div>
 
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* Active Matters - Takes 2 columns */}
-                    <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-                                    <FolderIcon />
-                                </div>
-                                <h3 className="font-bold text-slate-900">{t('userPortal.activeMatters')}</h3>
-                            </div>
-                            <Link to="/portal/cases" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
-                                {t('userPortal.viewAll')} <ArrowRightIcon />
-                            </Link>
+                {/* ═══════ Stats Cards ═══════ */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Active Cases */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm text-slate-500 font-medium">Active Cases</span>
+                            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">+8%</span>
                         </div>
-                        <div className="divide-y divide-slate-100">
-                            {activeCases && activeCases.map((caseItem: Case) => (
-                                <Link 
-                                    to={`/portal/cases/${caseItem._id}`} 
-                                    key={caseItem._id}
-                                    className="p-5 hover:bg-slate-50 transition-colors block"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex gap-4 flex-1">
-                                            <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                                                {caseItem.title?.charAt(0) || 'C'}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-bold text-slate-900 truncate">{caseItem.title}</h4>
-                                                <p className="text-sm text-slate-500 mt-0.5">
-                                                    {caseItem.caseNumber || `Case #${caseItem._id.slice(-6)}`}
-                                                </p>
-                                                <div className="flex items-center gap-3 mt-2">
-                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusColor(caseItem.status)}`}>
-                                                        {caseItem.status}
-                                                    </span>
-                                                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                                                        <ClockIcon />
-                                                        {caseItem.createdAt ? new Date(caseItem.createdAt).toLocaleDateString('en-IN') : 'N/A'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Link>
-                            ))}
-                            {activeCases.length === 0 && (
-                                <div className="p-8 text-center">
-                                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <FolderIcon />
-                                    </div>
-                                    <p className="font-semibold text-slate-900">{t('userPortal.noActiveCases')}</p>
-                                    <p className="text-sm text-slate-500 mt-1">{t('userPortal.noActiveCasesDesc')}</p>
-                                </div>
-                            )}
-                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.activeCases || 0}</p>
+                        <p className="text-xs text-slate-400 mt-1">Ongoing</p>
                     </div>
 
-                    {/* Right Column */}
-                    <div className="space-y-6">
-                        
-                        {/* Upcoming Appointment */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                                <div className="flex items-center gap-2">
-                                    <CalendarIcon />
-                                    <h3 className="font-bold text-slate-900">{t('userPortal.upcoming')}</h3>
-                                </div>
-                                <Link to="/portal/calendar" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">{t('userPortal.viewAll')}</Link>
+                    {/* Pending Deadlines */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm text-slate-500 font-medium">Pending Deadlines</span>
+                            <span className="text-[11px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">Due soon</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.pendingDeadlines || 0}</p>
+                        <p className="text-xs text-slate-400 mt-1">Critical</p>
+                    </div>
+
+                    {/* Unread Messages */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm text-slate-500 font-medium">Unread Messages</span>
+                            {(stats?.unreadMessages || 0) > 0 && (
+                                <span className="text-[11px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">New</span>
+                            )}
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.unreadMessages || 0}</p>
+                        <p className="text-xs text-slate-400 mt-1">Items</p>
+                    </div>
+
+                    {/* Billable Hours */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-sm text-slate-500 font-medium">Billable Hours</span>
+                            <span className="text-[11px] font-medium text-slate-400">Target: 180h</span>
+                        </div>
+                        <p className="text-3xl font-bold text-slate-900">148h</p>
+                        <p className="text-xs text-slate-400 mt-1">Monthly</p>
+                        <div className="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: '82%' }}></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* ═══════ Main Content: Recent Cases + AI Insights ═══════ */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                    {/* Recent Cases Table — 2 cols */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+                            <div className="px-6 py-4 flex items-center justify-between">
+                                <h3 className="text-lg font-bold text-slate-900">Recent Cases</h3>
+                                <Link to="/portal/cases" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 underline underline-offset-2">
+                                    View All Cases
+                                </Link>
                             </div>
-                            <div className="p-5">
-                                {upcomingBooking && !isNaN(upcomingBooking.getTime()) ? (
-                                    <div className="flex gap-4 items-center p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                        <div className="text-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm min-w-[60px]">
-                                            <span className="block text-xs font-bold text-indigo-600 uppercase">
-                                                {upcomingBooking.toLocaleDateString('en-IN', { month: 'short' })}
+
+                            {/* Table Header */}
+                            <div className="px-6 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100">
+                                <div className="col-span-4">Case Name / ID</div>
+                                <div className="col-span-2">Client</div>
+                                <div className="col-span-3">Status</div>
+                                <div className="col-span-2">Last Updated</div>
+                                <div className="col-span-1"></div>
+                            </div>
+
+                            {/* Table Rows */}
+                            <div className="divide-y divide-slate-100">
+                                {activeCases.length > 0 ? activeCases.map((caseItem) => (
+                                    <Link
+                                        to={`/portal/cases/${caseItem._id}`}
+                                        key={caseItem._id}
+                                        className="px-6 py-4 grid grid-cols-12 gap-2 items-center hover:bg-slate-50/80 transition-colors"
+                                    >
+                                        <div className="col-span-4">
+                                            <p className="text-sm font-semibold text-slate-900 truncate">{caseItem.title}</p>
+                                            <p className="text-xs text-slate-400 mt-0.5">#{caseItem.caseNumber || `LFA-${caseItem._id.slice(-6)}`}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-sm text-slate-600 truncate">{caseItem.clientName || '—'}</p>
+                                        </div>
+                                        <div className="col-span-3">
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${getStatusColor(caseItem.status)}`}>
+                                                {caseItem.status}
                                             </span>
-                                            <span className="block text-2xl font-bold text-slate-900">
-                                                {upcomingBooking.getDate()}
-                                            </span>
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-bold text-slate-900">{nextEventTitle}</p>
-                                            <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                                                <ClockIcon />
-                                                {upcomingBooking.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                                            </p>
+                                        <div className="col-span-2">
+                                            <p className="text-sm text-slate-500">{getRelativeTime(caseItem.createdAt)}</p>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-4">
-                                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                            <CalendarIcon />
+                                        <div className="col-span-1 flex justify-end">
+                                            <button className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors" onClick={e => e.preventDefault()}>
+                                                <MoreHorizIcon />
+                                            </button>
                                         </div>
-                                        <p className="text-sm text-slate-500">{t('userPortal.noUpcoming')}</p>
+                                    </Link>
+                                )) : (
+                                    <div className="px-6 py-10 text-center">
+                                        <p className="text-sm text-slate-500">No active cases yet.</p>
+                                        <Link to="/portal/cases/new" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 mt-2 inline-block">Start a new case →</Link>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Recent Activity */}
+                        {/* ═══════ Quick Action Buttons ═══════ */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <Link
+                                to="/portal/cases/new"
+                                className="flex flex-col items-center gap-2.5 p-5 bg-white rounded-xl border border-slate-200 hover:shadow-lg hover:border-indigo-200 transition-all group cursor-pointer"
+                            >
+                                <div className="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <PlusIcon />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-700">New Case</span>
+                            </Link>
+                            <button className="flex flex-col items-center gap-2.5 p-5 bg-white rounded-xl border border-slate-200 hover:shadow-lg hover:border-orange-200 transition-all group cursor-pointer">
+                                <div className="w-11 h-11 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                    <UploadIcon />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-700">Upload</span>
+                            </button>
+                            <Link
+                                to="/portal/case-law"
+                                className="flex flex-col items-center gap-2.5 p-5 bg-white rounded-xl border border-slate-200 hover:shadow-lg hover:border-violet-200 transition-all group cursor-pointer"
+                            >
+                                <div className="w-11 h-11 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-colors">
+                                    <SearchIcon2 />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-700">Search</span>
+                            </Link>
+                            <button className="flex flex-col items-center gap-2.5 p-5 bg-white rounded-xl border border-slate-200 hover:shadow-lg hover:border-red-200 transition-all group cursor-pointer">
+                                <div className="w-11 h-11 rounded-xl bg-red-100 text-red-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors">
+                                    <PenSquareIcon />
+                                </div>
+                                <span className="text-sm font-semibold text-slate-700">Draft</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* ═══════ Right Sidebar ═══════ */}
+                    <div className="space-y-6">
+
+                        {/* AI Insights */}
                         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
-                                <BellIcon />
-                                <h3 className="font-bold text-slate-900">{t('userPortal.recentActivity')}</h3>
+                            <div className="px-5 py-4 flex items-center gap-2">
+                                <SparklesIcon />
+                                <h3 className="text-base font-bold text-slate-900">AI Insights</h3>
                             </div>
-                            <div className="p-5">
-                                <div className="space-y-4">
-                                    {activities && activities.map((act, idx) => (
-                                        <div className="flex items-start gap-3" key={idx}>
-                                            <div className="mt-0.5">
-                                                <CheckCircleIcon />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-slate-900 line-clamp-2">{act.description}</p>
-                                                <p className="text-xs text-slate-400 mt-1">
-                                                    {new Date(act.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {activities.length === 0 && (
-                                        <div className="text-center py-4">
-                                            <p className="text-sm text-slate-500">{t('userPortal.noRecentActivity')}</p>
-                                        </div>
-                                    )}
+
+                            <div className="px-5 pb-5 space-y-4">
+                                {/* Insight 1 */}
+                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-1">Potential Conflict Detected</h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed mb-2">
+                                        Found similarities in the Smith v. Peterson case with a 2018 ruling.
+                                    </p>
+                                    <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+                                        Analyze Conflict <ArrowRightIcon />
+                                    </button>
+                                </div>
+
+                                {/* Insight 2 */}
+                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-1">Drafting Assistant</h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed mb-2">
+                                        Your summary for the Miller Estate is ready for review.
+                                    </p>
+                                    <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+                                        Open Draft <ExternalLinkIcon />
+                                    </button>
+                                </div>
+
+                                {/* Insight 3 */}
+                                <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-100">
+                                    <h4 className="text-sm font-bold text-slate-800 mb-1">Calendar Optimization</h4>
+                                    <p className="text-xs text-slate-500 leading-relaxed mb-2">
+                                        AI suggests blocking Friday for research on Case #084.
+                                    </p>
+                                    <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">
+                                        Approve Slot <CheckSmallIcon />
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Quick Actions */}
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                            <h3 className="font-bold text-slate-900 mb-4">{t('userPortal.quickActions')}</h3>
-                            <div className="grid grid-cols-2 gap-3">
-                                <Link
-                                    to="/portal/calendar"
-                                    className="p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors text-center group"
-                                >
-                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 mx-auto mb-2 group-hover:scale-110 transition-transform">
-                                        <CalendarIcon />
-                                    </div>
-                                    <p className="text-xs font-semibold text-slate-700">{t('userPortal.schedule')}</p>
+                        {/* Upcoming Events */}
+                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div className="px-5 py-4 flex items-center justify-between">
+                                <h3 className="text-base font-bold text-slate-900">Upcoming</h3>
+                                <Link to="/portal/calendar" className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                    <CalendarSmallIcon />
                                 </Link>
+                            </div>
+
+                            <div className="px-5 pb-5 space-y-3">
+                                {upcomingEvents.length > 0 ? upcomingEvents.map((event, idx) => {
+                                    const { month, day } = formatEventDate(event);
+                                    return (
+                                        <div key={event._id || idx} className="flex gap-4 items-start">
+                                            <div className="text-center min-w-[40px]">
+                                                <span className="block text-[10px] font-bold text-indigo-600 uppercase">{month}</span>
+                                                <span className="block text-xl font-bold text-slate-900">{day}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-slate-900 truncate">{event.title}</p>
+                                                <p className="text-xs text-slate-400 mt-0.5">{formatEventTime(event)}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }) : (
+                                    <div className="text-center py-4">
+                                        <p className="text-sm text-slate-400">No upcoming events</p>
+                                        <Link to="/portal/calendar" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 mt-1 inline-block">
+                                            View Calendar →
+                                        </Link>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
