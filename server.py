@@ -123,9 +123,13 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # ---------- MONGO DB ----------
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_URI = os.getenv("MONGO_URI")
 mongo_client = MongoClient(MONGO_URI)
-db = mongo_client.get_database()
+try:
+    db = mongo_client.get_database()
+except Exception:
+    db = mongo_client["lawfirmDB"]
+logger.info(f"MongoDB database: {db.name}")
 chat_collection = db["chat_history"]
 document_status_collection = db["document_status"]
 draft_sessions_collection = db["draft_sessions"]

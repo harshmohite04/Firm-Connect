@@ -12,12 +12,13 @@ const mongoose = require('mongoose');
 const app = require('./app');
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const MONGO_URI = process.env.MONGO_URI;
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(MONGO_URI);
-        console.log(`MongoDB Connected: ${mongoose.connection.host}`);
+        console.log(`Connecting to MongoDB with URI: ${MONGO_URI.replace(/\/\/[^@]+@/, '//****:****@')}`);
+        await mongoose.connect(MONGO_URI, { dbName: 'lawfirmDB' });
+        console.log(`MongoDB Connected: ${mongoose.connection.host}, DB: ${mongoose.connection.db.databaseName}`);
     } catch (error) {
         console.error(`Error: ${error.message}`);
         process.exit(1);
