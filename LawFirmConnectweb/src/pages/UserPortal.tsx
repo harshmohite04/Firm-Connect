@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import caseService from '../services/caseService';
-import type { Case, ActivityLog } from '../services/caseService';
+import type { Case } from '../services/caseService';
 import scheduleService from '../services/scheduleService';
 import type { CalendarEvent } from '../services/scheduleService';
 import { messageService } from '../services/messageService';
@@ -81,7 +81,6 @@ const UserPortal: React.FC = () => {
     const [activeCases, setActiveCases] = useState<Case[]>([]);
     const [loading, setLoading] = useState(true);
     const [userName, setUserName] = useState('');
-    const [userRole, setUserRole] = useState('');
     const [error, setError] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
     const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
@@ -102,7 +101,6 @@ const UserPortal: React.FC = () => {
                     try {
                         const user = JSON.parse(userStr);
                         setUserName(user.firstName || 'User');
-                        setUserRole(user.role === 'ADMIN' ? 'Senior Partner' : 'Attorney');
                     } catch { setUserName("User"); }
                 } else {
                     setUserName('Client');

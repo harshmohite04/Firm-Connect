@@ -9,6 +9,7 @@ export interface Case {
   title: string;
   description: string;
   caseNumber?: string;
+  clientName?: string;
   status: "Open" | "In Progress" | "Closed" | "Paused";
   legalMatter: string;
   assignedLawyers: any[]; // or User[]
@@ -381,7 +382,13 @@ const getInvestigationStatus = async (
 
 const getActiveInvestigationJob = async (
   caseId: string,
-): Promise<{ hasActiveJob: boolean; jobId?: string; progress?: number; progressLabel?: string; currentStep?: string }> => {
+): Promise<{
+  hasActiveJob: boolean;
+  jobId?: string;
+  progress?: number;
+  progressLabel?: string;
+  currentStep?: string;
+}> => {
   const response = await axios.get(
     `${RAG_API_URL}/investigation/active-job/${caseId}`,
     { headers: getAuthHeaders() },
