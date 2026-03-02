@@ -6,48 +6,437 @@ import type { Case } from '../services/caseService';
 import caseService from '../services/caseService';
 import TransliterateInput from '../components/TransliterateInput';
 
-// Icons - matching UserPortal style
-const CaseIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+/* ──────────────────────── Icons ──────────────────────── */
+
+const BriefcaseIcon = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 7h-4V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2ZM10 5h4v2h-4V5Zm10 15H4v-5.4l3 1.05V17a1 1 0 0 0 2 0v-.78l3 1.05 3-1.05V17a1 1 0 0 0 2 0v-1.35l3-1.05V20Zm0-8.4-8 2.8-8-2.8V9h16v2.6Z" />
     </svg>
 );
 
 const FolderIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 6h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Zm0 12H4V8h16v10Z" />
     </svg>
 );
 
 const CheckCircleIcon = () => (
-    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm-1 15-4-4 1.4-1.4L11 14.2l5.6-5.6L18 10l-7 7Z" />
     </svg>
 );
 
 const SearchIcon = () => (
-    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.35-4.35" />
     </svg>
 );
 
 const PlusIcon = () => (
-    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path d="M12 5v14M5 12h14" />
     </svg>
 );
 
-const ArrowRightIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+const ChevronRightIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="m9 18 6-6-6-6" />
     </svg>
 );
 
-const ClockIcon = () => (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+const DashboardIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
     </svg>
 );
+
+const EmptyFileIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+);
+
+/* ──────────────────────── Styles (inline CSS-in-JS) ──────────────────────── */
+
+const styles = {
+    page: {
+        minHeight: '100vh',
+        background: 'var(--color-bg-primary, #f0f2f5)',
+        display: 'flex',
+        flexDirection: 'column' as const,
+    },
+    container: {
+        padding: '16px 0',
+        width: '100%',
+        flex: 1,
+    },
+    /* ── Header ── */
+    header: {
+        background: 'var(--color-surface, #fff)',
+        borderRadius: '14px',
+        padding: '22px 24px',
+        marginBottom: '16px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap' as const,
+        gap: '12px',
+    },
+    headerTitle: {
+        fontSize: '26px',
+        fontWeight: 800,
+        color: 'var(--color-text-primary, #1a1a2e)',
+        letterSpacing: '-0.5px',
+        margin: 0,
+        lineHeight: 1.2,
+    },
+    headerSubtitle: {
+        fontSize: '14px',
+        color: 'var(--color-text-secondary, #6b7280)',
+        marginTop: '6px',
+        fontWeight: 500,
+    },
+    headerActions: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+    },
+    dashboardBtn: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 20px',
+        border: '1px solid var(--color-surface-border, #d1d5db)',
+        borderRadius: '10px',
+        background: 'var(--color-surface, #fff)',
+        color: 'var(--color-text-primary, #1a1a2e)',
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+    },
+    newCaseBtn: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '10px 20px',
+        border: 'none',
+        borderRadius: '10px',
+        background: 'var(--gradient-accent, linear-gradient(135deg, #5048e5, #7c3aed))',
+        color: '#fff',
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        textDecoration: 'none',
+    },
+    /* ── Stats ── */
+    statsGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '12px',
+        marginBottom: '16px',
+    },
+    statCard: {
+        background: 'var(--color-surface, #fff)',
+        borderRadius: '14px',
+        padding: '18px 20px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        transition: 'box-shadow 0.2s',
+    },
+    statTop: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        marginBottom: '12px',
+    },
+    statIconBox: {
+        width: '42px',
+        height: '42px',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statBadge: {
+        fontSize: '9px',
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.08em',
+        padding: '3px 8px',
+        borderRadius: '20px',
+    },
+    statNumber: {
+        fontSize: '30px',
+        fontWeight: 800,
+        lineHeight: 1,
+        color: 'var(--color-text-primary, #1a1a2e)',
+        letterSpacing: '-1px',
+    },
+    statLabel: {
+        fontSize: '13px',
+        color: 'var(--color-text-secondary, #6b7280)',
+        marginTop: '4px',
+        fontWeight: 500,
+    },
+    /* ── Search & Filter ── */
+    searchBar: {
+        background: 'var(--color-surface, #fff)',
+        borderRadius: '14px',
+        padding: '14px 20px',
+        marginBottom: '16px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap' as const,
+    },
+    searchInputWrapper: {
+        flex: 1,
+        position: 'relative' as const,
+        minWidth: '200px',
+    },
+    searchInput: {
+        width: '100%',
+        padding: '10px 12px 10px 40px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        borderRadius: '10px',
+        fontSize: '14px',
+        fontWeight: 500,
+        color: 'var(--color-text-primary, #1a1a2e)',
+        background: 'var(--color-bg-tertiary, #f9fafb)',
+        outline: 'none',
+        transition: 'border-color 0.2s, box-shadow 0.2s',
+    },
+    searchIconPos: {
+        position: 'absolute' as const,
+        left: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: 'var(--color-text-tertiary, #9ca3af)',
+        pointerEvents: 'none' as const,
+    },
+    filterPills: {
+        display: 'flex',
+        gap: '6px',
+    },
+    filterPill: (active: boolean) => ({
+        padding: '8px 18px',
+        borderRadius: '20px',
+        fontSize: '13px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        border: 'none',
+        transition: 'all 0.2s',
+        background: active ? 'var(--color-accent, #5048e5)' : 'var(--color-bg-tertiary, #f3f4f6)',
+        color: active ? '#fff' : 'var(--color-text-secondary, #6b7280)',
+    }),
+    /* ── Table ── */
+    tableCard: {
+        background: 'var(--color-surface, #fff)',
+        borderRadius: '14px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        overflow: 'hidden',
+        marginBottom: '16px',
+    },
+    tableHeader: {
+        display: 'grid',
+        gridTemplateColumns: '2.5fr 1fr 1.2fr 1fr 0.5fr',
+        padding: '14px 28px',
+        borderBottom: '1px solid var(--color-surface-border, #e5e7eb)',
+        background: 'var(--color-bg-tertiary, #f9fafb)',
+    },
+    tableHeaderCell: {
+        fontSize: '11px',
+        fontWeight: 700,
+        textTransform: 'uppercase' as const,
+        letterSpacing: '0.08em',
+        color: 'var(--color-text-tertiary, #9ca3af)',
+    },
+    tableRow: {
+        display: 'grid',
+        gridTemplateColumns: '2.5fr 1fr 1.2fr 1fr 0.5fr',
+        padding: '18px 28px',
+        alignItems: 'center',
+        transition: 'background-color 0.15s',
+        cursor: 'pointer',
+        textDecoration: 'none',
+        color: 'inherit',
+    },
+    tableRowBorder: {
+        borderBottom: '1px solid var(--color-surface-border, #e5e7eb)',
+    },
+    caseInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '14px',
+        minWidth: 0,
+    },
+    caseAvatar: {
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 700,
+        fontSize: '14px',
+        color: '#fff',
+        flexShrink: 0,
+    },
+    caseName: {
+        fontSize: '14px',
+        fontWeight: 700,
+        color: 'var(--color-text-primary, #1a1a2e)',
+        lineHeight: 1.3,
+        whiteSpace: 'nowrap' as const,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
+    caseDesc: {
+        fontSize: '12px',
+        color: 'var(--color-text-secondary, #6b7280)',
+        marginTop: '2px',
+        whiteSpace: 'nowrap' as const,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+    },
+    statusBadge: (status: string) => {
+        const s = status?.toLowerCase();
+        if (s === 'closed') return { background: 'var(--color-bg-tertiary, #f3f4f6)', color: 'var(--color-text-tertiary, #6b7280)', border: '1px solid var(--color-surface-border, #e5e7eb)' };
+        if (s === 'open' || s === 'active') return { background: 'rgba(16, 185, 129, 0.1)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' };
+        return { background: 'rgba(245, 158, 11, 0.1)', color: '#D97706', border: '1px solid rgba(245, 158, 11, 0.2)' };
+    },
+    statusText: {
+        fontSize: '12px',
+        fontWeight: 600,
+        padding: '4px 12px',
+        borderRadius: '6px',
+        display: 'inline-block',
+    },
+    attorneyText: {
+        fontSize: '14px',
+        fontWeight: 500,
+        color: 'var(--color-text-primary, #1a1a2e)',
+    },
+    dateText: {
+        fontSize: '13px',
+        color: 'var(--color-text-secondary, #6b7280)',
+        fontWeight: 500,
+    },
+    chevronCell: {
+        display: 'flex',
+        justifyContent: 'flex-end',
+        color: 'var(--color-text-tertiary, #9ca3af)',
+    },
+    /* ── Empty State ── */
+    emptyState: {
+        background: 'var(--color-surface, #fff)',
+        borderRadius: '14px',
+        border: '1px solid var(--color-surface-border, #e5e7eb)',
+        padding: '48px 20px',
+        textAlign: 'center' as const,
+        marginBottom: '16px',
+    },
+    emptyIcon: {
+        width: '64px',
+        height: '64px',
+        borderRadius: '16px',
+        background: 'var(--color-bg-tertiary, #f3f4f6)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        margin: '0 auto 16px',
+        color: 'var(--color-text-tertiary, #9ca3af)',
+    },
+    emptyTitle: {
+        fontSize: '18px',
+        fontWeight: 700,
+        color: 'var(--color-text-primary, #1a1a2e)',
+        marginBottom: '8px',
+    },
+    emptyDesc: {
+        fontSize: '14px',
+        color: 'var(--color-text-secondary, #6b7280)',
+        maxWidth: '360px',
+        margin: '0 auto 24px',
+        lineHeight: 1.6,
+    },
+    emptyBtn: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 28px',
+        borderRadius: '28px',
+        border: 'none',
+        background: '#ef4444',
+        color: '#fff',
+        fontSize: '14px',
+        fontWeight: 600,
+        cursor: 'pointer',
+        textDecoration: 'none',
+        transition: 'all 0.2s',
+    },
+    /* ── Footer ── */
+    footer: {
+        textAlign: 'center' as const,
+        padding: '24px',
+        fontSize: '13px',
+        color: 'var(--color-text-tertiary, #9ca3af)',
+        borderTop: '1px solid var(--color-surface-border, #e5e7eb)',
+    },
+    /* ── Back button ── */
+    backBtn: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '13px',
+        fontWeight: 600,
+        color: 'var(--color-accent, #5048e5)',
+        cursor: 'pointer',
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        marginBottom: '8px',
+        transition: 'opacity 0.2s',
+    },
+};
+
+/* ──────────────────────── Avatar colors ──────────────────────── */
+const avatarColors = [
+    'linear-gradient(135deg, #5048e5, #7c3aed)',
+    'linear-gradient(135deg, #059669, #10b981)',
+    'linear-gradient(135deg, #2563eb, #3b82f6)',
+    'linear-gradient(135deg, #d946ef, #a855f7)',
+    'linear-gradient(135deg, #ea580c, #f97316)',
+    'linear-gradient(135deg, #0891b2, #06b6d4)',
+];
+
+const getAvatarColor = (title: string) => {
+    let hash = 0;
+    for (let i = 0; i < (title?.length || 0); i++) {
+        hash = title.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return avatarColors[Math.abs(hash) % avatarColors.length];
+};
+
+const getInitials = (title: string) => {
+    if (!title) return 'C';
+    const words = title.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return title.charAt(0).toUpperCase();
+};
+
+/* ──────────────────────── Component ──────────────────────── */
 
 const PortalCases: React.FC = () => {
     const { t } = useTranslation();
@@ -87,25 +476,14 @@ const PortalCases: React.FC = () => {
         return matchesFilter && matchesSearch;
     });
 
-    const getStatusStyle = (status: string) => {
-        switch (status?.toLowerCase()) {
-            case 'open':
-            case 'active':
-                return 'bg-emerald-100 text-emerald-700';
-            case 'closed':
-                return 'bg-slate-100 text-slate-600';
-            default:
-                return 'bg-amber-100 text-amber-700';
-        }
-    };
-
     if (loading) {
         return (
             <PortalLayout>
                 <div className="flex items-center justify-center min-h-[60vh]">
                     <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-600 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-slate-600 font-medium">{t('cases.loading')}</p>
+                        <div className="w-12 h-12 rounded-full animate-spin mx-auto mb-4"
+                             style={{ border: '4px solid var(--color-surface-border)', borderTopColor: 'var(--color-accent)' }}></div>
+                        <p className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('cases.loading')}</p>
                     </div>
                 </div>
             </PortalLayout>
@@ -114,191 +492,212 @@ const PortalCases: React.FC = () => {
 
     return (
         <PortalLayout>
-            <div className="space-y-6">
-
-                {/* Header - Matching UserPortal style */}
-                <div className="bg-white rounded-2xl p-6 lg:p-8 border border-slate-200 shadow-sm">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        <div>
-                            {viewUserId && viewUserName ? (
-                                <>
-                                    <button
-                                        onClick={() => navigate('/portal/firm-connect')}
-                                        className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-800 font-medium mb-2 transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                        </svg>
-                                        Back to Firm Connect
-                                    </button>
-                                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">{viewUserName}'s Cases</h1>
-                                    <p className="text-slate-500 mt-2">Viewing cases assigned to {viewUserName}.</p>
-                                </>
-                            ) : (
-                                <>
-                                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">My Legal Matters</h1>
-                                    <p className="text-slate-500 mt-2">Overview of all your active and archived cases.</p>
-                                </>
-                            )}
-                        </div>
-                        <div className="flex gap-3">
-                            <Link
-                                to="/portal"
-                                className="px-5 py-2.5 border border-slate-200 rounded-xl text-slate-700 font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
-                            >
-                                {t('cases.dashboard')}
-                            </Link>
-                            {!viewUserId && (
-                                <Link
-                                    to="/portal/start-case"
-                                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-colors flex items-center gap-2"
+            <div style={styles.container}>
+                {/* ── Header Card ── */}
+                <div style={styles.header}>
+                    <div>
+                        {viewUserId && viewUserName ? (
+                            <>
+                                <button
+                                    onClick={() => navigate('/portal/firm-connect')}
+                                    style={styles.backBtn}
+                                    onMouseOver={e => (e.currentTarget.style.opacity = '0.7')}
+                                    onMouseOut={e => (e.currentTarget.style.opacity = '1')}
                                 >
-                                    <PlusIcon /> New Case
-                                </Link>
-                            )}
-                        </div>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                    Back to Firm Connect
+                                </button>
+                                <h1 style={styles.headerTitle}>{viewUserName}'s Cases</h1>
+                                <p style={styles.headerSubtitle}>Viewing cases assigned to {viewUserName}.</p>
+                            </>
+                        ) : (
+                            <>
+                                <h1 style={styles.headerTitle}>My Legal Matters</h1>
+                                <p style={styles.headerSubtitle}>Overview of all your active and archived cases</p>
+                            </>
+                        )}
+                    </div>
+                    <div style={styles.headerActions}>
+                        {!viewUserId && (
+                            <Link to="/portal/start-case" style={styles.newCaseBtn}>
+                                <PlusIcon /> New Case
+                            </Link>
+                        )}
                     </div>
                 </div>
 
-                {/* Stats Grid - Matching UserPortal style */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-                                <CaseIcon />
+                {/* ── Stats Grid ── */}
+                <div style={styles.statsGrid}>
+                    {/* Active Cases */}
+                    <div style={styles.statCard}>
+                        <div style={styles.statTop}>
+                            <div style={{ ...styles.statIconBox, backgroundColor: 'rgba(80, 72, 229, 0.1)', color: '#5048e5' }}>
+                                <BriefcaseIcon />
                             </div>
-                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">{t('cases.active')}</span>
+                            <span style={{ ...styles.statBadge, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
+                                Active
+                            </span>
                         </div>
-                        <p className="text-2xl font-bold text-slate-900">{activeCases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('cases.activeCases')}</p>
+                        <div style={styles.statNumber}>{activeCases.length}</div>
+                        <div style={styles.statLabel}>Active Cases</div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 group-hover:scale-110 transition-transform">
+                    {/* Total Cases */}
+                    <div style={styles.statCard}>
+                        <div style={styles.statTop}>
+                            <div style={{ ...styles.statIconBox, backgroundColor: 'var(--color-bg-tertiary, #f3f4f6)', color: 'var(--color-text-secondary, #6b7280)' }}>
                                 <FolderIcon />
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-slate-900">{cases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('cases.totalCases')}</p>
+                        <div style={styles.statNumber}>{cases.length}</div>
+                        <div style={styles.statLabel}>Total Cases</div>
                     </div>
 
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 hover:shadow-lg transition-shadow group col-span-2 lg:col-span-1">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="w-11 h-11 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 group-hover:scale-110 transition-transform">
+                    {/* Closed Cases */}
+                    <div style={styles.statCard}>
+                        <div style={styles.statTop}>
+                            <div style={{ ...styles.statIconBox, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
                                 <CheckCircleIcon />
                             </div>
                         </div>
-                        <p className="text-2xl font-bold text-slate-900">{closedCases.length}</p>
-                        <p className="text-sm text-slate-500 mt-1">{t('cases.closedCases')}</p>
+                        <div style={styles.statNumber}>{closedCases.length}</div>
+                        <div style={styles.statLabel}>Closed Cases</div>
                     </div>
                 </div>
 
-                {/* Search & Filter - Matching UserPortal card style */}
-                <div className="bg-white p-4 rounded-xl border border-slate-200">
-                    <div className="flex flex-col lg:flex-row gap-4">
-                        <div className="flex-grow relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <SearchIcon />
-                            </div>
-                            <TransliterateInput
-                                value={searchQuery}
-                                onChangeText={(text) => setSearchQuery(text)}
-                                placeholder={t('cases.searchPlaceholder')}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-slate-200 focus:border-slate-300 text-sm transition-all"
-                            />
+                {/* ── Search & Filter Bar ── */}
+                <div style={styles.searchBar}>
+                    <div style={styles.searchInputWrapper}>
+                        <div style={styles.searchIconPos}>
+                            <SearchIcon />
                         </div>
-                        <div className="flex items-center gap-2">
-                            {(['All', 'Active', 'Closed'] as const).map((f) => (
-                                <button
-                                    key={f}
-                                    onClick={() => setFilter(f)}
-                                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${filter === f
-                                        ? 'bg-slate-900 text-white'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
-                                >
-                                    {t(`cases.${f.toLowerCase()}`)}
-                                </button>
-                            ))}
-                        </div>
+                        <TransliterateInput
+                            value={searchQuery}
+                            onChangeText={(text) => setSearchQuery(text)}
+                            placeholder={t('cases.searchPlaceholder')}
+                            style={styles.searchInput}
+                        />
+                    </div>
+                    <div style={styles.filterPills}>
+                        {(['All', 'Active', 'Closed'] as const).map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f)}
+                                style={styles.filterPill(filter === f)}
+                                onMouseOver={e => {
+                                    if (filter !== f) e.currentTarget.style.background = 'var(--color-surface-border, #e5e7eb)';
+                                }}
+                                onMouseOut={e => {
+                                    if (filter !== f) e.currentTarget.style.background = 'var(--color-bg-tertiary, #f3f4f6)';
+                                }}
+                            >
+                                {t(`cases.${f.toLowerCase()}`)}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* Cases List - Card style matching UserPortal "Active Matters" */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center text-slate-600">
-                                <FolderIcon />
-                            </div>
-                            <h3 className="font-bold text-slate-900">
-                                {filter === 'All' ? t('cases.allCases') : filter === 'Active' ? t('cases.activeCases') : t('cases.closedCases')}
-                            </h3>
+                {/* ── Cases Table ── */}
+                {filteredCases.length > 0 && (
+                    <div style={styles.tableCard}>
+                        {/* Table Header */}
+                        <div style={styles.tableHeader}>
+                            <span style={styles.tableHeaderCell}>Case Details</span>
+                            <span style={styles.tableHeaderCell}>Status</span>
+                            <span style={styles.tableHeaderCell}>Attorney</span>
+                            <span style={styles.tableHeaderCell}>Date</span>
+                            <span style={{ ...styles.tableHeaderCell, textAlign: 'right' }}>Actions</span>
                         </div>
-                        <span className="text-sm text-slate-500">{filteredCases.length} {filteredCases.length === 1 ? t('cases.case') : t('cases.casesLabel')}</span>
-                    </div>
 
-                    <div className="divide-y divide-slate-100">
-                        {filteredCases.map((caseItem: Case) => (
+                        {/* Table Rows */}
+                        {filteredCases.map((caseItem: Case, idx: number) => (
                             <Link
                                 to={`/portal/cases/${caseItem._id}`}
                                 key={caseItem._id}
-                                className="p-5 hover:bg-slate-50 transition-colors block"
+                                style={{
+                                    ...styles.tableRow,
+                                    ...(idx < filteredCases.length - 1 ? styles.tableRowBorder : {}),
+                                }}
+                                onMouseOver={e => { e.currentTarget.style.backgroundColor = 'var(--color-bg-tertiary, #f9fafb)'; }}
+                                onMouseOut={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                             >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="flex gap-4 flex-1">
-                                        <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                                            {caseItem.title?.charAt(0) || 'C'}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="font-bold text-slate-900 truncate">{caseItem.title}</h4>
-                                            <p className="text-sm text-slate-500 mt-0.5 line-clamp-1">
-                                                {caseItem.description || t('cases.noDescription')}
-                                            </p>
-                                            <div className="flex items-center gap-4 mt-2">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold ${getStatusStyle(caseItem.status)}`}>
-                                                    {caseItem.status}
-                                                </span>
-                                                <span className="text-xs text-slate-400 flex items-center gap-1">
-                                                    <ClockIcon />
-                                                    {new Date(caseItem.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                </span>
-                                                {caseItem.leadAttorney && (
-                                                    <span className="text-xs text-slate-400">
-                                                        {t('cases.attorney')}: {caseItem.leadAttorney.name}
-                                                    </span>
-                                                )}
-                                            </div>
+                                {/* Case Details */}
+                                <div style={styles.caseInfo}>
+                                    <div style={{
+                                        ...styles.caseAvatar,
+                                        background: getAvatarColor(caseItem.title),
+                                    }}>
+                                        {getInitials(caseItem.title)}
+                                    </div>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={styles.caseName}>{caseItem.title}</div>
+                                        <div style={styles.caseDesc}>
+                                            {caseItem.description
+                                                ? (caseItem.description.length > 45
+                                                    ? caseItem.description.slice(0, 45) + '...'
+                                                    : caseItem.description)
+                                                : t('cases.noDescription')}
                                         </div>
                                     </div>
-                                    <div className="text-slate-400">
-                                        <ArrowRightIcon />
-                                    </div>
+                                </div>
+
+                                {/* Status */}
+                                <div>
+                                    <span style={{ ...styles.statusText, ...styles.statusBadge(caseItem.status) }}>
+                                        {caseItem.status}
+                                    </span>
+                                </div>
+
+                                {/* Attorney */}
+                                <div style={styles.attorneyText}>
+                                    {caseItem.leadAttorney?.name || '—'}
+                                </div>
+
+                                {/* Date */}
+                                <div style={styles.dateText}>
+                                    {new Date(caseItem.createdAt).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: '2-digit',
+                                        year: 'numeric',
+                                    })}
+                                </div>
+
+                                {/* Actions */}
+                                <div style={styles.chevronCell}>
+                                    <ChevronRightIcon />
                                 </div>
                             </Link>
                         ))}
+                    </div>
+                )}
 
-                        {filteredCases.length === 0 && (
-                            <div className="p-8 text-center">
-                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <FolderIcon />
-                                </div>
-                                <p className="font-semibold text-slate-900">{t('cases.noCasesFound')}</p>
-                                <p className="text-sm text-slate-500 mt-1">
-                                    {searchQuery ? t('cases.adjustSearch') : t('cases.startCreating')}
-                                </p>
-                                {!searchQuery && (
-                                    <Link
-                                        to="/portal/start-case"
-                                        className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-colors"
-                                    >
-                                        <PlusIcon /> {t('cases.createCase')}
-                                    </Link>
-                                )}
-                            </div>
+                {/* ── Empty State ── */}
+                {filteredCases.length === 0 && (
+                    <div style={styles.emptyState}>
+                        <div style={styles.emptyIcon}>
+                            <EmptyFileIcon />
+                        </div>
+                        <h3 style={styles.emptyTitle}>
+                            {t('cases.noCasesFound')}
+                        </h3>
+                        <p style={styles.emptyDesc}>
+                            {searchQuery
+                                ? t('cases.adjustSearch')
+                                : "It looks like you haven't started any cases yet. Get started by creating your first legal matter."}
+                        </p>
+                        {!searchQuery && (
+                            <Link to="/portal/start-case" style={styles.emptyBtn}>
+                                <PlusIcon /> Create your first case
+                            </Link>
                         )}
                     </div>
+                )}
+
+                {/* ── Footer ── */}
+                <div style={styles.footer}>
+                    © {new Date().getFullYear()} Law Firm Connect (LawFirmAI). All rights reserved.
                 </div>
             </div>
         </PortalLayout>

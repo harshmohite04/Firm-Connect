@@ -16,27 +16,27 @@ const CheckIcon = () => (
 )
 
 const FamilyIcon = () => (
-    <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
 )
 const CorporateIcon = () => (
-    <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
     </svg>
 )
 const RealEstateIcon = () => (
-    <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
     </svg>
 )
 const LitigationIcon = () => (
-    <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
     </svg>
 )
 const PhoneIcon = () => (
-    <svg className="w-5 h-5 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" style={{ color: 'var(--color-text-tertiary)' }}>
         <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
     </svg>
 )
@@ -52,7 +52,7 @@ const UsersIcon = () => (
 )
 
 const TeamIcon = () => (
-    <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5" style={{ color: 'var(--color-accent)' }}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
     </svg>
 )
@@ -79,19 +79,15 @@ const StartCase: React.FC = () => {
         teamMembers: [] as TeamMember[],
         leadAttorneyEmail: ''
     });
-    // const [inviteEmail, setInviteEmail] = useState(''); // Removed unused state
     const [loading, setLoading] = useState(false);
     const [emailInput, setEmailInput] = useState('');
     const [emailError, setEmailError] = useState('');
     const [validatingEmail, setValidatingEmail] = useState(false);
     const [currentUser, setCurrentUser] = useState({ firstName: '', lastName: '', email: '' });
 
-    // Get current user info on component mount
     React.useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                // Use imported api instance or helper if authService has getCurrentUser exposed
-                // Assuming we can use internal api for now or authService
                 const response = await api.get('/auth/me'); 
                 const user = response.data;
                 setCurrentUser({
@@ -119,8 +115,6 @@ const StartCase: React.FC = () => {
         setValidatingEmail(true);
         setEmailError('');
 
-        // For now, client-side validation only as backend lookup is not ready
-        // TODO: Implement backend user lookup
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(emailInput)) {
             setEmailError('Invalid email address format');
@@ -128,7 +122,6 @@ const StartCase: React.FC = () => {
             return;
         }
 
-        // Simulate success for demo/MVP
          const alreadyInvited = formData.teamMembers.some(m => m.email === emailInput);
          if (alreadyInvited) {
              setEmailError('This user has already been invited');
@@ -140,8 +133,8 @@ const StartCase: React.FC = () => {
             ...formData,
             teamMembers: [...formData.teamMembers, {
                 email: emailInput,
-                firstName: 'Guest', // Placeholder
-                lastName: 'User',   // Placeholder
+                firstName: 'Guest',
+                lastName: 'User',
                 status: 'pending'
             }]
         });
@@ -161,18 +154,14 @@ const StartCase: React.FC = () => {
         try {
             const data = new FormData();
             data.append('title', formData.title);
-            data.append('category', formData.category); // Map to legalMatter
+            data.append('category', formData.category);
             data.append('legalMatter', formData.category); 
             data.append('description', formData.description);
-            // Team logic: we might send assignedLawyers as IDs if we had them. 
-            // For now, just sending core fields + files.
             
-            // Files
             formData.files.forEach(file => {
                 data.append('files', file);
             });
             
-            // Debug: Log FormData contents
             for (const pair of data.entries()) {
                 console.log('FormData:', pair[0], pair[1]);
             }
@@ -196,29 +185,43 @@ const StartCase: React.FC = () => {
         { id: 'Litigation', label: t('startCase.litigation'), desc: t('startCase.litigationDesc'), icon: <LitigationIcon /> },
     ];
 
+    const inputStyle: React.CSSProperties = {
+        backgroundColor: 'var(--color-bg-tertiary)',
+        borderColor: 'var(--color-surface-border)',
+        color: 'var(--color-text-primary)',
+    };
+
     return (
         <PortalLayout>
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
-                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">{t('startCase.title')}</h2>
-                    <p className="text-slate-500 mt-1">{t('startCase.subtitle')}</p>
+                    <h2 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.title')}</h2>
+                    <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.subtitle')}</p>
                 </div>
 
                 {/* Progress Steps */}
                 <div className="flex items-center justify-between mb-10 relative">
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-200 -z-10"></div>
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-blue-600 transition-all duration-300 -z-10" style={{ width: `${((step - 1) / 2) * 100}%` }}></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 -z-10" style={{ backgroundColor: 'var(--color-surface-border)' }}></div>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 h-1 transition-all duration-300 -z-10"
+                         style={{ width: `${((step - 1) / 2) * 100}%`, background: 'var(--gradient-accent)' }}></div>
 
                     {[
                         { num: 1, label: t('startCase.caseInfo') },
                         { num: 2, label: t('startCase.teamFormation') },
                         { num: 3, label: t('startCase.reviewSubmit') }
                     ].map((s) => (
-                        <div key={s.num} className="flex items-center gap-3 bg-slate-50 px-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors ${step >= s.num ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                        <div key={s.num} className="flex items-center gap-3 px-2" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                            <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-colors"
+                                 style={step >= s.num
+                                     ? { background: 'var(--gradient-accent)', color: '#fff' }
+                                     : { backgroundColor: 'var(--color-surface-border)', color: 'var(--color-text-tertiary)' }
+                                 }>
                                 {step > s.num ? <CheckIcon /> : s.num}
                             </div>
-                            <span className={`text-sm font-bold ${step >= s.num ? 'text-blue-900' : 'text-slate-400'}`}>{s.label}</span>
+                            <span className="text-sm font-bold"
+                                  style={{ color: step >= s.num ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)' }}>
+                                {s.label}
+                            </span>
                         </div>
                     ))}
                 </div>
@@ -227,40 +230,50 @@ const StartCase: React.FC = () => {
 
                     {/* Main Form Area */}
                     <div className="lg:col-span-2">
-                        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8">
+                        <div className="card-surface p-8">
 
                             {/* Step 1: Case Information */}
                             {step === 1 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">i</div>
-                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.caseBasics')}</h3>
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-lg"
+                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>i</div>
+                                        <h3 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.caseBasics')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.caseName')} <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                                            {t('startCase.caseName')} <span style={{ color: '#EF4444' }}>*</span>
+                                        </label>
                                         <TransliterateInput
                                             value={formData.title}
                                             onChangeText={(text) => setFormData({ ...formData, title: text })}
                                             placeholder={t('startCase.caseNamePlaceholder')}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                            className="w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all"
+                                            style={{ ...inputStyle, '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                         />
-                                        <p className="text-xs text-slate-400 mt-1">{t('startCase.caseNameHint')}</p>
+                                        <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>{t('startCase.caseNameHint')}</p>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.legalMatterType')} <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                                            {t('startCase.legalMatterType')} <span style={{ color: '#EF4444' }}>*</span>
+                                        </label>
                                         <div className="grid sm:grid-cols-2 gap-4">
                                             {categories.map(cat => (
                                                 <div
                                                     key={cat.id}
                                                     onClick={() => setFormData({ ...formData, category: cat.id })}
-                                                    className={`cursor-pointer border rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-md ${formData.category === cat.id ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300'}`}
+                                                    className="cursor-pointer rounded-xl p-4 flex flex-col gap-3 transition-all hover:shadow-md border"
+                                                    style={formData.category === cat.id
+                                                        ? { backgroundColor: 'var(--color-accent-soft)', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 1px var(--color-accent)' }
+                                                        : { borderColor: 'var(--color-surface-border)', backgroundColor: 'var(--color-surface)' }
+                                                    }
                                                 >
-                                                    <div>{cat.icon}</div>
+                                                    <div style={{ color: 'var(--color-accent)' }}>{cat.icon}</div>
                                                     <div>
-                                                        <h4 className={`font-bold text-sm ${formData.category === cat.id ? 'text-blue-900' : 'text-slate-900'}`}>{cat.label}</h4>
-                                                        <p className="text-xs text-slate-500">{cat.desc}</p>
+                                                        <h4 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>{cat.label}</h4>
+                                                        <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{cat.desc}</p>
                                                     </div>
                                                 </div>
                                             ))}
@@ -268,12 +281,15 @@ const StartCase: React.FC = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.briefDescription')} <span className="text-red-500">*</span></label>
+                                        <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-secondary)' }}>
+                                            {t('startCase.briefDescription')} <span style={{ color: '#EF4444' }}>*</span>
+                                        </label>
                                         <TransliterateInput
                                             value={formData.description}
                                             onChangeText={(text) => setFormData({ ...formData, description: text })}
                                             placeholder={t('startCase.descriptionPlaceholder')}
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                                            className="w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all resize-none"
+                                            style={{ ...inputStyle, '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                             type="textarea"
                                             rows={4}
                                         />
@@ -281,42 +297,51 @@ const StartCase: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Step 2: Team Formation (Renumbered) */}
+                            {/* Step 2: Team Formation */}
                             {step === 2 && (
                                 <div className="space-y-8">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                             <UsersIcon />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.teamFormation')}</h3>
+                                        <h3 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.teamFormation')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-4">{t('startCase.workType')}</label>
+                                        <label className="block text-sm font-bold mb-4" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.workType')}</label>
                                         <div className="grid sm:grid-cols-2 gap-6">
                                             <div
                                                 onClick={() => setFormData({...formData, teamType: 'solo'})}
-                                                className={`cursor-pointer border-2 rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center ${formData.teamType === 'solo' ? 'bg-white border-blue-500 ring-4 ring-blue-50/50' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                                className="cursor-pointer rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center border-2"
+                                                style={formData.teamType === 'solo'
+                                                    ? { backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 4px var(--color-accent-soft)' }
+                                                    : { backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-surface-border)' }
+                                                }
                                             >
-                                                <div className={`${formData.teamType === 'solo' ? 'text-blue-600' : 'text-slate-400'}`}>
+                                                <div style={{ color: formData.teamType === 'solo' ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}>
                                                     <UserIcon />
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.single')}</h4>
-                                                    <p className="text-sm text-slate-500">{t('startCase.singleDesc')}</p>
+                                                    <h4 className="font-bold text-lg mb-1" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.single')}</h4>
+                                                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.singleDesc')}</p>
                                                 </div>
                                             </div>
 
                                             <div
                                                 onClick={() => setFormData({...formData, teamType: 'team'})}
-                                                className={`cursor-pointer border-2 rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center ${formData.teamType === 'team' ? 'bg-blue-50 border-blue-500 ring-4 ring-blue-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                                className="cursor-pointer rounded-xl p-8 flex flex-col items-center gap-4 transition-all hover:shadow-md text-center border-2"
+                                                style={formData.teamType === 'team'
+                                                    ? { backgroundColor: 'var(--color-accent-soft)', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 4px var(--color-accent-soft)' }
+                                                    : { backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-surface-border)' }
+                                                }
                                             >
-                                                <div className={`${formData.teamType === 'team' ? 'text-blue-600' : 'text-slate-400'}`}>
+                                                <div style={{ color: formData.teamType === 'team' ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}>
                                                     <UsersIcon />
                                                 </div>
                                                 <div>
-                                                    <h4 className={`font-bold text-lg mb-1 ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.team')}</h4>
-                                                    <p className="text-sm text-slate-500">{t('startCase.teamDesc')}</p>
+                                                    <h4 className="font-bold text-lg mb-1" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.team')}</h4>
+                                                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.teamDesc')}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -324,7 +349,7 @@ const StartCase: React.FC = () => {
 
                                     {formData.teamType === 'team' && (
                                         <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-4">
-                                            <label className="block text-sm font-bold text-slate-700">{t('startCase.inviteTeamMembers')}</label>
+                                            <label className="block text-sm font-bold" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.inviteTeamMembers')}</label>
                                             <div className="flex gap-2">
                                                 <input
                                                     type="email"
@@ -337,27 +362,29 @@ const StartCase: React.FC = () => {
                                                             validateEmail();
                                                         }
                                                     }}
-                                                    className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                    className="flex-1 px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all"
+                                                    style={{ ...inputStyle, '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                                 />
                                                 <button 
                                                     onClick={validateEmail}
                                                     disabled={validatingEmail || !emailInput}
-                                                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+                                                    className="btn-gradient px-6 py-3 text-sm font-bold rounded-xl disabled:opacity-50"
                                                 >
                                                     {validatingEmail ? t('startCase.adding') : t('startCase.add')}
                                                 </button>
                                             </div>
-                                            {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
-                                            <p className="text-xs text-slate-400">{t('startCase.registeredOnly')}</p>
+                                            {emailError && <p className="text-xs mt-1" style={{ color: '#EF4444' }}>{emailError}</p>}
+                                            <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{t('startCase.registeredOnly')}</p>
 
                                             {formData.teamMembers.length > 0 && (
                                                 <div className="flex flex-wrap gap-2 mt-3">
                                                     {formData.teamMembers.map((member) => (
-                                                        <span key={member.email} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+                                                        <span key={member.email} className="inline-flex items-center gap-1.5 px-3 py-1 text-sm font-medium rounded-full"
+                                                              style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                                             {member.firstName} {member.lastName} ({member.email})
                                                             <button 
                                                                 onClick={() => removeTeamMember(member.email)}
-                                                                className="hover:text-blue-900"
+                                                                className="hover:opacity-70"
                                                             >
                                                                 ×
                                                             </button>
@@ -366,11 +393,11 @@ const StartCase: React.FC = () => {
                                                 </div>
                                             )}
 
-                                            <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex gap-3">
-                                                <div className="text-yellow-600 pt-0.5">
+                                            <div className="rounded-xl p-4 flex gap-3" style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                                <div style={{ color: '#D97706' }} className="pt-0.5">
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                                 </div>
-                                                <p className="text-sm text-yellow-800">
+                                                <p className="text-sm" style={{ color: '#92400E' }}>
                                                     {t('startCase.inviteWarning')}
                                                 </p>
                                             </div>
@@ -379,40 +406,49 @@ const StartCase: React.FC = () => {
                                 </div>
                             )}
 
-                             {/* Step 4: Review */}
+                             {/* Step 4: Review (legacy step - keeping for backward compat) */}
                              {step === 4 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                             <TeamIcon />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900">{t('startCase.teamFormation')}</h3>
+                                        <h3 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.teamFormation')}</h3>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-bold text-slate-700 mb-3">{t('startCase.workType')}</label>
+                                        <label className="block text-sm font-bold mb-3" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.workType')}</label>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div
                                                 onClick={() => setFormData({ ...formData, teamType: 'solo', teamMembers: [] })}
-                                                className={`cursor-pointer border rounded-xl p-6 text-center transition-all hover:shadow-md ${formData.teamType === 'solo' ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300'}`}
+                                                className="cursor-pointer rounded-xl p-6 text-center transition-all hover:shadow-md border"
+                                                style={formData.teamType === 'solo'
+                                                    ? { backgroundColor: 'var(--color-accent-soft)', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 1px var(--color-accent)' }
+                                                    : { borderColor: 'var(--color-surface-border)', backgroundColor: 'var(--color-surface)' }
+                                                }
                                             >
-                                                <div className="flex justify-center mb-3">
-                                                    <svg className="w-10 h-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <div className="flex justify-center mb-3" style={{ color: 'var(--color-accent)' }}>
+                                                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                                     </svg>
                                                 </div>
-                                                <h4 className={`font-bold text-sm ${formData.teamType === 'solo' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.single')}</h4>
-                                                <p className="text-xs text-slate-500 mt-1">{t('startCase.singleDesc')}</p>
+                                                <h4 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.single')}</h4>
+                                                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.singleDesc')}</p>
                                             </div>
                                             <div
                                                 onClick={() => setFormData({ ...formData, teamType: 'team' })}
-                                                className={`cursor-pointer border rounded-xl p-6 text-center transition-all hover:shadow-md ${formData.teamType === 'team' ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500' : 'border-slate-200 hover:border-slate-300'}`}
+                                                className="cursor-pointer rounded-xl p-6 text-center transition-all hover:shadow-md border"
+                                                style={formData.teamType === 'team'
+                                                    ? { backgroundColor: 'var(--color-accent-soft)', borderColor: 'var(--color-accent)', boxShadow: '0 0 0 1px var(--color-accent)' }
+                                                    : { borderColor: 'var(--color-surface-border)', backgroundColor: 'var(--color-surface)' }
+                                                }
                                             >
                                                 <div className="flex justify-center mb-3">
                                                     <TeamIcon />
                                                 </div>
-                                                <h4 className={`font-bold text-sm ${formData.teamType === 'team' ? 'text-blue-900' : 'text-slate-900'}`}>{t('startCase.team')}</h4>
-                                                <p className="text-xs text-slate-500 mt-1">{t('startCase.teamDesc')}</p>
+                                                <h4 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>{t('startCase.team')}</h4>
+                                                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.teamDesc')}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -420,7 +456,7 @@ const StartCase: React.FC = () => {
                                     {formData.teamType === 'team' && (
                                         <>
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 mb-2">{t('startCase.inviteTeamMembers')}</label>
+                                                <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.inviteTeamMembers')}</label>
                                                 <div className="flex gap-2">
                                                     <input
                                                         type="email"
@@ -431,50 +467,55 @@ const StartCase: React.FC = () => {
                                                         }}
                                                         onKeyPress={e => e.key === 'Enter' && validateEmail()}
                                                         placeholder={t('startCase.emailPlaceholder')}
-                                                        className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                        className="flex-1 px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all"
+                                                        style={{ ...inputStyle, '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                                     />
                                                     <button
                                                         onClick={validateEmail}
                                                         disabled={validatingEmail || !emailInput.trim()}
-                                                        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="btn-gradient px-6 py-3 rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
                                                         {validatingEmail ? t('startCase.checking') : t('startCase.add')}
                                                     </button>
                                                 </div>
                                                 {emailError && (
-                                                    <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+                                                    <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#EF4444' }}>
                                                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                                         </svg>
                                                         {emailError}
                                                     </p>
                                                 )}
-                                                <p className="text-xs text-slate-400 mt-1">{t('startCase.registeredOnly')}</p>
+                                                <p className="text-xs mt-1" style={{ color: 'var(--color-text-tertiary)' }}>{t('startCase.registeredOnly')}</p>
                                             </div>
 
                                             {formData.teamMembers.length > 0 && (
                                                 <>
                                                     <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-3">{t('startCase.teamMembers')} ({formData.teamMembers.length})</label>
+                                                        <label className="block text-sm font-bold mb-3" style={{ color: 'var(--color-text-secondary)' }}>{t('startCase.teamMembers')} ({formData.teamMembers.length})</label>
                                                         <div className="space-y-2">
                                                             {formData.teamMembers.map((member, index) => (
-                                                                <div key={index} className="flex items-center justify-between bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                                                <div key={index} className="flex items-center justify-between p-4 rounded-xl border"
+                                                                     style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-surface-border)' }}>
                                                                     <div className="flex items-center gap-3">
-                                                                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                                                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                                                             {member.firstName[0]}{member.lastName[0]}
                                                                         </div>
                                                                         <div>
-                                                                            <p className="text-sm font-bold text-slate-900">{member.firstName} {member.lastName}</p>
-                                                                            <p className="text-xs text-slate-500">{member.email}</p>
+                                                                            <p className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>{member.firstName} {member.lastName}</p>
+                                                                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{member.email}</p>
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
-                                                                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">
+                                                                        <span className="px-3 py-1 text-xs font-bold rounded-full"
+                                                                              style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#D97706' }}>
                                                                             {t('startCase.pendingInvitation')}
                                                                         </span>
                                                                         <button
                                                                             onClick={() => removeTeamMember(member.email)}
-                                                                            className="text-red-500 hover:text-red-700 font-bold text-xs"
+                                                                            className="font-bold text-xs"
+                                                                            style={{ color: '#EF4444' }}
                                                                         >
                                                                             {t('startCase.remove')}
                                                                         </button>
@@ -485,12 +526,13 @@ const StartCase: React.FC = () => {
                                                     </div>
 
                                                     <div>
-                                                        <label className="block text-sm font-bold text-slate-700 mb-3">Lead Attorney</label>
-                                                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                                                        <label className="block text-sm font-bold mb-3" style={{ color: 'var(--color-text-secondary)' }}>Lead Attorney</label>
+                                                        <div className="p-4 rounded-xl border" style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-surface-border)' }}>
                                                             <select
                                                                 value={formData.leadAttorneyEmail}
                                                                 onChange={e => setFormData({ ...formData, leadAttorneyEmail: e.target.value })}
-                                                                className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                                                className="w-full px-4 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all"
+                                                                style={{ ...inputStyle, '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                                             >
                                                                 <option value={currentUser.email}>{currentUser.firstName} {currentUser.lastName} (You)</option>
                                                                 {formData.teamMembers.map((member, index) => (
@@ -499,17 +541,17 @@ const StartCase: React.FC = () => {
                                                                     </option>
                                                                 ))}
                                                             </select>
-                                                            <p className="text-xs text-slate-500 mt-2">The lead attorney manages the team and can add/remove members</p>
+                                                            <p className="text-xs mt-2" style={{ color: 'var(--color-text-secondary)' }}>The lead attorney manages the team and can add/remove members</p>
                                                         </div>
                                                     </div>
                                                 </>
                                             )}
 
-                                            <div className="bg-amber-50 p-4 rounded-lg flex gap-3 border border-amber-100">
-                                                <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <div className="p-4 rounded-xl flex gap-3" style={{ backgroundColor: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                                                <svg className="w-5 h-5 flex-shrink-0" style={{ color: '#D97706' }} fill="currentColor" viewBox="0 0 20 20">
                                                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                                 </svg>
-                                                <p className="text-xs text-amber-800">
+                                                <p className="text-xs" style={{ color: '#92400E' }}>
                                                     Team members will receive email invitations. Invitations expire after 3 days if not accepted.
                                                 </p>
                                             </div>
@@ -518,61 +560,63 @@ const StartCase: React.FC = () => {
                                 </div>
                             )}
 
-                                    {/* Step 3: Review (Renumbered) */}
+                                    {/* Step 3: Review */}
                             {step === 3 && (
                                 <div className="space-y-6">
                                     <div className="flex items-center gap-3 mb-6">
-                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center"
+                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                             <CheckIcon />
                                         </div>
-                                        <h3 className="text-xl font-bold text-slate-900">Review & Submit</h3>
+                                        <h3 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Review & Submit</h3>
                                     </div>
 
-                                    <div className="bg-slate-50 rounded-xl p-6 space-y-4">
-                                        <div className="flex justify-between border-b border-slate-200 pb-4">
+                                    <div className="rounded-xl p-6 space-y-4" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
+                                        <div className="flex justify-between pb-4" style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
                                             <div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase">Case Name</p>
-                                                <p className="font-bold text-slate-900">{formData.title}</p>
+                                                <p className="text-xs font-bold uppercase" style={{ color: 'var(--color-text-tertiary)' }}>Case Name</p>
+                                                <p className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{formData.title}</p>
                                             </div>
-                                            <button onClick={() => setStep(1)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                            <button onClick={() => setStep(1)} className="text-xs font-bold hover:underline" style={{ color: 'var(--color-accent)' }}>Edit</button>
                                         </div>
-                                        <div className="flex justify-between border-b border-slate-200 pb-4">
+                                        <div className="flex justify-between pb-4" style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
                                             <div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase">Category</p>
-                                                <p className="font-bold text-slate-900">{formData.category}</p>
+                                                <p className="text-xs font-bold uppercase" style={{ color: 'var(--color-text-tertiary)' }}>Category</p>
+                                                <p className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{formData.category}</p>
                                             </div>
-                                            <button onClick={() => setStep(1)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                            <button onClick={() => setStep(1)} className="text-xs font-bold hover:underline" style={{ color: 'var(--color-accent)' }}>Edit</button>
                                         </div>
-                                        <div className="flex justify-between border-b border-slate-200 pb-4">
+                                        <div className="flex justify-between pb-4" style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
                                             <div>
-                                                <p className="text-xs font-bold text-slate-500 uppercase">Work Type</p>
-                                                <div className="font-bold text-slate-900 capitalize flex items-center gap-2">
+                                                <p className="text-xs font-bold uppercase" style={{ color: 'var(--color-text-tertiary)' }}>Work Type</p>
+                                                <div className="font-bold capitalize flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
                                                     {formData.teamType} 
-                                                    {formData.teamType === 'team' && <span className="text-slate-500 font-normal text-sm">({formData.teamMembers.length} members invited)</span>}
+                                                    {formData.teamType === 'team' && <span className="font-normal text-sm" style={{ color: 'var(--color-text-secondary)' }}>({formData.teamMembers.length} members invited)</span>}
                                                 </div>
                                             </div>
-                                            <button onClick={() => setStep(2)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                            <button onClick={() => setStep(2)} className="text-xs font-bold hover:underline" style={{ color: 'var(--color-accent)' }}>Edit</button>
                                         </div>
                                         <div>
-                                            <p className="text-sm text-slate-700 leading-relaxed">{formData.description}</p>
+                                            <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>{formData.description}</p>
                                         </div>
                                         
-                                        <div className="border-t border-slate-200 pt-4">
+                                        <div className="pt-4" style={{ borderTop: '1px solid var(--color-surface-border)' }}>
                                             <div className="flex justify-between">
                                                 <div>
-                                                    <p className="text-xs font-bold text-slate-500 uppercase">Team Type</p>
-                                                    <p className="font-bold text-slate-900 capitalize">{formData.teamType}</p>
+                                                    <p className="text-xs font-bold uppercase" style={{ color: 'var(--color-text-tertiary)' }}>Team Type</p>
+                                                    <p className="font-bold capitalize" style={{ color: 'var(--color-text-primary)' }}>{formData.teamType}</p>
                                                 </div>
-                                                <button onClick={() => setStep(2)} className="text-xs font-bold text-blue-600 hover:underline">Edit</button>
+                                                <button onClick={() => setStep(2)} className="text-xs font-bold hover:underline" style={{ color: 'var(--color-accent)' }}>Edit</button>
                                             </div>
 
                                             <div className="mt-4">
-                                                <p className="text-xs font-bold text-slate-500 uppercase mb-2">Lead Attorney</p>
+                                                <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--color-text-tertiary)' }}>Lead Attorney</p>
                                                 <div className="flex items-center gap-2 text-sm">
-                                                    <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                                                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs"
+                                                         style={{ background: 'var(--gradient-accent)' }}>
                                                         {currentUser.firstName[0]}{currentUser.lastName[0]}
                                                     </div>
-                                                    <span className="text-slate-900 font-bold">
+                                                    <span className="font-bold" style={{ color: 'var(--color-text-primary)' }}>
                                                         {formData.leadAttorneyEmail === currentUser.email
                                                             ? `${currentUser.firstName} ${currentUser.lastName} (You)`
                                                             : formData.teamMembers.find(m => m.email === formData.leadAttorneyEmail)
@@ -585,16 +629,17 @@ const StartCase: React.FC = () => {
 
                                             {formData.teamType === 'team' && formData.teamMembers.length > 0 && (
                                                 <div className="mt-4">
-                                                    <p className="text-xs font-bold text-slate-500 uppercase mb-2">Team Members</p>
+                                                    <p className="text-xs font-bold uppercase mb-2" style={{ color: 'var(--color-text-tertiary)' }}>Team Members</p>
                                                     <div className="space-y-2">
                                                         {formData.teamMembers.map((member, idx) => (
                                                             <div key={idx} className="flex items-center gap-2 text-sm">
-                                                                <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                                                <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs"
+                                                                     style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                                                     {member.firstName[0]}{member.lastName[0]}
                                                                 </div>
-                                                                <span className="text-slate-900">{member.firstName} {member.lastName}</span>
-                                                                <span className="text-slate-400">•</span>
-                                                                <span className="text-xs text-yellow-700">Invitation Pending</span>
+                                                                <span style={{ color: 'var(--color-text-primary)' }}>{member.firstName} {member.lastName}</span>
+                                                                <span style={{ color: 'var(--color-text-tertiary)' }}>•</span>
+                                                                <span className="text-xs" style={{ color: '#D97706' }}>Invitation Pending</span>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -603,9 +648,9 @@ const StartCase: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="bg-green-50 p-4 rounded-lg flex gap-3 border border-green-100">
-                                        <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-                                        <p className="text-xs text-green-800 font-medium">
+                                    <div className="p-4 rounded-xl flex gap-3" style={{ backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                        <svg className="w-5 h-5 flex-shrink-0" style={{ color: '#059669' }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                        <p className="text-xs font-medium" style={{ color: '#065F46' }}>
                                             Everything looks good! Ready to create your case.
                                         </p>
                                     </div>
@@ -613,11 +658,11 @@ const StartCase: React.FC = () => {
                             )}
 
                             {/* Footer Buttons */}
-                            <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-slate-100">
+                            <div className="flex justify-end gap-3 mt-10 pt-6" style={{ borderTop: '1px solid var(--color-surface-border)' }}>
                                 {step > 1 && (
                                     <button
                                         onClick={handleBack}
-                                        className="px-6 py-2.5 border border-slate-300 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                        className="btn-ghost px-6 py-2.5 text-sm font-bold"
                                     >
                                         Back
                                     </button>
@@ -626,7 +671,7 @@ const StartCase: React.FC = () => {
                                     <button 
                                         onClick={handleNext}
                                         disabled={!formData.title || !formData.category || !formData.description}
-                                        className={`px-6 py-2.5 bg-blue-600 rounded-lg text-sm font-bold text-white shadow-md transition-all ${(!formData.title || !formData.category || !formData.description) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+                                        className="btn-gradient px-6 py-2.5 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         Next Step
                                     </button>
@@ -634,7 +679,7 @@ const StartCase: React.FC = () => {
                                     <button
                                         onClick={handleSubmit}
                                         disabled={loading}
-                                        className={`px-6 py-2.5 bg-blue-600 rounded-lg text-sm font-bold text-white shadow-md transition-all flex items-center gap-2 ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+                                        className="btn-gradient px-6 py-2.5 text-sm font-bold flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                     >
                                         {loading ? 'Creating Case...' : 'Create Case'}
                                         {!loading && <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>}
@@ -648,39 +693,39 @@ const StartCase: React.FC = () => {
                     {/* Right Column: Info Cards */}
                     <div className="space-y-6">
 
-                        <div className="bg-blue-50 rounded-xl p-6 border border-blue-100">
+                        <div className="rounded-xl p-6" style={{ backgroundColor: 'var(--color-accent-soft)', border: '1px solid rgba(79, 70, 229, 0.15)' }}>
                             <div className="flex items-start gap-3">
-                                <div className="pt-0.5 text-blue-600">
+                                <div className="pt-0.5" style={{ color: 'var(--color-accent)' }}>
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1 a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-blue-900 text-sm mb-1">Why do we need this?</h4>
-                                    <p className="text-xs text-blue-800 leading-relaxed">
+                                    <h4 className="font-bold text-sm mb-1" style={{ color: 'var(--color-text-primary)' }}>Why do we need this?</h4>
+                                    <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                                         Providing detailed information helps us match you with the most qualified attorney for your specific legal needs immediately.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
+                        <div className="card-surface p-6">
                             <div className="flex items-start gap-3 mb-4">
-                                <div className="pt-0.5 text-green-500">
+                                <div className="pt-0.5" style={{ color: '#059669' }}>
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                                 </div>
-                                <h4 className="font-bold text-slate-900 text-sm">Secure & Confidential</h4>
+                                <h4 className="font-bold text-sm" style={{ color: 'var(--color-text-primary)' }}>Secure & Confidential</h4>
                             </div>
-                            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                            <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--color-text-secondary)' }}>
                                 All information submitted through this portal is encrypted and protected by attorney-client privilege.
                             </p>
-                            <a href="#" className="text-xs font-bold text-blue-600 hover:text-blue-700">Read our privacy policy</a>
+                            <a href="#" className="text-xs font-bold hover:underline" style={{ color: 'var(--color-accent)' }}>Read our privacy policy</a>
                         </div>
 
-                        <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                            <h4 className="font-bold text-slate-900 text-sm mb-2">Need assistance?</h4>
-                            <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                        <div className="card-surface p-6">
+                            <h4 className="font-bold text-sm mb-2" style={{ color: 'var(--color-text-primary)' }}>Need assistance?</h4>
+                            <p className="text-xs leading-relaxed mb-4" style={{ color: 'var(--color-text-secondary)' }}>
                                 If you're unsure how to categorize your case, please give our intake team a call.
                             </p>
-                            <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
+                            <div className="flex items-center gap-2 font-bold text-sm" style={{ color: 'var(--color-text-secondary)' }}>
                                 <PhoneIcon />
                                 +91 93568 36581
                             </div>

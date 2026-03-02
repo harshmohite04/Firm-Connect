@@ -432,11 +432,10 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             <aside className={`${isMobile ? (mobileMenuOpen ? 'translate-x-0' : '-translate-x-full') : (sidebarOpen ? 'w-64' : 'w-16')} ${isMobile ? 'fixed inset-y-0 left-0 w-64' : 'relative'} flex flex-col z-50 transition-all duration-300 ease-in-out md:z-10 md:relative md:translate-x-0`} style={{ backgroundColor: 'var(--color-surface)', borderRight: '1px solid var(--color-surface-border)' }}>
                 {/* Logo */}
                 <div className={`h-16 md:h-16 flex items-center ${isMobile ? 'px-4 gap-3' : (sidebarOpen ? 'px-6 gap-3' : 'justify-center')} cursor-pointer relative`} onClick={() => window.location.href = '/'}>
-                    <img src={Logo} alt="LawFirmAI" style={{width:"2.5rem" , height:"2.5rem"}}/>
+                    <img src={Logo} alt="LawFirmAI" style={{width:"3.5rem" , height:"3.5rem"}}/>
                     {(isMobile || sidebarOpen) && (
                         <div>
-                            <h1 className="font-bold leading-none text-sm md:text-base" style={{ color: 'var(--color-text-primary)' }}>LawFirmAI</h1>
-                            <span className="text-xs font-medium" style={{ color: 'var(--color-accent)' }}>Legal Portal</span>
+                            <h1 className="font-bold leading-none text-sm md:text-xl" style={{ color: 'var(--color-text-primary)' }}>LawFirmAI</h1>
                         </div>
                     )}
                 </div>

@@ -202,7 +202,7 @@ const FirmConnect: React.FC = () => {
         return (
             <PortalLayout>
                 <div className="flex items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-accent)' }}></div>
                 </div>
             </PortalLayout>
         );
@@ -212,9 +212,9 @@ const FirmConnect: React.FC = () => {
         return (
             <PortalLayout>
                 <div className="max-w-2xl mx-auto text-center py-20">
-                    <Building2 className="mx-auto h-16 w-16 text-slate-300 mb-6" />
-                    <h2 className="text-2xl font-bold text-slate-900 mb-3">No Organization Found</h2>
-                    <p className="text-slate-500">
+                    <Building2 className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
+                    <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>No Organization Found</h2>
+                    <p style={{ color: 'var(--color-text-secondary)' }}>
                         {userRole === 'ATTORNEY'
                             ? 'You are not part of any firm yet. Ask your firm admin to invite you.'
                             : 'Purchase a plan from the Pricing page to create your firm.'}
@@ -230,28 +230,26 @@ const FirmConnect: React.FC = () => {
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
-                        <Building2 className="h-8 w-8 text-indigo-600" />
-                        <h1 className="text-3xl font-bold text-slate-900">{org.name}</h1>
+                        <Building2 className="h-8 w-8" style={{ color: 'var(--color-accent)' }} />
+                        <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>{org.name}</h1>
                     </div>
-                    <p className="text-slate-500">
+                    <p style={{ color: 'var(--color-text-secondary)' }}>
                         {org.plan} Plan · {usedSeats}/{totalSeats} seats used
                     </p>
                 </div>
 
                 {/* Seat Usage Bar */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
+                <div className="card-surface p-6 mb-8">
                     <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-semibold text-slate-900">Seat Usage</h3>
-                        <span className="text-sm font-medium text-slate-500">
+                        <h3 className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>Seat Usage</h3>
+                        <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
                             {usedSeats} of {totalSeats} seats
                         </span>
                     </div>
-                    <div className="w-full bg-slate-100 rounded-full h-3">
+                    <div className="w-full rounded-full h-3" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
                         <div
-                            className={`h-3 rounded-full transition-all duration-500 ${
-                                usedSeats >= totalSeats ? 'bg-red-500' : 'bg-indigo-600'
-                            }`}
-                            style={{ width: `${Math.min((usedSeats / totalSeats) * 100, 100)}%` }}
+                            className={`h-3 rounded-full transition-all duration-500`}
+                            style={{ width: `${Math.min((usedSeats / totalSeats) * 100, 100)}%`, background: usedSeats >= totalSeats ? '#EF4444' : 'var(--gradient-accent)' }}
                         />
                     </div>
                     {usedSeats >= totalSeats && (
@@ -264,7 +262,7 @@ const FirmConnect: React.FC = () => {
                             {!showSeatUpgrade ? (
                                 <button
                                     onClick={() => setShowSeatUpgrade(true)}
-                                    className="px-4 py-2 text-sm font-semibold text-indigo-600 border border-indigo-200 rounded-xl hover:bg-indigo-50 transition-colors"
+                                    className="btn-ghost px-4 py-2 text-sm font-semibold rounded-xl"
                                 >
                                     + Add Seats
                                 </button>
@@ -296,7 +294,7 @@ const FirmConnect: React.FC = () => {
                                             <button
                                                 onClick={handleAddSeats}
                                                 disabled={updatingSeats}
-                                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 transition-colors"
+                                                className="btn-gradient px-4 py-2 text-sm font-semibold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {updatingSeats ? 'Processing...' : 'Confirm'}
                                             </button>
@@ -316,9 +314,9 @@ const FirmConnect: React.FC = () => {
 
                 {/* Invite Form (Admin Only) */}
                 {userRole === 'ADMIN' && (
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-                        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                            <UserPlus className="h-5 w-5 text-indigo-600" />
+                    <div className="card-surface p-6 mb-8">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                            <UserPlus className="h-5 w-5" style={{ color: 'var(--color-accent)' }} />
                             Invite a Member
                         </h3>
                         <form onSubmit={handleInvite} className="flex gap-3">
@@ -327,13 +325,14 @@ const FirmConnect: React.FC = () => {
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
                                 placeholder="Enter email address..."
-                                className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-900"
+                                className="flex-1 px-4 py-3 rounded-xl text-sm border focus:outline-none focus:ring-2"
+                                style={{ borderColor: 'var(--color-surface-border)', color: 'var(--color-text-primary)', backgroundColor: 'var(--color-surface)', '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                                 disabled={usedSeats >= totalSeats || inviting}
                             />
                             <button
                                 type="submit"
                                 disabled={usedSeats >= totalSeats || inviting || !inviteEmail.trim()}
-                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                                className="btn-gradient px-6 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {inviting ? 'Sending...' : 'Send Invite'}
                             </button>
@@ -343,8 +342,8 @@ const FirmConnect: React.FC = () => {
 
                 {/* Pending Invitations (Admin Only) */}
                 {userRole === 'ADMIN' && invitations.length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
-                        <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                    <div className="card-surface p-6 mb-8">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
                             <Clock className="h-5 w-5 text-amber-500" />
                             Pending Invitations ({invitations.length})
                         </h3>
@@ -370,9 +369,9 @@ const FirmConnect: React.FC = () => {
                 )}
 
                 {/* Members List */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                        <Users className="h-5 w-5 text-indigo-600" />
+                <div className="card-surface p-6">
+                    <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                        <Users className="h-5 w-5" style={{ color: 'var(--color-accent)' }} />
                         Firm Members ({members.length})
                     </h3>
                     <div className="space-y-3">
@@ -382,7 +381,8 @@ const FirmConnect: React.FC = () => {
                                 className="flex items-center justify-between py-4 px-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors"
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                                         style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                         {member.userId.firstName?.[0]}{member.userId.lastName?.[0]}
                                     </div>
                                     <div>

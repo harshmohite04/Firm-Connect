@@ -304,26 +304,27 @@ const PortalCalendar: React.FC = () => {
 
     return (
         <PortalLayout>
-            <div className="flex h-[calc(100vh-100px)] overflow-hidden bg-slate-50">
+            <div className="flex h-[calc(100vh-100px)] overflow-hidden" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
                 
                 {/* Main Calendar Area */}
                 <div className={`flex-1 flex flex-col transition-all duration-300 ${showSidePanel ? 'mr-96' : ''}`}>
                     
                     {/* Header - Teams Style */}
-                    <div className="px-6 py-3 bg-white border-b border-slate-200 flex items-center justify-between">
+                    <div className="px-6 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-surface-border)' }}>
                         <div className="flex items-center gap-4">
                             <button 
                                 onClick={openNewEventPanel}
-                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-md hover:bg-indigo-700 shadow-sm flex items-center gap-2 transition-colors"
+                                className="btn-gradient px-4 py-2 text-sm font-semibold rounded-lg shadow-sm flex items-center gap-2 transition-colors"
                             >
                                 <PlusIcon /> {t('calendar.newMeeting')}
                             </button>
                             
-                            <div className="h-6 w-px bg-slate-300" />
+                            <div className="h-6 w-px" style={{ backgroundColor: 'var(--color-surface-border)' }} />
                             
                             <button 
                                 onClick={() => setViewDate(new Date())}
-                                className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded transition-colors"
+                                className="px-3 py-1.5 text-sm font-medium rounded transition-colors hover:opacity-80"
+                                style={{ color: 'var(--color-text-secondary)' }}
                             >
                                 {t('calendar.today')}
                             </button>
@@ -337,21 +338,21 @@ const PortalCalendar: React.FC = () => {
                                 </button>
                             </div>
                             
-                            <h2 className="text-lg font-semibold text-slate-800">
+                            <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                                 {formatDateRange()}
                             </h2>
                         </div>
 
                         {/* View Switcher - Teams Style */}
-                        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                        <div className="flex items-center gap-1 rounded-lg p-1" style={{ backgroundColor: 'var(--color-bg-tertiary)' }}>
                             {(['Day', 'WorkWeek', 'Week'] as const).map(mode => (
                                 <button
                                     key={mode}
-                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                                        viewMode === mode 
-                                            ? 'bg-white shadow-sm text-slate-900' 
-                                            : 'text-slate-600 hover:text-slate-900'
-                                    }`}
+                                    className="px-3 py-1.5 text-sm font-medium rounded-md transition-all"
+                                    style={viewMode === mode
+                                        ? { backgroundColor: 'var(--color-surface)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', color: 'var(--color-text-primary)' }
+                                        : { color: 'var(--color-text-secondary)' }
+                                    }
                                     onClick={() => setViewMode(mode)}
                                 >
                                     {mode === 'Day' ? t('calendar.day') : mode === 'WorkWeek' ? t('calendar.workWeek') : t('calendar.week')}
@@ -361,13 +362,13 @@ const PortalCalendar: React.FC = () => {
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="flex-1 overflow-auto bg-white">
+                    <div className="flex-1 overflow-auto" style={{ backgroundColor: 'var(--color-surface)' }}>
                         <div className="flex min-h-full">
                             {/* Time Column */}
-                            <div className="w-16 flex-shrink-0 border-r border-slate-200 bg-slate-50">
+                            <div className="w-16 flex-shrink-0" style={{ borderRight: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-bg-tertiary)' }}>
                                 <div className="h-12" /> {/* Header spacer */}
                                 {hours.map(hour => (
-                                    <div key={hour} className="h-[60px] text-right pr-2 text-xs text-slate-500 -mt-2">
+                                    <div key={hour} className="h-[60px] text-right pr-2 text-xs -mt-2" style={{ color: 'var(--color-text-tertiary)' }}>
                                         {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                                     </div>
                                 ))}
@@ -456,14 +457,14 @@ const PortalCalendar: React.FC = () => {
                 </div>
 
                 {/* Side Panel - Teams Style */}
-                <div className={`fixed right-0 top-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl transform transition-transform duration-300 z-30 ${showSidePanel ? 'translate-x-0' : 'translate-x-full'}`}>
+                <div className={`fixed right-0 top-0 h-full w-96 shadow-xl transform transition-transform duration-300 z-30 ${showSidePanel ? 'translate-x-0' : 'translate-x-full'}`} style={{ backgroundColor: 'var(--color-surface)', borderLeft: '1px solid var(--color-surface-border)' }}>
                     <div className="flex flex-col h-full">
                         {/* Panel Header */}
-                        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-                            <h3 className="font-semibold text-slate-800 text-lg">
+                        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-bg-tertiary)' }}>
+                            <h3 className="font-semibold text-lg" style={{ color: 'var(--color-text-primary)' }}>
                                 {isCreating ? t('calendar.newMeeting') : t('calendar.editMeeting')}
                             </h3>
-                            <button onClick={closeSidePanel} className="p-1 hover:bg-slate-200 rounded-full transition-colors">
+                            <button onClick={closeSidePanel} className="p-1 rounded-full transition-colors hover:opacity-70" style={{ color: 'var(--color-text-tertiary)' }}>
                                 <XIcon />
                             </button>
                         </div>
@@ -596,7 +597,7 @@ const PortalCalendar: React.FC = () => {
                         </form>
 
                         {/* Panel Footer */}
-                        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+                        <div className="px-6 py-4 flex items-center justify-between" style={{ borderTop: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-bg-tertiary)' }}>
                             {!isCreating && selectedEvent && (
                                 <button
                                     type="button"
@@ -611,13 +612,13 @@ const PortalCalendar: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={closeSidePanel}
-                                    className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-md text-sm font-medium transition-colors"
+                                    className="btn-ghost px-4 py-2 rounded-lg text-sm font-medium"
                                 >
                                     {t('calendar.cancel')}
                                 </button>
                                 <button
                                     onClick={handleSaveEvent}
-                                    className="px-6 py-2 bg-indigo-600 text-white rounded-md text-sm font-semibold hover:bg-indigo-700 transition-colors"
+                                    className="btn-gradient px-6 py-2 rounded-lg text-sm font-semibold"
                                 >
                                     {t('calendar.save')}
                                 </button>
