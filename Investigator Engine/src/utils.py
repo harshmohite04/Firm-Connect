@@ -15,6 +15,13 @@ from langchain_core.runnables import RunnableLambda
 
 from dotenv import load_dotenv
 
+# Add parent directory to path to import system_settings
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from utils.system_settings import load_provider_preset
+
 load_dotenv()
 
 logger = logging.getLogger("investigator_engine")
@@ -188,6 +195,8 @@ def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard"):
 
     task_tier: "fast" (extraction), "standard" (analysis), "powerful" (synthesis)
     The tier can override the model via env vars LLM_TIER_FAST, LLM_TIER_STANDARD, LLM_TIER_POWERFUL.
+
+    Provider selection: Dynamic based on system_settings (with fallback to LLM_PROVIDER env var)
     """
     # Check tier-based override from environment
     tier_env_key = _TIER_DEFAULTS.get(task_tier)
@@ -205,8 +214,12 @@ def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard"):
             target_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
             return ChatOllama(model=target_model, temperature=0.1)
 
-    # Check LLM_PROVIDER toggle
-    provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
+    # Get LLM provider from system settings (dynamic)
+    try:
+        provider = load_provider_preset()
+    except Exception as e:
+        logger.warning(f"Could not load provider preset: {e}. Falling back to env var.")
+        provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
 
     if provider == "openai":
         api_key = os.getenv("OPENAI_API_KEY")
@@ -255,6 +268,26 @@ def get_perplexity_llm(model: str = "sonar-pro"):
         base_url="https://api.perplexity.ai",
         temperature=0.1
     )
+
+
+def get_web_search_llm(model: str = "sonar-pro"):
+    """
+    Get a web search LLM based on current preset.
+    - Preset A (DeepSeek): Returns Serper-based search wrapper
+    - Preset B (OpenAI): Returns Perplexity LLM instance
+    """
+    try:
+        provider = load_provider_preset()
+    except Exception as e:
+        logger.warning(f"Could not load provider preset: {e}. Falling back to env var.")
+        provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
+
+    if provider == "openai":
+        return get_perplexity_llm(model=model)
+    else:
+        # For DeepSeek: use standard LLM (will be called via SerperSearchTool)
+        # The actual Serper integration happens in the agent using get_serper_search()
+        return get_llm(task_tier="standard")
 
 
 def get_llm_with_retry(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"):

@@ -32,8 +32,8 @@ from investigation.generator import DocumentGenerator
 # Import security utilities
 from utils.auth import verify_token, get_current_user, get_user_id
 from utils.validation import (
-    validate_case_id, 
-    sanitize_filename, 
+    validate_case_id,
+    sanitize_filename,
     validate_session_id,
     validate_string_length
 )
@@ -44,6 +44,7 @@ from utils.error_handler import (
     log_security_event,
     logger
 )
+from utils.system_settings import clear_cache as clear_settings_cache
 import asyncio
 
 async def _run_ingestion_background(
@@ -1101,6 +1102,17 @@ async def retry_ingest(
 async def health(request: Request):
     # Health check doesn't require authentication
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
+
+@app.post("/api/admin/reload-config")
+@limiter.limit("5/minute")
+async def reload_config(request: Request):
+    """Reload system configuration cache (called by Admin Dashboard after settings change)"""
+    try:
+        clear_settings_cache()
+        return {"status": "success", "message": "Configuration cache cleared"}
+    except Exception as e:
+        logger.error(f"Error reloading config: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reload configuration")
 
 # ---------- CONVERSATIONAL DRAFT ENDPOINTS ----------
 
