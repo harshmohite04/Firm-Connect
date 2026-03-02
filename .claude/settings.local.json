@@ -20,7 +20,10 @@
       "Bash(npm uninstall:*)",
       "Bash(done)",
       "WebFetch(domain:api.indiankanoon.org)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(python3:*)",
+      "Bash(test:*)",
+      "Bash(\"D:\\\\harsh\\\\Code_Playground\\\\Law Firm Connect\\\\CheckOne\\\\Firm-Connect\\\\utils\\\\system_settings.py\":*)"
     ]
   }
 }

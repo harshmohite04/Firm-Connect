@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional
 from langchain_core.prompts import ChatPromptTemplate
 from src.state import InvestigatorState
 from src.utils import (
-    get_llm_with_retry, get_json_parser, get_perplexity_llm,
+    get_llm_with_retry, get_json_parser, get_web_search_llm,
     format_challenges, format_evidence_gaps, format_facts,
     format_timeline, format_legal_issues, format_risks,
     smart_truncate, rate_limiter
@@ -16,10 +16,10 @@ class ResearchOutput(BaseModel):
 
 def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
     """
-    Identifies legal issues and finds real precedents via Perplexity (web search).
-    Falls back to standard LLM if Perplexity is not configured.
+    Identifies legal issues and finds real precedents via web search.
+    Uses Perplexity for Preset B (OpenAI mode) or standard LLM for Preset A (DeepSeek mode).
     """
-    llm = get_perplexity_llm()
+    llm = get_web_search_llm()
     if hasattr(llm, "with_retry"):
         llm = llm.with_retry(stop_after_attempt=3, wait_exponential_jitter=True)
     parser = get_json_parser(pydantic_object=ResearchOutput)

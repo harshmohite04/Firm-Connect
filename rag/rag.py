@@ -12,6 +12,7 @@ from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetrieve
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
 
 from utils.embeddings import embedder, embed_text
+from utils.system_settings import load_provider_preset
 
 
 load_dotenv()
@@ -30,31 +31,43 @@ QDRANT_KEY = os.getenv("QDRANT_API_KEY")
 COLLECTION = "chunks"
 groq = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# LLM Provider toggle
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deepseek").lower()
+# Static config
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 RAG_MODEL = os.getenv("RAG_MODEL", "gpt-4o-mini")
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
-if LLM_PROVIDER == "openai" and OPENAI_API_KEY:
-    llm = OpenAILLM(
-        model_name=RAG_MODEL,
-        model_params={"temperature": 0.1},
-        api_key=OPENAI_API_KEY,
-    )
-    stream_client = OpenAI(api_key=OPENAI_API_KEY)
-    stream_model = RAG_MODEL
-else:
-    llm = OpenAILLM(
-        model_name=DEEPSEEK_MODEL,
-        model_params={"temperature": 0.1},
-        api_key=DEEPSEEK_API_KEY,
-        base_url="https://api.deepseek.com"
-    )
-    stream_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
-    stream_model = DEEPSEEK_MODEL
+def _get_llm_provider():
+    """Get LLM provider based on current preset (dynamic)"""
+    provider = load_provider_preset()
+
+    if provider == "openai" and OPENAI_API_KEY:
+        return OpenAILLM(
+            model_name=RAG_MODEL,
+            model_params={"temperature": 0.1},
+            api_key=OPENAI_API_KEY,
+        )
+    else:
+        return OpenAILLM(
+            model_name=DEEPSEEK_MODEL,
+            model_params={"temperature": 0.1},
+            api_key=DEEPSEEK_API_KEY,
+            base_url="https://api.deepseek.com"
+        )
+
+def _get_stream_client():
+    """Get streaming client based on current preset (dynamic)"""
+    provider = load_provider_preset()
+
+    if provider == "openai" and OPENAI_API_KEY:
+        return OpenAI(api_key=OPENAI_API_KEY), RAG_MODEL
+    else:
+        return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), DEEPSEEK_MODEL
+
+# Initialize defaults (will be overridden at request time)
+llm = _get_llm_provider()
+stream_client, stream_model = _get_stream_client()
 
 
 from neo4j_graphrag.generation.prompts import RagTemplate
@@ -96,6 +109,9 @@ Answer (include [N] citations):
 # ---------- ASK FUNCTION ----------
 def ask(query: str, case_id: str, history: list = [], top_k=5):
     print(f"Generating answer for Case: {case_id}...\n")
+
+    # Get fresh LLM based on current preset
+    current_llm = _get_llm_provider()
 
     # Define Qdrant Filter
     qdrant_filter = models.Filter(
@@ -178,7 +194,7 @@ def ask(query: str, case_id: str, history: list = [], top_k=5):
 
     rag = GraphRAG(
         retriever=retriever,
-        llm=llm,
+        llm=current_llm,
         prompt_template=custom_prompt
     )
 
@@ -250,6 +266,9 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5):
     import re as _re
 
     print(f"[STREAM] Generating answer for Case: {case_id}...\n")
+
+    # Get fresh stream client based on current preset
+    current_stream_client, current_stream_model = _get_stream_client()
 
     # --- Retrieval (same logic as ask()) ---
     qdrant_filter = models.Filter(
@@ -372,8 +391,8 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5):
     # 4. Stream from LLM
     full_answer = ""
     try:
-        stream = stream_client.chat.completions.create(
-            model=stream_model,
+        stream = current_stream_client.chat.completions.create(
+            model=current_stream_model,
             messages=messages,
             temperature=0.1,
             stream=True
