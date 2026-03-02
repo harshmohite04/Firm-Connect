@@ -44,9 +44,9 @@ const ProfileInfo: React.FC = () => {
     };
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="card-surface p-6 animate-in fade-in slide-in-from-right-4 duration-300">
              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-slate-900">Profile Information</h2>
+                <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Profile Information</h2>
              </div>
              
              {message && (
@@ -64,7 +64,8 @@ const ProfileInfo: React.FC = () => {
                             type="text" 
                             value={user.firstName}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                            className="w-full px-3 py-2 rounded-lg outline-none transition-all text-sm border focus:ring-2"
+                            style={{ borderColor: 'var(--color-surface-border)', color: 'var(--color-text-primary)', backgroundColor: 'var(--color-surface)', '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                         />
                     </div>
                     <div>
@@ -74,7 +75,8 @@ const ProfileInfo: React.FC = () => {
                             type="text" 
                             value={user.lastName}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                            className="w-full px-3 py-2 rounded-lg outline-none transition-all text-sm border focus:ring-2"
+                            style={{ borderColor: 'var(--color-surface-border)', color: 'var(--color-text-primary)', backgroundColor: 'var(--color-surface)', '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                         />
                     </div>
                 </div>
@@ -85,7 +87,8 @@ const ProfileInfo: React.FC = () => {
                         type="email" 
                         value={user.email}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-slate-50"
+                        className="w-full px-3 py-2 rounded-lg outline-none transition-all text-sm border"
+                        style={{ borderColor: 'var(--color-surface-border)', color: 'var(--color-text-tertiary)', backgroundColor: 'var(--color-bg-tertiary)' }}
                         disabled 
                     />
                     <p className="text-[10px] text-slate-400 mt-1">Contact support to change email.</p>
@@ -106,7 +109,7 @@ const ProfileInfo: React.FC = () => {
                     <button 
                         type="submit" 
                         disabled={isLoading}
-                        className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50"
+                        className="btn-gradient px-6 py-2 font-bold rounded-lg shadow-sm disabled:opacity-50"
                     >
                         {isLoading ? 'Saving...' : 'Save Changes'}
                     </button>

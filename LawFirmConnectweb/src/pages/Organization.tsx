@@ -98,7 +98,7 @@ const OrganizationPage: React.FC = () => {
         return (
             <PortalLayout>
                 <div className="flex items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-accent)' }}></div>
                 </div>
             </PortalLayout>
         );
@@ -108,9 +108,9 @@ const OrganizationPage: React.FC = () => {
         return (
             <PortalLayout>
                 <div className="max-w-2xl mx-auto text-center py-20">
-                    <Shield className="mx-auto h-16 w-16 text-slate-300 mb-6" />
-                    <h2 className="text-2xl font-bold text-slate-900 mb-3">Admin Access Only</h2>
-                    <p className="text-slate-500">
+                    <Shield className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
+                    <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>Admin Access Only</h2>
+                    <p style={{ color: 'var(--color-text-secondary)' }}>
                         This page is restricted to firm administrators.
                     </p>
                 </div>
@@ -122,9 +122,9 @@ const OrganizationPage: React.FC = () => {
         return (
             <PortalLayout>
                 <div className="max-w-2xl mx-auto text-center py-20">
-                    <Building2 className="mx-auto h-16 w-16 text-slate-300 mb-6" />
-                    <h2 className="text-2xl font-bold text-slate-900 mb-3">No Organization</h2>
-                    <p className="text-slate-500">Purchase a plan to create your firm.</p>
+                    <Building2 className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
+                    <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>No Organization</h2>
+                    <p style={{ color: 'var(--color-text-secondary)' }}>Purchase a plan to create your firm.</p>
                 </div>
             </PortalLayout>
         );
@@ -136,37 +136,37 @@ const OrganizationPage: React.FC = () => {
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
-                        <Building2 className="h-8 w-8 text-indigo-600" />
-                        <h1 className="text-3xl font-bold text-slate-900">Organization Management</h1>
+                        <Building2 className="h-8 w-8" style={{ color: 'var(--color-accent)' }} />
+                        <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>Organization Management</h1>
                     </div>
-                    <p className="text-slate-500">{org.name} · {org.plan} Plan</p>
+                    <p style={{ color: 'var(--color-text-secondary)' }}>{org.name} · {org.plan} Plan</p>
                 </div>
 
                 {/* Org Info Card */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <p className="text-sm text-slate-500 mb-1">Plan</p>
-                        <p className="text-xl font-bold text-slate-900">{org.plan}</p>
+                    <div className="card-surface p-6">
+                        <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Plan</p>
+                        <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{org.plan}</p>
                     </div>
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <p className="text-sm text-slate-500 mb-1">Members</p>
-                        <p className="text-xl font-bold text-slate-900">
+                    <div className="card-surface p-6">
+                        <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Members</p>
+                        <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
                             {members.length} / {org.maxSeats}
                         </p>
                     </div>
-                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                        <p className="text-sm text-slate-500 mb-1">Subscription</p>
+                    <div className="card-surface p-6">
+                        <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Subscription</p>
                         <p className="text-xl font-bold text-green-600">{org.subscriptionStatus}</p>
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
                             Expires {new Date(org.subscriptionExpiresAt).toLocaleDateString()}
                         </p>
                     </div>
                 </div>
 
                 {/* Members Management */}
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-6 flex items-center gap-2">
-                        <Users className="h-5 w-5 text-indigo-600" />
+                <div className="card-surface p-6">
+                    <h3 className="font-semibold mb-6 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                        <Users className="h-5 w-5" style={{ color: 'var(--color-accent)' }} />
                         Manage Members
                     </h3>
 
@@ -186,7 +186,8 @@ const OrganizationPage: React.FC = () => {
                                     <tr key={member.userId._id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                                         <td className="py-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                                                <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs"
+                                                     style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                                     {member.userId.firstName?.[0]}{member.userId.lastName?.[0]}
                                                 </div>
                                                 <span className="font-medium text-slate-900">
@@ -244,7 +245,7 @@ const OrganizationPage: React.FC = () => {
                 {showReassignModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center">
                         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowReassignModal(false)} />
-                        <div className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 z-10">
+                        <div className="relative rounded-2xl shadow-2xl max-w-lg w-full mx-4 p-6 z-10" style={{ backgroundColor: 'var(--color-surface)' }}>
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                                     <ArrowRightLeft className="h-5 w-5 text-amber-600" />
@@ -303,7 +304,7 @@ const OrganizationPage: React.FC = () => {
                                 <button
                                     onClick={handleReassign}
                                     disabled={!reassignTarget}
-                                    className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                                    className="btn-gradient flex-1 py-3 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Reassign & Complete
                                 </button>

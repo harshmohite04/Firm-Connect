@@ -83,7 +83,7 @@ const PortalMessages: React.FC = () => {
     useEffect(() => {
         if (!userId) return;
 
-        socketRef.current = io(import.meta.env.VITE_API_URL || 'http://localhost:5000'); // Ensure this matches your backend URL
+        socketRef.current = io(import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
         socketRef.current.on('connect', () => {
             console.log('Socket connected');
@@ -95,7 +95,6 @@ const PortalMessages: React.FC = () => {
         };
     }, [userId]);
 
-    // Ref to track selected contact for socket callbacks to avoid stale state
     const selectedContactIdRef = useRef<string | null>(null);
     useEffect(() => {
         selectedContactIdRef.current = selectedContactId;
@@ -109,13 +108,8 @@ const PortalMessages: React.FC = () => {
             console.log('socket: newMessage received:', message);
             const currentContactId = selectedContactIdRef.current;
             
-            // Normalize IDs to strings
             const msgSender = message.sender?._id || message.sender;
             const msgRecipient = message.recipient?._id || message.recipient;
-            
-            // If we are the sender, the other party is the recipient
-            // If we are the recipient, the other party is the sender
-            // But we only care if this message belongs to the current OPEN chat (currentContactId)
             
             const isRelated = (msgSender === currentContactId) || (msgRecipient === currentContactId);
 
@@ -125,13 +119,12 @@ const PortalMessages: React.FC = () => {
                 }
                 
                 setActiveMessages(prev => {
-                    // Avoid duplicates
                     if (prev.some(m => m._id === message._id)) return prev;
                     
                     const formattedMsg: Message = {
                         _id: message._id,
                         content: message.content,
-                        sender: typeof msgSender === 'object' ? msgSender.toString() : msgSender, // Ensure string
+                        sender: typeof msgSender === 'object' ? msgSender.toString() : msgSender,
                         timestamp: new Date(message.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
                         read: message.read
                     };
@@ -143,9 +136,6 @@ const PortalMessages: React.FC = () => {
         };
 
         const readListener = ({ recipientId }: any) => {
-             // contactId is ME (the sender of the original messages)
-             // recipientId is the person who read them (the current contact)
-             
              if (selectedContactIdRef.current === recipientId) {
                  setActiveMessages(prev => prev.map(msg => 
                      (msg.sender === userId && !msg.read) ? { ...msg, read: true } : msg
@@ -168,8 +158,6 @@ const PortalMessages: React.FC = () => {
             const msgSender = message.sender?._id || message.sender;
             const msgRecipient = message.recipient?._id || message.recipient;
             
-            // Identify the contact ID for this conversation
-            // If I sent it, contact is recipient. If I received it, contact is sender.
             const otherId = msgSender === userId ? msgRecipient : msgSender;
 
             const existingIndex = prev.findIndex(c => c.contactId === otherId);
@@ -186,11 +174,10 @@ const PortalMessages: React.FC = () => {
                     ...newConvos[existingIndex],
                     lastMessage: newLastMsg
                 };
-                // Move to top
                 const [moved] = newConvos.splice(existingIndex, 1);
                 return [moved, ...newConvos];
             } else {
-                fetchMessagesAndContacts(); // Refresh to get new conversation
+                fetchMessagesAndContacts();
                 return prev; 
             }
         });
@@ -207,7 +194,6 @@ const PortalMessages: React.FC = () => {
 
     const fetchMessagesAndContacts = async () => {
         try {
-            // Use the new conversations API that returns last message + unread count
             const conversationsData = await messageService.getConversations();
             console.log('fetched conversations:', conversationsData);
             
@@ -234,7 +220,6 @@ const PortalMessages: React.FC = () => {
         setSelectedContactId(contactId);
         setActiveMessages([]); 
         
-        // Reset unread count locally for immediate UI update
         setConversations(prev => prev.map(convo => 
             convo.contactId === contactId 
                 ? { ...convo, unreadCount: 0 } 
@@ -248,7 +233,7 @@ const PortalMessages: React.FC = () => {
             const formatted: Message[] = msgs.map((m: any) => ({
                 _id: m._id,
                 content: m.content,
-                sender: m.sender, // Should be string ID from backend
+                sender: m.sender,
                 timestamp: new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
                 read: m.read
             }));
@@ -266,7 +251,6 @@ const PortalMessages: React.FC = () => {
             const sentMsg = await messageService.sendMessage(selectedContactId, inputMessage);
             console.log('message sent response:', sentMsg);
             
-            // Manually append to UI for immediate feedback
             const formattedMsg: Message = {
                 _id: sentMsg._id,
                 content: sentMsg.content,
@@ -276,7 +260,6 @@ const PortalMessages: React.FC = () => {
             };
             
             setActiveMessages(prev => {
-                // Dedupe just in case socket arrives instantly
                 if (prev.some(m => m._id === sentMsg._id)) return prev;
                 return [...prev, formattedMsg];
             });
@@ -393,22 +376,23 @@ const PortalMessages: React.FC = () => {
 
     return (
         <PortalLayout>
-            <div className="flex h-[calc(100vh-140px)] bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative">
+            <div className="flex h-[calc(100vh-140px)] card-surface overflow-hidden relative">
                 
                 {/* Left Sidebar */}
-                <div className="w-80 border-r border-slate-200 flex flex-col bg-slate-50/50">
+                <div className="w-80 flex flex-col" style={{ borderRight: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-bg-tertiary)' }}>
                     
                     {/* Header */}
-                    <div className="p-4 border-b border-slate-200 bg-white">
+                    <div className="p-4" style={{ borderBottom: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface)' }}>
                         <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold text-slate-900">{t('messages.chat')}</h2>
+                            <h2 className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>{t('messages.chat')}</h2>
                             <button 
                                 onClick={() => setShowAddFriendModal(true)}
-                                className="p-2 hover:bg-blue-50 rounded-full transition-colors flex items-center gap-2 group"
+                                className="p-2 rounded-full transition-colors flex items-center gap-2 group hover:opacity-80"
                                 title="Add friend via email"
+                                style={{ color: 'var(--color-accent)' }}
                             >
-                                <span className="text-xs font-bold text-blue-600 hidden group-hover:inline-block">{t('messages.addFriend')}</span>
-                                <UserPlusIcon className="w-5 h-5 text-blue-600" />
+                                <span className="text-xs font-bold hidden group-hover:inline-block" style={{ color: 'var(--color-accent)' }}>{t('messages.addFriend')}</span>
+                                <UserPlusIcon className="w-5 h-5" />
                             </button>
                         </div>
                         
@@ -416,17 +400,26 @@ const PortalMessages: React.FC = () => {
                         <div className="flex gap-2 mb-3">
                             <button 
                                 onClick={() => setActiveTab('chats')}
-                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeTab === 'chats' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors"
+                                style={activeTab === 'chats'
+                                    ? { background: 'var(--gradient-accent)', color: '#fff' }
+                                    : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }
+                                }
                             >
                                 {t('messages.chats')}
                             </button>
                             <button
                                 onClick={() => setActiveTab('requests')}
-                                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors relative ${activeTab === 'requests' ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                className="flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors relative"
+                                style={activeTab === 'requests'
+                                    ? { background: 'var(--gradient-accent)', color: '#fff' }
+                                    : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }
+                                }
                             >
                                 {t('messages.requests')}
                                 {pendingRequests.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] text-white ring-2 ring-white">
+                                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white ring-2"
+                                          style={{ backgroundColor: '#EF4444' }}>
                                         {pendingRequests.length}
                                     </span>
                                 )}
@@ -436,12 +429,18 @@ const PortalMessages: React.FC = () => {
                         {activeTab === 'chats' && (
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <SearchIcon className="w-5 h-5 text-slate-400" />
+                                    <SearchIcon className="w-5 h-5" style={{ color: 'var(--color-text-tertiary)' }} />
                                 </div>
                                 <input 
                                     type="text" 
                                     placeholder={t('messages.searchChats')}
-                                    className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm transition-colors"
+                                    className="block w-full pl-10 pr-3 py-2 rounded-lg leading-5 text-sm transition-colors border focus:outline-none focus:ring-2"
+                                    style={{
+                                        backgroundColor: 'var(--color-bg-tertiary)',
+                                        borderColor: 'var(--color-surface-border)',
+                                        color: 'var(--color-text-primary)',
+                                        '--tw-ring-color': 'var(--color-accent-glow)',
+                                    } as React.CSSProperties}
                                 />
                             </div>
                         )}
@@ -450,9 +449,9 @@ const PortalMessages: React.FC = () => {
                     {/* Content List */}
                     <div className="flex-1 overflow-y-auto">
                         {activeTab === 'chats' ? (
-                            <div className="divide-y divide-slate-100">
+                            <div>
                                 {conversations.length === 0 && (
-                                    <div className="p-4 text-center text-slate-500 text-sm">{t('messages.noChats')}</div>
+                                    <div className="p-4 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>{t('messages.noChats')}</div>
                                 )}
 
                                 {conversations.map((convo) => {
@@ -463,52 +462,60 @@ const PortalMessages: React.FC = () => {
                                         <div 
                                             key={convo.contactId}
                                             onClick={() => handleSelectContact(convo.contactId)}
-                                            className={`p-4 cursor-pointer transition-colors relative ${
-                                                isSelected 
-                                                    ? 'bg-blue-50/70' 
-                                                    : hasUnread 
-                                                        ? 'bg-blue-50/30 hover:bg-blue-50/50' 
-                                                        : 'hover:bg-slate-50'
-                                            }`}
+                                            className="p-4 cursor-pointer transition-colors relative"
+                                            style={{
+                                                backgroundColor: isSelected
+                                                    ? 'var(--color-accent-soft)'
+                                                    : hasUnread
+                                                        ? 'rgba(79, 70, 229, 0.03)'
+                                                        : 'transparent',
+                                                borderBottom: '1px solid var(--color-surface-border)',
+                                            }}
                                         >
                                             {/* Left accent border for selected or unread */}
                                             {(isSelected || hasUnread) && (
-                                                <div className={`absolute left-0 top-0 bottom-0 w-1 ${isSelected ? 'bg-blue-600' : 'bg-blue-400'}`}></div>
+                                                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: 'var(--color-accent)' }}></div>
                                             )}
                                             
                                             <div className="flex justify-between items-start mb-1">
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative">
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                                                            hasUnread ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-500'
-                                                        }`}>
+                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
+                                                             style={hasUnread
+                                                                 ? { backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }
+                                                                 : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }
+                                                             }>
                                                             {convo.name.substring(0,2).toUpperCase()}
                                                         </div>
-                                                        {/* Online indicator dot */}
-                                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full"></div>
+                                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 rounded-full"
+                                                             style={{ backgroundColor: '#10B981', borderColor: 'var(--color-surface)' }}></div>
                                                     </div>
                                                     <div>
-                                                        <h4 className={`text-sm ${hasUnread ? 'font-bold text-slate-900' : 'font-medium text-slate-700'}`}>
+                                                        <h4 className="text-sm" style={{ color: 'var(--color-text-primary)', fontWeight: hasUnread ? 700 : 500 }}>
                                                             {convo.name}
                                                         </h4>
                                                         {!hasUnread && (
-                                                            <p className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit">{t('messages.activeStatus')}</p>
+                                                            <p className="text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wide w-fit"
+                                                               style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
+                                                                {t('messages.activeStatus')}
+                                                            </p>
                                                         )}
                                                     </div>
                                                 </div>
                                                 <div className="flex flex-col items-end gap-1">
-                                                    <span className={`text-xs ${hasUnread ? 'font-bold text-blue-600' : 'font-medium text-slate-400'}`}>
+                                                    <span className="text-xs" style={{ color: hasUnread ? 'var(--color-accent)' : 'var(--color-text-tertiary)', fontWeight: hasUnread ? 700 : 500 }}>
                                                         {convo.lastMessage ? convo.lastMessage.timestamp : ''}
                                                     </span>
-                                                    {/* Unread badge */}
                                                     {hasUnread && (
-                                                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full">
+                                                        <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-white text-[10px] font-bold rounded-full"
+                                                              style={{ background: 'var(--gradient-accent)' }}>
                                                             {convo.unreadCount}
                                                         </span>
                                                     )}
                                                 </div>
                                             </div>
-                                            <p className={`text-sm line-clamp-1 pl-12 ${hasUnread ? 'font-semibold text-slate-800' : 'text-slate-500'}`}>
+                                            <p className="text-sm line-clamp-1 pl-12"
+                                               style={{ color: hasUnread ? 'var(--color-text-primary)' : 'var(--color-text-secondary)', fontWeight: hasUnread ? 600 : 400 }}>
                                                 {convo.lastMessage ? convo.lastMessage.content : t('messages.noMessages')}
                                             </p>
                                         </div>
@@ -516,16 +523,18 @@ const PortalMessages: React.FC = () => {
                                 })}
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-100">
+                            <div>
                                 {pendingRequests.length === 0 && (
                                     <div className="p-8 text-center flex flex-col items-center">
-                                        <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mb-3 text-slate-400">
+                                        <div className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
+                                             style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}>
                                             <UserPlusIcon className="w-6 h-6" />
                                         </div>
-                                        <p className="text-slate-500 text-sm font-medium">{t('messages.noPendingRequests')}</p>
+                                        <p className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>{t('messages.noPendingRequests')}</p>
                                         <button
                                             onClick={() => setShowAddFriendModal(true)}
-                                            className="mt-2 text-xs text-blue-600 font-bold hover:underline"
+                                            className="mt-2 text-xs font-bold hover:underline"
+                                            style={{ color: 'var(--color-accent)' }}
                                         >
                                             {t('messages.findPeople')}
                                         </button>
@@ -533,27 +542,29 @@ const PortalMessages: React.FC = () => {
                                 )}
 
                                 {pendingRequests.map(req => (
-                                    <div key={req._id} className="p-4 hover:bg-slate-50 transition-colors">
+                                    <div key={req._id} className="p-4 transition-colors hover:opacity-90"
+                                         style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
                                         <div className="flex items-start gap-3 mb-3">
-                                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
+                                            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold"
+                                                 style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                                 {(req.sender.firstName || 'U').substring(0,2).toUpperCase()}
                                             </div>
                                             <div>
-                                                <h4 className="text-sm font-bold text-slate-900">{req.sender.firstName} {req.sender.lastName}</h4>
-                                                <p className="text-xs text-slate-500">{req.sender.email}</p>
-                                                <p className="text-[10px] text-slate-400 mt-0.5">{t('messages.sentFriendRequest')}</p>
+                                                <h4 className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>{req.sender.firstName} {req.sender.lastName}</h4>
+                                                <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{req.sender.email}</p>
+                                                <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>{t('messages.sentFriendRequest')}</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-2 pl-13">
                                             <button 
                                                 onClick={() => handleRespondToRequest(req._id, 'accept')}
-                                                className="flex-1 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                                className="btn-gradient flex-1 py-1.5 text-xs font-bold rounded-lg"
                                             >
                                                 {t('messages.accept')}
                                             </button>
                                             <button
                                                 onClick={() => handleRespondToRequest(req._id, 'reject')}
-                                                className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors"
+                                                className="btn-ghost flex-1 py-1.5 text-xs font-bold rounded-lg"
                                             >
                                                 {t('messages.reject')}
                                             </button>
@@ -566,41 +577,41 @@ const PortalMessages: React.FC = () => {
                 </div>
 
                 {/* Right Area: Chat Interface */}
-                <div className="flex-1 flex flex-col bg-white">
+                <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--color-surface)' }}>
                     {/* Chat Header */}
-                    <div className="h-20 px-6 border-b border-slate-200 flex justify-between items-center bg-white">
+                    <div className="h-20 px-6 flex justify-between items-center"
+                         style={{ borderBottom: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-surface)' }}>
                         <div className="flex items-center gap-3">
                             {selectedConversation ? (
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <h3 className="font-bold text-slate-900 text-lg">{selectedConversation.name}</h3>
-                                        <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-0.5 rounded-full border border-green-100">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                        <h3 className="font-bold text-lg" style={{ color: 'var(--color-text-primary)' }}>{selectedConversation.name}</h3>
+                                        <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                                              style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#059669', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#10B981' }}></span>
                                             {t('messages.available')}
                                         </span>
                                     </div>
                                     <div className="flex gap-6 text-sm">
-                                        <button className="font-bold text-slate-900 border-b-2 border-blue-600 pb-2 px-1">{t('messages.chat')}</button>
-                                        <button className="font-medium text-slate-500 hover:text-slate-700 pb-2 px-1 transition-colors">{t('messages.shared')}</button>
+                                        <button className="font-bold pb-2 px-1" style={{ color: 'var(--color-text-primary)', borderBottom: '2px solid var(--color-accent)' }}>{t('messages.chat')}</button>
+                                        <button className="font-medium pb-2 px-1 transition-colors hover:opacity-80" style={{ color: 'var(--color-text-secondary)' }}>{t('messages.shared')}</button>
                                     </div>
                                 </div>
                             ) : (
-                                <h3 className="font-bold text-slate-900">{t('messages.selectChat')}</h3>
+                                <h3 className="font-bold" style={{ color: 'var(--color-text-primary)' }}>{t('messages.selectChat')}</h3>
                             )}
                         </div>
                     </div>
 
                     {/* Chat Messages */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/30">
+                    <div className="flex-1 overflow-y-auto p-6 space-y-8" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
                         {activeMessages.map((msg) => {
-                            // Handle both populated object and string ID for sender
                             const senderId = typeof msg.sender === 'object' && msg.sender !== null 
                                 ? (msg.sender as any)._id 
                                 : msg.sender;
                             
                             const isMe = senderId === userId;
 
-                            // Helper for initials
                             const getInitials = (name: string) => {
                                 if (!name) return '??';
                                 const parts = name.split(' ');
@@ -608,7 +619,6 @@ const PortalMessages: React.FC = () => {
                                 return name.substring(0, 2).toUpperCase();
                             };
                             
-                            // Determine avatar text
                             let avatarText = '??';
                             if (isMe) {
                                 try {
@@ -632,21 +642,29 @@ const PortalMessages: React.FC = () => {
                             
                             return (
                                 <div key={msg._id} className={`flex gap-4 max-w-2xl ${isMe ? 'flex-row-reverse ml-auto' : ''}`}>
-                                    <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold ${isMe ? 'bg-amber-200 text-amber-800' : 'bg-slate-200 text-slate-700'}`}>
+                                    <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
+                                         style={isMe
+                                             ? { background: 'var(--gradient-accent)', color: '#fff' }
+                                             : { backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }
+                                         }>
                                         {avatarText.toUpperCase()}
                                     </div>
                                     <div className={`${isMe ? 'items-end' : ''} flex flex-col`}>
                                         <div className="flex items-baseline gap-2 mb-1">
-                                            <span className="text-[10px] text-slate-400">
+                                            <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>
                                                 {msg.timestamp}
                                             </span>
                                         </div>
-                                        <div className={`${isMe ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-700 rounded-tl-none'} p-4 rounded-2xl shadow-sm text-sm leading-relaxed`}>
+                                        <div className="p-4 rounded-2xl shadow-sm text-sm leading-relaxed"
+                                             style={isMe
+                                                 ? { background: 'var(--gradient-accent)', color: '#fff', borderTopRightRadius: 0 }
+                                                 : { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)', color: 'var(--color-text-primary)', borderTopLeftRadius: 0 }
+                                             }>
                                             <p>{msg.content}</p>
                                         </div>
                                          <div className={`flex items-center gap-1 mt-1 ${isMe ? 'flex-row-reverse' : ''} px-1`}>
                                             {isMe && (
-                                                <span className={`text-[10px] ${msg.read ? 'text-blue-500' : 'text-slate-300'}`}>
+                                                <span className="text-[10px]" style={{ color: msg.read ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}>
                                                     {msg.read ? '✓✓' : '✓'}
                                                 </span>
                                             )}
@@ -659,18 +677,25 @@ const PortalMessages: React.FC = () => {
                     </div>
 
                     {/* Chat Input */}
-                    <div className="p-4 bg-white border-t border-slate-200">
-                        <form onSubmit={handleSendMessage} className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 transition-all">
-                            <button type="button" className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                    <div className="p-4" style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-surface-border)' }}>
+                        <form onSubmit={handleSendMessage} className="flex items-center gap-3 rounded-xl p-2 shadow-sm transition-all border focus-within:ring-2"
+                              style={{
+                                  backgroundColor: 'var(--color-surface)',
+                                  borderColor: 'var(--color-surface-border)',
+                                  '--tw-ring-color': 'var(--color-accent-glow)',
+                              } as React.CSSProperties}>
+                            <button type="button" className="p-2 rounded-lg transition-colors hover:opacity-70" style={{ color: 'var(--color-text-tertiary)' }}>
                                 <PaperClipIcon className="w-5 h-5" />
                             </button>
                             <TransliterateInput
                                 value={inputMessage}
                                 onChangeText={setInputMessage}
                                 placeholder={t('messages.typePlaceholder')}
-                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm text-slate-700 placeholder-slate-400 focus:outline-none"
+                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm placeholder-opacity-60 focus:outline-none"
+                                style={{ color: 'var(--color-text-primary)' }}
                             />
-                            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg shadow-sm transition-colors">
+                            <button type="submit" className="p-2 rounded-lg shadow-sm transition-colors text-white"
+                                    style={{ background: 'var(--gradient-accent)' }}>
                                 <SendIcon className="w-5 h-5" />
                             </button>
                         </form>
@@ -679,28 +704,36 @@ const PortalMessages: React.FC = () => {
 
                 {/* Add Friend Modal */}
                 {showAddFriendModal && (
-                    <div className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200">
-                            <h3 className="text-lg font-bold text-slate-900 mb-2">{t('messages.findPeople')}</h3>
-                            <p className="text-sm text-slate-500 mb-6">{t('messages.searchByEmail')}</p>
+                    <div className="absolute inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                         style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                        <div className="card-surface w-full max-w-sm p-6 transform transition-all animate-in fade-in zoom-in-95 duration-200 shadow-xl">
+                            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--color-text-primary)' }}>{t('messages.findPeople')}</h3>
+                            <p className="text-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>{t('messages.searchByEmail')}</p>
                             
                             <form onSubmit={handleSearchUser}>
                                 <div className="mb-4 relative">
-                                    <label className="block text-xs font-bold text-slate-600 uppercase mb-1">{t('messages.emailAddress')}</label>
+                                    <label className="block text-xs font-bold uppercase mb-1" style={{ color: 'var(--color-text-tertiary)' }}>{t('messages.emailAddress')}</label>
                                     <input 
                                         type="email" 
                                         required
                                         value={searchEmail}
                                         onChange={(e) => setSearchEmail(e.target.value)}
-                                        className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                                        className="w-full px-3 py-2 rounded-lg outline-none transition-all text-sm border focus:ring-2"
+                                        style={{
+                                            backgroundColor: 'var(--color-bg-tertiary)',
+                                            borderColor: 'var(--color-surface-border)',
+                                            color: 'var(--color-text-primary)',
+                                            '--tw-ring-color': 'var(--color-accent-glow)',
+                                        } as React.CSSProperties}
                                         placeholder="user@example.com"
                                         autoFocus
                                     />
                                     <button 
                                         type="submit" 
                                         disabled={isSearching || !searchEmail}
-                                        className="absolute right-2 top-0 bottom-0 my-auto h-fit mt-7 p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="absolute right-2 top-0 bottom-0 my-auto h-fit mt-7 p-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         title="Search"
+                                        style={{ color: 'var(--color-accent)' }}
                                     >
                                        {isSearching ? (
                                            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -715,25 +748,31 @@ const PortalMessages: React.FC = () => {
                             </form>
                             
                             {searchError && (
-                                <div className={`mb-4 p-3 text-sm rounded-lg border animate-in fade-in slide-in-from-top-1 ${searchError.includes('sent') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+                                <div className="mb-4 p-3 text-sm rounded-lg border animate-in fade-in slide-in-from-top-1"
+                                     style={searchError.includes('sent')
+                                         ? { backgroundColor: 'rgba(16, 185, 129, 0.08)', color: '#059669', borderColor: 'rgba(16, 185, 129, 0.2)' }
+                                         : { backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#DC2626', borderColor: 'rgba(239, 68, 68, 0.2)' }
+                                     }>
                                     {searchError}
                                 </div>
                             )}
 
                             {foundUser && (
-                                <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between mb-4 animate-in slide-in-from-top-2 duration-300">
+                                <div className="mt-4 p-3 rounded-xl border flex items-center justify-between mb-4 animate-in slide-in-from-top-2 duration-300"
+                                     style={{ backgroundColor: 'var(--color-bg-tertiary)', borderColor: 'var(--color-surface-border)' }}>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-sm">
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                                             style={{ backgroundColor: 'var(--color-accent-soft)', color: 'var(--color-accent)' }}>
                                             {foundUser.avatar}
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-900">{foundUser.name}</h4>
-                                            <p className="text-xs text-slate-500">{foundUser.email}</p>
+                                            <h4 className="text-sm font-bold" style={{ color: 'var(--color-text-primary)' }}>{foundUser.name}</h4>
+                                            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>{foundUser.email}</p>
                                         </div>
                                     </div>
                                     <button 
                                         onClick={handleAddFoundUser}
-                                        className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm text-xs font-bold px-3"
+                                        className="btn-gradient rounded-lg text-xs font-bold px-3 py-2"
                                         title="Send Request"
                                     >
                                         {t('messages.sendRequest')}
@@ -741,11 +780,12 @@ const PortalMessages: React.FC = () => {
                                 </div>
                             )}
 
-                            <div className="flex justify-end pt-2 border-t border-slate-100">
+                            <div className="flex justify-end pt-2" style={{ borderTop: '1px solid var(--color-surface-border)' }}>
                                 <button 
                                     type="button" 
                                     onClick={closeModal}
-                                    className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+                                    className="px-4 py-2 text-sm font-medium transition-colors hover:opacity-80"
+                                    style={{ color: 'var(--color-text-secondary)' }}
                                 >
                                     {t('messages.close')}
                                 </button>

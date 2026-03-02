@@ -89,12 +89,13 @@ const PortalProfile: React.FC = () => {
                 
                 {/* Header */}
                 <div className="flex items-center gap-6 mb-8">
-                    <div className="w-24 h-24 rounded-full bg-blue-600 text-white flex items-center justify-center text-3xl font-bold shadow-lg ring-4 ring-blue-50">
+                    <div className="w-24 h-24 rounded-full text-white flex items-center justify-center text-3xl font-bold shadow-lg"
+                         style={{ background: 'var(--gradient-accent)' }}>
                         {user.firstName ? user.firstName[0].toUpperCase() : ''}{user.lastName ? user.lastName[0].toUpperCase() : ''}
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900">{user.firstName} {user.lastName}</h1>
-                        <p className="text-slate-500 font-medium capitalize">{user.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
+                        <h1 className="text-3xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>{user.firstName} {user.lastName}</h1>
+                        <p className="font-medium capitalize" style={{ color: 'var(--color-text-secondary)' }}>{user.role === 'ADMIN' ? 'Admin' : 'Attorney'}</p>
                     </div>
                 </div>
 
@@ -102,16 +103,28 @@ const PortalProfile: React.FC = () => {
                     
                     {/* Left Col: Navigation / Actions */}
                     <div className="lg:col-span-1 space-y-4">
-                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden sticky top-24">
-                            <div className="p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-700">{t('profile.accountSettings')}</div>
+                        <div className="card-surface overflow-hidden sticky top-24">
+                            <div className="p-4 font-bold" style={{ borderBottom: '1px solid var(--color-surface-border)', backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-secondary)' }}>{t('profile.accountSettings')}</div>
                             <nav className="flex flex-col p-2 space-y-1">
-                                <Link to="info" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('info') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                <Link to="info" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                                      style={isActive('info')
+                                          ? { color: 'var(--color-accent)', backgroundColor: 'var(--color-accent-soft)' }
+                                          : { color: 'var(--color-text-secondary)' }
+                                      }>
                                     <UserIcon /> {t('profile.profileInfo')}
                                 </Link>
-                                <Link to="security" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('security') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                <Link to="security" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                                      style={isActive('security')
+                                          ? { color: 'var(--color-accent)', backgroundColor: 'var(--color-accent-soft)' }
+                                          : { color: 'var(--color-text-secondary)' }
+                                      }>
                                     <LockIcon /> {t('profile.security')}
                                 </Link>
-                                <Link to="notifications" className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${isActive('notifications') ? 'text-blue-700 bg-blue-50' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>
+                                <Link to="notifications" className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors"
+                                      style={isActive('notifications')
+                                          ? { color: 'var(--color-accent)', backgroundColor: 'var(--color-accent-soft)' }
+                                          : { color: 'var(--color-text-secondary)' }
+                                      }>
                                     <BellIcon /> {t('profile.notifications')}
                                 </Link>
                             </nav>
@@ -119,7 +132,8 @@ const PortalProfile: React.FC = () => {
 
                         <button
                             onClick={handleLogoutClick}
-                            className="w-full flex items-center justify-center gap-2 p-3 bg-white border border-red-200 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-colors shadow-sm"
+                            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl font-bold transition-colors shadow-sm border"
+                            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#DC2626' }}
                         >
                             <LogoutIcon /> {t('profile.signOut')}
                         </button>
