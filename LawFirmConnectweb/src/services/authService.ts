@@ -26,7 +26,12 @@ export interface LoginResponse {
 export interface RegisterResponse {
   _id: string;
   firstName: string;
+  lastName: string;
   email: string;
+  role: string;
+  organizationId?: string;
+  subscriptionStatus?: string;
+  token: string;
   msg: string;
 }
 
@@ -52,7 +57,6 @@ const register = async (userData: {
   email: string;
   phone: string;
   password: string;
-  accountType?: "FIRM" | "ATTORNEY";
   organizationId?: string;
 }): Promise<RegisterResponse> => {
   const response = await api.post("/auth/register", userData);

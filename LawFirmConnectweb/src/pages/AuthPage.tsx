@@ -90,9 +90,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
         setIsLoading(true);
         try {
-            await authService.register({ firstName, lastName, email, phone, password: signUpPassword });
+            const data = await authService.register({ firstName, lastName, email, phone, password: signUpPassword });
+            // Auto-login: store token in localStorage, then redirect to pricing
+            localStorage.setItem('user', JSON.stringify(data));
             toast.success(t('signUp.successMessage'));
-            setMode('signin');
+            navigate('/pricing', { state: { needsSubscription: true } });
+            return;
         } catch (err: any) {
             setError(err.response?.data?.message || t('signUp.errorDefault'));
         } finally {

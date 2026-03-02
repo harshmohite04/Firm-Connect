@@ -14,8 +14,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ["ADMIN", "ATTORNEY"],
-      default: "ATTORNEY",
+      enum: ["ADMIN", "ADVOCATE"],
+      default: "ADVOCATE",
     },
     status: { type: String, enum: ["PENDING", "VERIFIED"], default: "PENDING" },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", default: null },
@@ -45,11 +45,12 @@ const userSchema = new mongoose.Schema(
       enum: ['ACTIVE', 'INACTIVE'], 
       default: 'INACTIVE' 
     },
-    subscriptionPlan: { 
-      type: String, 
-      enum: ['STARTER', 'PROFESSIONAL', 'ENTERPRISE'],
+    subscriptionPlan: {
+      type: String,
+      enum: ['STARTER', 'PROFESSIONAL', 'FIRM'],
       default: null
     },
+    razorpaySubscriptionId: { type: String, default: null },
     subscriptionExpiresAt: { type: Date, default: null },
   },
   {

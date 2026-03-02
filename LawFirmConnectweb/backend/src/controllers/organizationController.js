@@ -59,10 +59,12 @@ const getMembers = async (req, res, next) => {
 
         const activeMembers = org.members.filter(m => m.status === 'ACTIVE');
 
+        const activeSeats = org.seats ? org.seats.filter(s => s.status === 'ACTIVE').length : 0;
+
         res.json({
             success: true,
             members: activeMembers,
-            totalSeats: org.maxSeats,
+            totalSeats: activeSeats,
             usedSeats: activeMembers.length
         });
     } catch (error) {
@@ -107,13 +109,15 @@ const inviteMember = async (req, res, next) => {
             throw new Error('Organization not found');
         }
 
-        // Strict Atomic Check: Count active members
-        const activeCount = org.members.filter(m => m.status === 'ACTIVE').length;
-        if (activeCount >= org.maxSeats) {
+        // Check: active members (excluding owner) must not exceed active seats
+        const activeMembers = org.members.filter(m => m.status === 'ACTIVE').length;
+        const activeSeats = org.seats ? org.seats.filter(s => s.status === 'ACTIVE').length : 0;
+        // Owner doesn't need a seat, so non-owner members need seats
+        if (activeMembers > activeSeats) {
             await session.abortTransaction();
             session.endSession();
             res.status(400);
-            throw new Error(`No seats available. Your plan allows ${org.maxSeats} seats.`);
+            throw new Error(`No seats available. You have ${activeSeats} active seat(s). Buy more seats first.`);
         }
 
         let userToInvite = await User.findOne({ email: normalizedEmail }).session(session);
@@ -149,7 +153,7 @@ const inviteMember = async (req, res, next) => {
                 lastName: 'Member',
                 email: normalizedEmail,
                 password: generatedPassword,
-                role: 'ATTORNEY',
+                role: 'ADVOCATE',
                 status: 'VERIFIED'
             });
             await userToInvite.save({ session });
@@ -157,7 +161,7 @@ const inviteMember = async (req, res, next) => {
 
         // Update User
         userToInvite.organizationId = org._id;
-        userToInvite.role = 'ATTORNEY';
+        userToInvite.role = 'ADVOCATE';
         await userToInvite.save({ session });
 
         // Update Organization Member List
@@ -174,7 +178,7 @@ const inviteMember = async (req, res, next) => {
             // Add new member entry
             org.members.push({
                 userId: userToInvite._id,
-                role: 'ATTORNEY',
+                role: 'ADVOCATE',
                 status: 'ACTIVE',
                 joinedAt: new Date()
             });
@@ -288,9 +292,10 @@ const acceptInvitation = async (req, res, next) => {
             throw new Error('Organization associated with this invitation does not exist');
         }
 
-        // Atomic Seat Check
+        // Seat Check: active members vs active seats
         const activeCount = org.members.filter(m => m.status === 'ACTIVE').length;
-        if (activeCount >= org.maxSeats) {
+        const availableSeats = org.seats ? org.seats.filter(s => s.status === 'ACTIVE').length : 0;
+        if (activeCount > availableSeats) {
             await session.abortTransaction();
              session.endSession();
             res.status(400);
@@ -332,7 +337,7 @@ const acceptInvitation = async (req, res, next) => {
         // Add user to org
         org.members.push({
             userId: acceptingUser._id,
-            role: 'ATTORNEY',
+            role: 'ADVOCATE',
             status: 'ACTIVE',
             joinedAt: new Date()
         });
@@ -340,7 +345,7 @@ const acceptInvitation = async (req, res, next) => {
 
         // Update user
         acceptingUser.organizationId = org._id;
-        acceptingUser.role = 'ATTORNEY';
+        acceptingUser.role = 'ADVOCATE';
         await acceptingUser.save({ session });
 
         await session.commitTransaction();
@@ -599,19 +604,16 @@ const reassignCases = async (req, res, next) => {
 };
 
 
-// @desc    Update (increase) seat count for the organization
+// @desc    Get seat info for the organization (seats are now managed via paymentRoutes)
 // @route   PATCH /organization/seats
 // @access  Private (Admin only)
 const updateSeats = async (req, res, next) => {
-    // No transaction needed here as it's a single document update, 
-    // but good to keep it consistent if we add more logic later.
     try {
-        const { additionalSeats, paymentId } = req.body;
         const admin = await User.findById(req.user._id);
 
         if (admin.role !== 'ADMIN') {
             res.status(403);
-            throw new Error('Only admins can update seats');
+            throw new Error('Only admins can manage seats');
         }
 
         const org = await Organization.findById(admin.organizationId);
@@ -620,56 +622,13 @@ const updateSeats = async (req, res, next) => {
             throw new Error('Organization not found');
         }
 
-        const count = parseInt(additionalSeats, 10);
-        if (!count || count < 1 || count > 50) {
-            res.status(400);
-            throw new Error('Additional seats must be between 1 and 50');
-        }
+        const activeSeats = org.seats ? org.seats.filter(s => s.status === 'ACTIVE').length : 0;
 
-        const newMax = org.maxSeats + count;
-        if (newMax > 50) {
-            res.status(400);
-            // Dynamic message
-            throw new Error(`Cannot exceed 50 seats. Current: ${org.maxSeats}, max you can add: ${50 - org.maxSeats}`);
-        }
-
-        // ===== PAYMENT VERIFICATION =====
-        // Bypass payment for any admin with @harsh.com email
-        if (!admin.email.endsWith('@harsh.com')) {
-            const pricePerSeat = org.plan === 'STARTER' ? 29900 : 49900; // paise
-            const expectedAmount = pricePerSeat * count;
-    
-            if (!paymentId) {
-                res.status(400);
-                throw new Error('Payment is required to add seats');
-            }
-    
-            // Verify Razorpay payment
-            try {
-                const payment = await razorpay.payments.fetch(paymentId);
-                if (payment.status !== 'captured' || payment.amount < expectedAmount) {
-                    res.status(400);
-                    throw new Error('Payment verification failed: Amount mismatch or not captured');
-                }
-            } catch (err) {
-                 res.status(400);
-                 throw new Error('Payment verification failed: Invalid Payment ID');
-            }
-        } else {
-            console.log(`[SEATS][BYPASS] Skipping payment for domain user: ${admin.email}`);
-        }
-        // ===== END PAYMENT VERIFICATION =====
-
-        org.maxSeats = newMax;
-        await org.save();
-        
         res.json({
             success: true,
-            message: `Seats increased to ${newMax}`,
-            maxSeats: newMax,
-            // Include pricing info for frontend display
-            pricePerSeat: org.plan === 'STARTER' ? 299 : 499,
-            totalCharge: (org.plan === 'STARTER' ? 299 : 499) * count
+            message: 'Seats are now managed via subscription. Use /payments/create-seat to purchase.',
+            activeSeats,
+            seats: org.seats
         });
     } catch (error) {
         next(error);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CheckCircle, X, Lock, ChevronDown, Sparkles, Shield, Zap, Mail } from 'lucide-react';
+import { CheckCircle, X, Lock, ChevronDown, Sparkles, Shield, Zap, Mail, Building2 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -24,6 +24,10 @@ const Pricing: React.FC = () => {
     const [authPopupVisible, setAuthPopupVisible] = useState(false);
     const [authPopupRender, setAuthPopupRender] = useState(false);
     const [openFaq, setOpenFaq] = useState<number | null>(0);
+    // Firm name modal state
+    const [showFirmNameModal, setShowFirmNameModal] = useState(false);
+    const [firmName, setFirmName] = useState('');
+    const [pendingPlan, setPendingPlan] = useState<any>(null);
 
     React.useEffect(() => {
         if (location.state?.needsSubscription) {
@@ -45,63 +49,68 @@ const Pricing: React.FC = () => {
     }, [showAuthPopup]);
 
     useEffect(() => {
-        if (!showAuthPopup) return;
+        if (!showAuthPopup && !showFirmNameModal) return;
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setShowAuthPopup(false);
+            if (e.key === 'Escape') {
+                setShowAuthPopup(false);
+                setShowFirmNameModal(false);
+            }
         };
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [showAuthPopup]);
+    }, [showAuthPopup, showFirmNameModal]);
 
     const plans = [
         {
             id: 'STARTER',
             name: 'Starter',
-            description: 'Perfect for individual lawyers or new practices.',
+            description: 'Perfect for individual advocates starting their practice.',
             price: 4999,
             icon: <Zap className="w-6 h-6" />,
+            roleLabel: 'ADVOCATE',
             features: [
                 'Up to 5 active cases',
                 '2 AI Investigations/mo',
                 'Standard RAG (Graph + Vector)',
-                '2 User Seats',
+                'Individual use',
                 'Basic Email Support'
             ],
             recommended: false,
-            cta: 'Start Free Trial'
+            cta: 'Subscribe'
         },
         {
             id: 'PROFESSIONAL',
             name: 'Professional',
-            description: 'Optimized for growing firms with heavy workloads.',
-            price: 24999,
+            description: 'For experienced advocates with heavy workloads.',
+            price: 8999,
             icon: <Sparkles className="w-6 h-6" />,
+            roleLabel: 'ADVOCATE',
             features: [
                 'Up to 20 active cases',
                 '10 AI Investigations/mo',
                 'Advanced AI Research Tools',
-                '5 User Seats',
-                'SOC2 Compliance',
-                'Priority Support'
+                'Priority Support',
+                'SOC2 Compliance'
             ],
             recommended: true,
-            cta: 'Start Free Trial'
+            cta: 'Subscribe'
         },
         {
-            id: 'ENTERPRISE',
-            name: 'Enterprise',
-            description: 'Full suite solutions for large legal organizations.',
-            price: null,
-            icon: <Shield className="w-6 h-6" />,
+            id: 'FIRM',
+            name: 'Firm',
+            description: 'Full suite for law firms with team management.',
+            price: 9999,
+            icon: <Building2 className="w-6 h-6" />,
+            roleLabel: 'ADMIN',
             features: [
-                'Unlimited Everything',
-                'Custom AI Model Training',
-                'API Access & Integration',
-                'Dedicated Account Manager',
-                'Custom SLA'
+                'Unlimited cases',
+                'Unlimited AI Investigations',
+                'Organization management',
+                'Buy per-member seats',
+                'Priority Support'
             ],
             recommended: false,
-            cta: 'Contact Sales'
+            cta: 'Subscribe'
         }
     ];
 
@@ -115,21 +124,16 @@ const Pricing: React.FC = () => {
             a: 'Absolutely. You can upgrade or downgrade your plan at any time. Changes take effect at the start of your next billing cycle, and we\'ll prorate any differences.'
         },
         {
-            q: 'How does the 14-day free trial work?',
-            a: 'Sign up for any plan and get full access for 14 days. No credit card required. At the end of the trial, choose to subscribe or your account will revert to a limited free tier.'
+            q: 'What happens after I subscribe?',
+            a: 'You get instant access to the portal. Starter and Professional plans give you an individual ADVOCATE account. The Firm plan makes you an ADMIN and lets you manage a team with per-member seats.'
         },
         {
-            q: 'Do you offer discounts for non-profits?',
-            a: 'Yes! We offer a 30% discount for verified non-profit organizations and legal aid societies. Contact our sales team to apply.'
+            q: 'How do Firm seats work?',
+            a: 'After subscribing to the Firm plan, you can buy additional seats for team members. Each seat is a separate monthly subscription (Starter or Professional tier) that you can assign to invited members.'
         }
     ];
 
-    const handleSubscribe = async (plan: any) => {
-        if (plan.id === 'ENTERPRISE') {
-            window.location.href = 'mailto:sales@lawfirmai.com?subject=Enterprise%20Plan%20Inquiry';
-            return;
-        }
-
+    const proceedWithPayment = async (plan: any, orgName?: string) => {
         try {
             setLoading(true);
             setError(null);
@@ -147,17 +151,16 @@ const Pricing: React.FC = () => {
             const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
             const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
+            // Dev bypass for @harsh.com
             if (user.email && user.email.endsWith('@harsh.com')) {
                 const { data } = await axios.post(
                     `${apiUrl}/payments/test-activate`,
-                    { planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                    { planId: plan.id, firmName: orgName || `${user.firstName}'s Law Firm` },
                     authHeader
                 );
 
                 if (data.success) {
-                    user.role = data.user.role;
-                    user.organizationId = data.user.organizationId;
-                    user.subscriptionStatus = data.user.subscriptionStatus;
+                    Object.assign(user, data.user);
                     localStorage.setItem('user', JSON.stringify(user));
                     navigate('/portal');
                 } else {
@@ -166,30 +169,38 @@ const Pricing: React.FC = () => {
                 return;
             }
 
-            const { data: orderData } = await axios.post(
-                `${apiUrl}/payments/create-order`,
-                { planId: plan.id, amount: plan.price },
+            // Create Razorpay subscription
+            const { data: subData } = await axios.post(
+                `${apiUrl}/payments/create-subscription`,
+                { planId: plan.id },
                 authHeader
             );
-            if (!orderData.success) { setError('Failed to initiate payment'); setLoading(false); return; }
+            if (!subData.success) {
+                setError('Failed to initiate subscription');
+                setLoading(false);
+                return;
+            }
 
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                amount: orderData.order.amount,
-                currency: "INR",
+                subscription_id: subData.subscriptionId,
                 name: "LawFirmAI",
-                description: `Subscription for ${plan.name} Plan`,
-                order_id: orderData.order.id,
+                description: `${plan.name} Plan – ₹${plan.price.toLocaleString()}/mo`,
                 handler: async function (response: any) {
                     try {
                         const verifyRes = await axios.post(
-                            `${apiUrl}/payments/verify`,
-                            { ...response, planId: plan.id, firmName: `${user.firstName}'s Law Firm` },
+                            `${apiUrl}/payments/verify-subscription`,
+                            {
+                                razorpay_subscription_id: response.razorpay_subscription_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                planId: plan.id,
+                                firmName: orgName
+                            },
                             authHeader
                         );
                         if (verifyRes.data.success) {
-                            user.role = 'ADMIN';
-                            user.subscriptionStatus = 'ACTIVE';
+                            Object.assign(user, verifyRes.data.user);
                             localStorage.setItem('user', JSON.stringify(user));
                             navigate('/portal');
                         } else {
@@ -211,7 +222,6 @@ const Pricing: React.FC = () => {
             };
             const rzp1 = new window.Razorpay(options);
             rzp1.open();
-            return;
 
         } catch (error) {
             console.error('Payment Error:', error);
@@ -219,6 +229,30 @@ const Pricing: React.FC = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleSubscribe = async (plan: any) => {
+        // For Firm plan, show firm name modal first
+        if (plan.id === 'FIRM') {
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            if (!user?.token) {
+                setShowAuthPopup(true);
+                return;
+            }
+            setPendingPlan(plan);
+            setFirmName(`${user.firstName}'s Law Firm`);
+            setShowFirmNameModal(true);
+            return;
+        }
+
+        await proceedWithPayment(plan);
+    };
+
+    const handleFirmNameSubmit = async () => {
+        if (!firmName.trim()) return;
+        setShowFirmNameModal(false);
+        await proceedWithPayment(pendingPlan, firmName.trim());
     };
 
     const renderCategory = (label: string) => (
@@ -241,19 +275,19 @@ const Pricing: React.FC = () => {
         return <span className="text-sm font-medium" style={{ color: 'var(--color-text-primary)' }}>{val}</span>;
     };
 
-    const renderRow = (feature: string, starter: boolean | string, pro: boolean | string, enterprise: boolean | string) => (
+    const renderRow = (feature: string, starter: boolean | string, pro: boolean | string, firm: boolean | string) => (
         <tr style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
             <td className="py-4 px-6 text-sm" style={{ color: 'var(--color-text-secondary)' }}>{feature}</td>
             <td className="py-4 px-4 text-center">{renderCell(starter)}</td>
             <td className="py-4 px-4 text-center" style={{ backgroundColor: 'var(--color-accent-glow)' }}>{renderCell(pro)}</td>
-            <td className="py-4 px-4 text-center">{renderCell(enterprise)}</td>
+            <td className="py-4 px-4 text-center">{renderCell(firm)}</td>
         </tr>
     );
 
     return (
         <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
             <Navbar />
-            
+
             <div className="flex-grow pt-28 pb-20 px-4 sm:px-6 lg:px-8">
                 {/* Welcome banner */}
                 {showWelcome && (
@@ -312,7 +346,7 @@ const Pricing: React.FC = () => {
                         Simple, <span className="text-gradient">Transparent</span> Pricing
                     </h1>
                     <p className="text-lg leading-relaxed max-w-2xl mx-auto" style={{ color: 'var(--color-text-secondary)' }}>
-                        Unlock the power of artificial intelligence for your legal practice. Scale from solo practitioner to global firm with ease.
+                        Unlock the power of artificial intelligence for your legal practice. Scale from solo advocate to full firm with ease.
                     </p>
                 </div>
 
@@ -332,7 +366,7 @@ const Pricing: React.FC = () => {
                             {plan.recommended && (
                                 <div className="absolute top-0 right-4 -translate-y-1/2">
                                     <span className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-400 text-gray-900 shadow-lg">
-                                        ✨ Most Popular
+                                        Most Popular
                                     </span>
                                 </div>
                             )}
@@ -346,7 +380,14 @@ const Pricing: React.FC = () => {
                                     }}>
                                         {plan.icon}
                                     </div>
-                                    <h3 className="text-xl font-bold">{plan.name}</h3>
+                                    <div>
+                                        <h3 className="text-xl font-bold">{plan.name}</h3>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider" style={{
+                                            color: plan.recommended ? 'rgba(255,255,255,0.6)' : 'var(--color-text-tertiary)'
+                                        }}>
+                                            {plan.roleLabel} account
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <p className="text-sm mb-6" style={{ color: plan.recommended ? 'rgba(255,255,255,0.8)' : 'var(--color-text-secondary)' }}>
@@ -355,16 +396,10 @@ const Pricing: React.FC = () => {
 
                                 {/* Price */}
                                 <div className="flex items-baseline mb-8">
-                                    {plan.price !== null ? (
-                                        <>
-                                            <span className="text-4xl font-extrabold tracking-tight">₹{plan.price.toLocaleString()}</span>
-                                            <span className="ml-1 text-base font-medium" style={{ color: plan.recommended ? 'rgba(255,255,255,0.7)' : 'var(--color-text-tertiary)' }}>
-                                                {t('pricing.perMonth')}
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <span className="text-4xl font-extrabold tracking-tight">Custom</span>
-                                    )}
+                                    <span className="text-4xl font-extrabold tracking-tight">₹{plan.price.toLocaleString()}</span>
+                                    <span className="ml-1 text-base font-medium" style={{ color: plan.recommended ? 'rgba(255,255,255,0.7)' : 'var(--color-text-tertiary)' }}>
+                                        {t('pricing.perMonth')}
+                                    </span>
                                 </div>
 
                                 {/* Features */}
@@ -384,14 +419,14 @@ const Pricing: React.FC = () => {
                                 {/* CTA Button */}
                                 <button
                                     onClick={() => handleSubscribe(plan)}
-                                    disabled={loading && plan.id !== 'ENTERPRISE'}
+                                    disabled={loading}
                                     className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm transition-all ${
-                                        loading && plan.id !== 'ENTERPRISE' ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'
+                                        loading ? 'opacity-50 cursor-not-allowed' : 'hover:-translate-y-0.5'
                                     }`}
                                     style={plan.recommended ? {
                                         backgroundColor: 'white',
                                         color: '#4F46E5',
-                                    } : plan.id === 'ENTERPRISE' ? {
+                                    } : plan.id === 'FIRM' ? {
                                         background: 'var(--gradient-accent)',
                                         color: 'white',
                                     } : {
@@ -400,14 +435,12 @@ const Pricing: React.FC = () => {
                                         border: '1px solid var(--color-surface-border)',
                                     }}
                                 >
-                                    {loading && plan.id !== 'ENTERPRISE' ? t('pricing.processing') : plan.cta}
+                                    {loading ? t('pricing.processing') : plan.cta}
                                 </button>
 
-                                {plan.price !== null && (
-                                    <p className="text-center text-xs mt-3" style={{ color: plan.recommended ? 'rgba(255,255,255,0.6)' : 'var(--color-text-tertiary)' }}>
-                                        14-day free trial • No credit card required
-                                    </p>
-                                )}
+                                <p className="text-center text-xs mt-3" style={{ color: plan.recommended ? 'rgba(255,255,255,0.6)' : 'var(--color-text-tertiary)' }}>
+                                    Monthly billing • Cancel anytime
+                                </p>
                             </div>
                         </div>
                     ))}
@@ -431,13 +464,12 @@ const Pricing: React.FC = () => {
                     }}>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                {/* Table header */}
                                 <thead>
                                     <tr style={{ borderBottom: '1px solid var(--color-surface-border)' }}>
                                         <th className="text-left py-5 px-6 font-bold text-sm" style={{ color: 'var(--color-text-primary)', minWidth: '220px' }}>
                                             Features
                                         </th>
-                                        {['Starter', 'Professional', 'Enterprise'].map((name, i) => (
+                                        {['Starter', 'Professional', 'Firm'].map((name, i) => (
                                             <th key={name} className="text-center py-5 px-4 font-bold text-sm" style={{
                                                 color: i === 1 ? 'var(--color-accent)' : 'var(--color-text-primary)',
                                                 minWidth: '140px'
@@ -453,39 +485,30 @@ const Pricing: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {/* Category: Core Features */}
                                     {renderCategory('Core Features')}
                                     {renderRow('Active Cases', '5', '20', 'Unlimited')}
                                     {renderRow('Document Storage', '5 GB', '50 GB', 'Unlimited')}
                                     {renderRow('Case Management', true, true, true)}
                                     {renderRow('Client Communication', true, true, true)}
-                                    {renderRow('Appointment Scheduling', true, true, true)}
-                                    {renderRow('User Seats', '2', '5', 'Unlimited')}
+                                    {renderRow('Role', 'Advocate', 'Advocate', 'Admin')}
+                                    {renderRow('Organization Management', false, false, true)}
+                                    {renderRow('Team Seats', false, false, 'Buy per-member')}
 
-                                    {/* Category: AI & Intelligence */}
                                     {renderCategory('AI & Intelligence')}
                                     {renderRow('AI Investigations/mo', '2', '10', 'Unlimited')}
-                                    {renderRow('AI Document Review', 'Basic', 'Advanced', 'Custom Models')}
-                                    {renderRow('RAG (Graph + Vector)', 'Standard', 'Standard', 'Custom')}
+                                    {renderRow('AI Document Review', 'Basic', 'Advanced', 'Advanced')}
+                                    {renderRow('RAG (Graph + Vector)', 'Standard', 'Standard', 'Standard')}
                                     {renderRow('AI Legal Research', false, true, true)}
                                     {renderRow('AI Document Drafting', false, true, true)}
-                                    {renderRow('Custom AI Training', false, false, true)}
 
-                                    {/* Category: Security & Compliance */}
                                     {renderCategory('Security & Compliance')}
                                     {renderRow('Data Encryption', 'AES-256', 'AES-256', 'AES-256')}
                                     {renderRow('SOC2 Compliance', false, true, true)}
-                                    {renderRow('SSO / SAML', false, false, true)}
                                     {renderRow('Audit Logs', false, true, true)}
-                                    {renderRow('API Access', false, false, true)}
 
-                                    {/* Category: Support & Services */}
                                     {renderCategory('Support & Services')}
                                     {renderRow('Email Support', true, true, true)}
                                     {renderRow('Priority Support', false, true, true)}
-                                    {renderRow('Dedicated Account Manager', false, false, true)}
-                                    {renderRow('Custom SLA', false, false, true)}
-                                    {renderRow('Onboarding & Training', false, 'Guided', 'White-glove')}
                                 </tbody>
                             </table>
                         </div>
@@ -572,6 +595,62 @@ const Pricing: React.FC = () => {
                 </div>
             </div>
 
+            {/* Firm Name Modal */}
+            {showFirmNameModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        onClick={() => setShowFirmNameModal(false)}
+                        className="absolute inset-0 backdrop-blur-sm bg-black/40"
+                    />
+                    <div
+                        className="relative rounded-2xl shadow-2xl p-8 max-w-sm w-full"
+                        style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)' }}
+                    >
+                        <div className="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center shadow-md mb-5" style={{ background: 'var(--gradient-accent)' }}>
+                            <Building2 className="w-7 h-7 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold text-center" style={{ color: 'var(--color-text-primary)' }}>Name your firm</h3>
+                        <p className="mt-2 text-sm text-center" style={{ color: 'var(--color-text-secondary)' }}>
+                            This will be your organization name on the platform.
+                        </p>
+                        <input
+                            type="text"
+                            value={firmName}
+                            onChange={(e) => setFirmName(e.target.value)}
+                            className="mt-4 w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2"
+                            style={{
+                                backgroundColor: 'var(--color-bg-tertiary)',
+                                border: '1px solid var(--color-surface-border)',
+                                color: 'var(--color-text-primary)',
+                            }}
+                            placeholder="e.g. Sharma & Associates"
+                            onKeyDown={(e) => e.key === 'Enter' && handleFirmNameSubmit()}
+                            autoFocus
+                        />
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => setShowFirmNameModal(false)}
+                                className="flex-1 py-3 rounded-xl font-bold text-sm transition-all"
+                                style={{
+                                    backgroundColor: 'var(--color-bg-tertiary)',
+                                    color: 'var(--color-text-primary)',
+                                    border: '1px solid var(--color-surface-border)'
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleFirmNameSubmit}
+                                disabled={!firmName.trim()}
+                                className="flex-1 btn-gradient disabled:opacity-50"
+                            >
+                                Continue to Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Auth popup for unauthenticated users */}
             {authPopupRender && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -599,7 +678,7 @@ const Pricing: React.FC = () => {
                         </p>
                         <div className="mt-6 flex flex-col gap-3">
                             <button
-                                onClick={() => navigate('/signin', { state: { from: '/pricing' } })}
+                                onClick={() => navigate('/signup', { state: { from: '/pricing' } })}
                                 className="btn-gradient w-full"
                             >
                                 Sign Up

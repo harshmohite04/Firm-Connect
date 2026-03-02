@@ -46,7 +46,7 @@ const InviteAccept: React.FC = () => {
                 // Update local storage with new org info
                 const user = JSON.parse(userStr);
                 user.organizationId = result.organization.id;
-                user.role = 'ATTORNEY';
+                user.role = 'ADVOCATE';
                 localStorage.setItem('user', JSON.stringify(user));
             }
         } catch (error: any) {

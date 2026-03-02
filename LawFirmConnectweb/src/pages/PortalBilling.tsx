@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import PortalLayout from '../components/PortalLayout';
 import { dummyBilling, dummyCases } from '../data/dummyData';
 import { useTranslation } from 'react-i18next';
@@ -80,6 +81,30 @@ const formatINR = (amount: number) => {
 // Convert USD-like amounts to INR (approximate rate)
 const toINR = (usdAmount: number) => Math.round(usdAmount * 83);
 
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
+
+interface SubscriptionData {
+    subscriptionPlan: string | null;
+    subscriptionStatus: string;
+    subscriptionExpiresAt: string | null;
+    razorpaySubscriptionId: string | null;
+    role: string;
+    organizationId: string | null;
+}
+
+interface Seat {
+    _id: string;
+    razorpaySubscriptionId: string;
+    plan: string;
+    status: string;
+    assignedTo: { _id: string; firstName: string; lastName: string; email: string } | null;
+    createdAt: string;
+}
+
 const PortalBilling: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<'open' | 'history' | 'retainer' | 'time'> ('open');
@@ -87,6 +112,123 @@ const PortalBilling: React.FC = () => {
     const [selectedDateRange, setSelectedDateRange] = useState('all');
     const [showQuickPay, setShowQuickPay] = useState(false);
     const { t } = useTranslation();
+
+    // Subscription state
+    const [subData, setSubData] = useState<SubscriptionData | null>(null);
+    const [subLoading, setSubLoading] = useState(true);
+    const [cancelLoading, setCancelLoading] = useState(false);
+    const [seatLoading, setSeatLoading] = useState(false);
+    const [seats, setSeats] = useState<Seat[]>([]);
+    const [showSeatModal, setShowSeatModal] = useState(false);
+    const [selectedSeatPlan, setSelectedSeatPlan] = useState<'STARTER' | 'PROFESSIONAL'>('STARTER');
+
+    // Fetch subscription data
+    useEffect(() => {
+        const fetchSubscription = async () => {
+            try {
+                const userStr = localStorage.getItem('user');
+                const user = userStr ? JSON.parse(userStr) : null;
+                if (!user?.token) return;
+
+                const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+                const { data } = await axios.get(`${apiUrl}/auth/me`, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setSubData({
+                    subscriptionPlan: data.subscriptionPlan,
+                    subscriptionStatus: data.subscriptionStatus,
+                    subscriptionExpiresAt: data.subscriptionExpiresAt,
+                    razorpaySubscriptionId: data.razorpaySubscriptionId || null,
+                    role: data.role,
+                    organizationId: data.organizationId
+                });
+
+                // Fetch org seats if ADMIN
+                if (data.role === 'ADMIN' && data.organizationId) {
+                    try {
+                        const orgRes = await axios.get(`${apiUrl}/organization`, {
+                            headers: { Authorization: `Bearer ${user.token}` }
+                        });
+                        setSeats(orgRes.data.organization?.seats || []);
+                    } catch { /* org fetch optional */ }
+                }
+            } catch (err) {
+                console.error('Failed to fetch subscription data:', err);
+            } finally {
+                setSubLoading(false);
+            }
+        };
+        fetchSubscription();
+    }, []);
+
+    const handleCancelSubscription = async () => {
+        if (!confirm('Are you sure you want to cancel your subscription? You will lose access at the end of your billing period.')) return;
+        try {
+            setCancelLoading(true);
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+            await axios.post(`${apiUrl}/payments/cancel-subscription`, {}, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            setSubData(prev => prev ? { ...prev, subscriptionStatus: 'INACTIVE' } : null);
+            toast.success('Subscription cancelled');
+        } catch {
+            toast.error('Failed to cancel subscription');
+        } finally {
+            setCancelLoading(false);
+        }
+    };
+
+    const handleBuySeat = async () => {
+        try {
+            setSeatLoading(true);
+            const userStr = localStorage.getItem('user');
+            const user = userStr ? JSON.parse(userStr) : null;
+            const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+            const authHeader = { headers: { Authorization: `Bearer ${user.token}` } };
+
+            // Dev bypass
+            if (user.email?.endsWith('@harsh.com')) {
+                toast.success(`[TEST] ${selectedSeatPlan} seat added`);
+                setShowSeatModal(false);
+                return;
+            }
+
+            const { data: subRes } = await axios.post(`${apiUrl}/payments/create-seat`, { seatPlan: selectedSeatPlan }, authHeader);
+            if (!subRes.success) { toast.error('Failed to create seat'); return; }
+
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                subscription_id: subRes.subscriptionId,
+                name: "LawFirmAI",
+                description: `${selectedSeatPlan} Seat Subscription`,
+                handler: async function (response: any) {
+                    try {
+                        const verifyRes = await axios.post(`${apiUrl}/payments/verify-seat`, {
+                            razorpay_subscription_id: response.razorpay_subscription_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            seatPlan: selectedSeatPlan
+                        }, authHeader);
+                        if (verifyRes.data.success) {
+                            setSeats(verifyRes.data.seats || []);
+                            toast.success('Seat purchased successfully');
+                        }
+                    } catch { toast.error('Seat verification failed'); }
+                },
+                theme: { color: "#4F46E5" },
+                modal: { ondismiss: () => setSeatLoading(false) }
+            };
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+            setShowSeatModal(false);
+        } catch {
+            toast.error('Failed to buy seat');
+        } finally {
+            setSeatLoading(false);
+        }
+    };
 
     // Keyboard: ESC to close billing modals
     React.useEffect(() => {
@@ -181,6 +323,125 @@ const PortalBilling: React.FC = () => {
                         </button>
                     </div>
                 </div>
+
+                {/* Subscription Card */}
+                {!subLoading && subData && (
+                    <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6 shadow-sm">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <h2 className="text-lg font-bold text-slate-900">Subscription</h2>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                                        subData.subscriptionStatus === 'ACTIVE'
+                                            ? 'bg-emerald-100 text-emerald-700'
+                                            : 'bg-red-100 text-red-700'
+                                    }`}>
+                                        {subData.subscriptionStatus}
+                                    </span>
+                                </div>
+                                <div className="flex flex-wrap gap-4 text-sm text-slate-600">
+                                    <span><strong>Plan:</strong> {subData.subscriptionPlan || 'None'}</span>
+                                    <span><strong>Role:</strong> {subData.role}</span>
+                                    {subData.subscriptionExpiresAt && (
+                                        <span><strong>Renews:</strong> {new Date(subData.subscriptionExpiresAt).toLocaleDateString('en-IN')}</span>
+                                    )}
+                                    {subData.razorpaySubscriptionId && (
+                                        <span className="text-slate-400 text-xs">ID: {subData.razorpaySubscriptionId}</span>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                {subData.subscriptionStatus === 'ACTIVE' && subData.razorpaySubscriptionId && (
+                                    <button
+                                        onClick={handleCancelSubscription}
+                                        disabled={cancelLoading}
+                                        className="px-4 py-2 border border-red-200 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                                    >
+                                        {cancelLoading ? 'Cancelling...' : 'Cancel Subscription'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Firm Seat Management */}
+                        {subData.role === 'ADMIN' && subData.organizationId && (
+                            <div className="mt-6 pt-5 border-t border-slate-100">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-slate-800">Team Seats</h3>
+                                    <button
+                                        onClick={() => setShowSeatModal(true)}
+                                        className="px-3 py-1.5 bg-indigo-600 rounded-lg text-xs font-semibold text-white hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
+                                    >
+                                        <PlusIcon /> Buy Seat
+                                    </button>
+                                </div>
+                                {seats.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {seats.map((seat, i) => (
+                                            <div key={seat._id || i} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                                        seat.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
+                                                    }`}>{seat.status}</span>
+                                                    <span className="text-sm font-medium text-slate-700">{seat.plan} Seat</span>
+                                                </div>
+                                                <div className="text-sm text-slate-500">
+                                                    {seat.assignedTo
+                                                        ? `${seat.assignedTo.firstName} ${seat.assignedTo.lastName}`
+                                                        : <span className="text-amber-600 font-medium">Unassigned</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-400">No seats purchased yet. Buy seats to add team members.</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Seat Purchase Modal */}
+                {showSeatModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div onClick={() => setShowSeatModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                        <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+                            <h3 className="text-lg font-bold text-slate-900 mb-4">Buy a Seat</h3>
+                            <p className="text-sm text-slate-500 mb-4">Each seat is a separate monthly subscription for a team member.</p>
+                            <div className="space-y-2 mb-6">
+                                {(['STARTER', 'PROFESSIONAL'] as const).map(plan => (
+                                    <button
+                                        key={plan}
+                                        onClick={() => setSelectedSeatPlan(plan)}
+                                        className={`w-full p-3 rounded-lg border text-left transition-colors ${
+                                            selectedSeatPlan === plan
+                                                ? 'border-indigo-500 bg-indigo-50'
+                                                : 'border-slate-200 hover:bg-slate-50'
+                                        }`}
+                                    >
+                                        <div className="font-semibold text-sm text-slate-800">{plan} Seat</div>
+                                        <div className="text-xs text-slate-500">
+                                            ₹{plan === 'STARTER' ? '4,999' : '8,999'}/mo
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowSeatModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleBuySeat}
+                                    disabled={seatLoading}
+                                    className="flex-1 px-4 py-2.5 bg-indigo-600 rounded-lg text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                    {seatLoading ? 'Processing...' : 'Purchase'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Stats Cards - Modern Design */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
