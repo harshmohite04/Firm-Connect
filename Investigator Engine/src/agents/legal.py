@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from src.state import InvestigatorState
 from src.utils import (
     get_llm_with_retry, get_json_parser, get_web_search_llm,
+    get_combined_web_research,
     format_challenges, format_evidence_gaps, format_facts,
     format_timeline, format_legal_issues, format_risks,
     smart_truncate, rate_limiter
@@ -16,13 +17,20 @@ class ResearchOutput(BaseModel):
 
 def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
     """
-    Identifies legal issues and finds real precedents via web search.
-    Uses Perplexity for Preset B (OpenAI mode) or standard LLM for Preset A (DeepSeek mode).
+    Identifies legal issues and finds real precedents using combined web research.
+    Uses BOTH Serper (Google results) and Perplexity (AI synthesis) for maximum
+    research quality, then feeds combined context into the main LLM for structured output.
     """
-    llm = get_web_search_llm()
-    if hasattr(llm, "with_retry"):
-        llm = llm.with_retry(stop_after_attempt=3, wait_exponential_jitter=True)
+    narrative = smart_truncate(state.get("case_narrative", ""), 4000)
     parser = get_json_parser(pydantic_object=ResearchOutput)
+
+    # Step 1: Gather web research from both Serper + Perplexity
+    web_research = get_combined_web_research(
+        f"Indian law legal issues precedents for: {narrative[:500]}"
+    )
+
+    # Step 2: Feed combined research into main LLM for structured analysis
+    llm = get_llm_with_retry(task_tier="powerful")
 
     prompt = ChatPromptTemplate.from_template(
         """
@@ -31,7 +39,12 @@ def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
 
         Narrative: {narrative}
 
-        Search for and cite REAL Indian statutes, sections, and landmark judgments.
+        Use the following web research to ground your analysis with REAL statutes and precedents:
+
+        --- WEB RESEARCH ---
+        {web_research}
+        --- END WEB RESEARCH ---
+
         Include specific Section numbers from IPC, CrPC, Indian Contract Act, Indian Evidence Act,
         Companies Act, Arbitration and Conciliation Act, and other relevant Indian legislation.
         Cite real Supreme Court of India and High Court judgments with case names and year.
@@ -46,7 +59,8 @@ def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
     try:
         rate_limiter.wait()
         result = (prompt | llm | parser).invoke({
-            "narrative": smart_truncate(state.get("case_narrative", ""), 4000),
+            "narrative": narrative,
+            "web_research": smart_truncate(web_research, 6000),
             "format_instructions": parser.get_format_instructions()
         })
 

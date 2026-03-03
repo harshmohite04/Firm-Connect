@@ -151,7 +151,7 @@ const OrganizationPage: React.FC = () => {
                     <div className="card-surface p-6">
                         <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Members</p>
                         <p className="text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
-                            {members.length} / {org.maxSeats}
+                            {members.length} / {(org.seats?.filter((s: any) => s.status === 'ACTIVE').length || 0) + 1}
                         </p>
                     </div>
                     <div className="card-surface p-6">

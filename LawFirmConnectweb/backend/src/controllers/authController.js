@@ -43,66 +43,57 @@ const registerUser = async (req, res, next) => {
 
         // Set status based on verification requirement
         const initialStatus = 'VERIFIED';
-        
-        // Determine Role
-        // If accountType is 'FIRM', role is ADMIN. Default is ATTORNEY.
-        const role = accountType === 'FIRM' ? 'ADMIN' : 'ATTORNEY';
 
+        // Role is always ADVOCATE at registration.
+        // Role upgrades happen at payment time (FIRM plan → ADMIN).
+        const role = 'ADVOCATE';
+
+        const isHarshDomain = email.toLowerCase().endsWith('@harsh.com');
         const user = await User.create({
             firstName,
             lastName,
             phone,
             email,
             password,
-            role,
+            role: isHarshDomain ? 'ADMIN' : role,
             status: initialStatus,
             // Auto-activate for @harsh.com
-            subscriptionStatus: email.toLowerCase().endsWith('@harsh.com') ? 'ACTIVE' : 'INACTIVE',
-            subscriptionPlan: email.toLowerCase().endsWith('@harsh.com') ? 'PROFESSIONAL' : undefined,
-            subscriptionExpiresAt: email.toLowerCase().endsWith('@harsh.com') ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
+            subscriptionStatus: isHarshDomain ? 'ACTIVE' : 'INACTIVE',
+            subscriptionPlan: isHarshDomain ? 'FIRM' : undefined,
+            subscriptionExpiresAt: isHarshDomain ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : null
         });
 
         if (user) {
-            // Case 1: USER CREATING A FIRM
-            // Only auto-create org for @harsh.com users (who bypass payment).
-            // All other ADMIN users must go through the Pricing page to pay and create their org.
-            if (role === 'ADMIN' && email.toLowerCase().endsWith('@harsh.com')) {
+            // Auto-create org for @harsh.com users (who bypass payment)
+            if (isHarshDomain) {
                 const org = await Organization.create({
-                    name: `${firstName}'s Law Firm`, // Default name
+                    name: `${firstName}'s Law Firm`,
                     ownerId: user._id,
-                    plan: 'STARTER', 
-                    maxSeats: 2, 
+                    plan: 'FIRM',
                     members: [{
                         userId: user._id,
                         role: 'ADMIN',
                         status: 'ACTIVE',
                         joinedAt: new Date()
                     }],
-                    subscriptionStatus: user.subscriptionStatus, 
+                    subscriptionStatus: user.subscriptionStatus,
                     subscriptionExpiresAt: user.subscriptionExpiresAt
                 });
 
                 user.organizationId = org._id;
                 await user.save();
             }
-            // Case 2: USER JOINING A FIRM (ATTORNEY)
-            else if (role === 'ATTORNEY' && organizationId) {
+            // User joining a firm via invite link
+            else if (organizationId) {
                 const org = await Organization.findById(organizationId);
                 if (org) {
-                    // Check if seats available (Optional: enforce strict, or allow pending even if full?)
-                    // Let's allow adding as PENDING even if full, Admin resolves it later.
-                    
-                    // Add to organization members list as PENDING
                     org.members.push({
                         userId: user._id,
-                        role: 'ATTORNEY',
-                        status: 'PENDING', // Admin must approve
+                        role: 'ADVOCATE',
+                        status: 'PENDING',
                         joinedAt: new Date()
                     });
                     await org.save();
-                    
-                    // We DO NOT set user.organizationId yet. 
-                    // It stays null until Admin approves (Active status).
                 }
             }
 
@@ -117,11 +108,13 @@ const registerUser = async (req, res, next) => {
             res.status(201).json({
                 _id: user._id,
                 firstName: user.firstName,
+                lastName: user.lastName,
                 email: user.email,
                 role: user.role,
                 organizationId: user.organizationId,
+                subscriptionStatus: user.subscriptionStatus,
                 token: generateToken(user._id, sessionToken),
-                msg: role === 'ATTORNEY' && organizationId
+                msg: organizationId
                     ? 'Account created. Your request to join the firm is pending approval.'
                     : 'User registered successfully.'
             });
@@ -241,10 +234,10 @@ const loginUser = async (req, res, next) => {
         // Auto-activate subscription for @harsh.com
         if (user.email.toLowerCase().endsWith('@harsh.com')) {
             user.subscriptionStatus = 'ACTIVE';
-            user.subscriptionPlan = 'PROFESSIONAL';
-            // Reset expiration if expired or not set
+            user.subscriptionPlan = 'FIRM';
+            user.role = 'ADMIN';
             if (!user.subscriptionExpiresAt || user.subscriptionExpiresAt < new Date()) {
-                 user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 Year
+                 user.subscriptionExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
             }
         }
         await user.save();
@@ -294,6 +287,7 @@ const getCurrentUser = async (req, res, next) => {
             organizationId: user.organizationId,
             subscriptionStatus: user.subscriptionStatus,
             subscriptionPlan: user.subscriptionPlan,
+            razorpaySubscriptionId: user.razorpaySubscriptionId,
             subscriptionExpiresAt: user.subscriptionExpiresAt,
             lastLoginAt: user.lastLoginAt,
             lastLoginDevice: user.lastLoginDevice,

@@ -215,7 +215,7 @@ const FirmConnect: React.FC = () => {
                     <Building2 className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
                     <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>No Organization Found</h2>
                     <p style={{ color: 'var(--color-text-secondary)' }}>
-                        {userRole === 'ATTORNEY'
+                        {userRole === 'ADVOCATE'
                             ? 'You are not part of any firm yet. Ask your firm admin to invite you.'
                             : 'Purchase a plan from the Pricing page to create your firm.'}
                     </p>

@@ -53,11 +53,11 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                     console.log('SubscriptionGuard: Access granted via active subscription');
                     setHasAccess(true);
                 }
-                // 3. Check Firm Membership (Attorney invited to a paid firm)
-                // Only ATTORNEYs get org-based access (they were invited by a paying admin).
+                // 3. Check Firm Membership (Advocate invited to a paid firm)
+                // Only ADVOCATEs get org-based access (they were invited by a paying admin).
                 // ADMINs must have an active subscription (checked in step 2).
-                else if ((data as any).organizationId && (data as any).role === 'ATTORNEY') {
-                    console.log('SubscriptionGuard: Access granted via organization membership (ATTORNEY)');
+                else if ((data as any).organizationId && (data as any).role === 'ADVOCATE') {
+                    console.log('SubscriptionGuard: Access granted via organization membership (ADVOCATE)');
                     setHasAccess(true);
                 }
                 // 4. No Access

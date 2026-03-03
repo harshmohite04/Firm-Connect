@@ -13,14 +13,17 @@ const organizationSchema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ['STARTER', 'PROFESSIONAL'],
+        enum: ['FIRM'],
         required: true
     },
-    maxSeats: {
-        type: Number,
-        required: true,
-        default: 2
-    },
+    razorpaySubscriptionId: { type: String, default: null },
+    seats: [{
+        razorpaySubscriptionId: String,
+        plan: { type: String, enum: ['STARTER', 'PROFESSIONAL'] },
+        status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+        assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+        createdAt: { type: Date, default: Date.now }
+    }],
     members: [{
         userId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -29,8 +32,8 @@ const organizationSchema = new mongoose.Schema({
         },
         role: {
             type: String,
-            enum: ['ADMIN', 'ATTORNEY'],
-            default: 'ATTORNEY'
+            enum: ['ADMIN', 'ADVOCATE'],
+            default: 'ADVOCATE'
         },
         status: {
             type: String,
@@ -64,9 +67,9 @@ organizationSchema.virtual('activeMemberCount').get(function() {
     return this.members.filter(m => m.status === 'ACTIVE').length;
 });
 
-// Virtual to check if seats are available
-organizationSchema.virtual('hasAvailableSeats').get(function() {
-    return this.activeMemberCount < this.maxSeats;
+// Virtual to get active seat count
+organizationSchema.virtual('activeSeats').get(function() {
+    return this.seats ? this.seats.filter(s => s.status === 'ACTIVE').length : 0;
 });
 
 // Ensure virtuals are included in JSON

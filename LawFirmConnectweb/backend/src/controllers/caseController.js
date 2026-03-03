@@ -102,7 +102,7 @@ const createCase = async (req, res, next) => {
              }
         }
 
-        if (req.user.role === 'ATTORNEY') {
+        if (req.user.role === 'ADVOCATE') {
             lawyers.push(req.user._id);
             // Ensure uniqueness
             lawyers = [...new Set(lawyers.map(id => id.toString()))];

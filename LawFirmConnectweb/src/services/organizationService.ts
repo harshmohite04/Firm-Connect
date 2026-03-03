@@ -9,7 +9,7 @@ export interface OrganizationMember {
     phone?: string;
     role: string;
   };
-  role: "ADMIN" | "ATTORNEY";
+  role: "ADMIN" | "ADVOCATE";
   status: "ACTIVE" | "REMOVED";
   joinedAt: string;
   removedAt?: string;
@@ -24,13 +24,21 @@ export interface Organization {
     lastName: string;
     email: string;
   };
-  plan: "STARTER" | "PROFESSIONAL";
-  maxSeats: number;
+  plan: "FIRM";
+  razorpaySubscriptionId?: string;
+  seats: {
+    _id: string;
+    razorpaySubscriptionId: string;
+    plan: "STARTER" | "PROFESSIONAL";
+    status: "ACTIVE" | "INACTIVE";
+    assignedTo: { _id: string; firstName: string; lastName: string; email: string } | null;
+    createdAt: string;
+  }[];
   members: OrganizationMember[];
   subscriptionStatus: string;
   subscriptionExpiresAt: string;
   activeMemberCount: number;
-  hasAvailableSeats: boolean;
+  activeSeats: number;
 }
 
 export interface Invitation {
@@ -117,7 +125,7 @@ const reassignCases = async (
 const updateSeats = async (
   additionalSeats: number,
   paymentId?: string,
-): Promise<{ success: boolean; message: string; maxSeats: number }> => {
+): Promise<{ success: boolean; message: string; activeSeats: number }> => {
   const response = await api.patch("/organization/seats", {
     additionalSeats,
     paymentId,
