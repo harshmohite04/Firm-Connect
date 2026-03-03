@@ -4,15 +4,15 @@
  * Run: node backend/src/scripts/createRazorpayPlans.js
  *
  * Creates 5 plans:
- *   1. Starter         – ₹4,999/mo  (individual)
- *   2. Professional     – ₹8,999/mo  (individual)
- *   3. Firm             – ₹9,999/mo  (firm owner)
- *   4. Starter Seat     – ₹4,999/mo  (per-member seat)
- *   5. Professional Seat– ₹8,999/mo  (per-member seat)
+ *   1. Starter              – ₹4,999/mo  (individual)
+ *   2. Professional          – ₹8,999/mo  (individual)
+ *   3. Firm                  – ₹9,999/mo  (firm owner)
+ *   4. Starter Seat          – ₹4,999/mo  (per-member seat, starter tier)
+ *   5. Professional Seat     – ₹8,999/mo  (per-member seat, professional tier)
  *
  * Output: Plan IDs to add to your .env file
  */
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env') });
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env.production') });
 const Razorpay = require('razorpay');
 
 const razorpay = new Razorpay({
@@ -21,11 +21,11 @@ const razorpay = new Razorpay({
 });
 
 const plans = [
-    { item: { name: 'LawFirmAI Starter',           amount: 499900, currency: 'INR', description: 'Starter plan – 5 cases, 2 AI investigations' },         period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_STARTER' },
-    { item: { name: 'LawFirmAI Professional',       amount: 899900, currency: 'INR', description: 'Professional plan – 20 cases, 10 AI investigations' },  period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_PROFESSIONAL' },
-    { item: { name: 'LawFirmAI Firm',               amount: 999900, currency: 'INR', description: 'Firm plan – Unlimited cases, org management' },         period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_FIRM' },
-    { item: { name: 'LawFirmAI Starter Seat',       amount: 499900, currency: 'INR', description: 'Starter seat – per-member subscription' },              period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_SEAT_STARTER' },
-    { item: { name: 'LawFirmAI Professional Seat',  amount: 899900, currency: 'INR', description: 'Professional seat – per-member subscription' },         period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_SEAT_PROFESSIONAL' },
+    { item: { name: 'LawFirmAI Starter',             amount: 499900, currency: 'INR', description: 'Starter plan – 5 cases/mo, 3 AI investigations' },               period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_STARTER' },
+    { item: { name: 'LawFirmAI Professional',       amount: 899900, currency: 'INR', description: 'Professional plan – 20 cases/mo, 8 AI investigations' },          period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_PROFESSIONAL' },
+    { item: { name: 'LawFirmAI Firm',               amount: 999900, currency: 'INR', description: 'Firm plan – 20 cases/mo, org management, admin' },               period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_FIRM' },
+    { item: { name: 'LawFirmAI Starter Seat',       amount: 499900, currency: 'INR', description: 'Starter seat – 5 cases/mo, 3 AI investigations per member' },     period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_SEAT_STARTER' },
+    { item: { name: 'LawFirmAI Professional Seat',  amount: 899900, currency: 'INR', description: 'Professional seat – 20 cases/mo, 8 AI investigations per member' }, period: 'monthly', interval: 1, envKey: 'RAZORPAY_PLAN_SEAT_PROFESSIONAL' },
 ];
 
 async function createPlans() {

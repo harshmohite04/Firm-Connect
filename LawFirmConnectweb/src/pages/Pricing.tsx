@@ -69,11 +69,11 @@ const Pricing: React.FC = () => {
             icon: <Zap className="w-6 h-6" />,
             roleLabel: 'ADVOCATE',
             features: [
-                'Up to 5 active cases',
-                '2 AI Investigations/mo',
-                'Standard RAG (Graph + Vector)',
-                'Individual use',
-                'Basic Email Support'
+                '5 cases/month',
+                '3 AI Investigations/mo',
+                '150 AskAI messages',
+                '5 document drafts',
+                '100 OCR pages'
             ],
             recommended: false,
             cta: 'Subscribe'
@@ -86,11 +86,11 @@ const Pricing: React.FC = () => {
             icon: <Sparkles className="w-6 h-6" />,
             roleLabel: 'ADVOCATE',
             features: [
-                'Up to 20 active cases',
-                '10 AI Investigations/mo',
-                'Advanced AI Research Tools',
-                'Priority Support',
-                'SOC2 Compliance'
+                '20 cases/month',
+                '8 AI Investigations/mo',
+                '300 AskAI messages',
+                '15 document drafts',
+                '500 OCR pages'
             ],
             recommended: true,
             cta: 'Subscribe'
@@ -103,10 +103,11 @@ const Pricing: React.FC = () => {
             icon: <Building2 className="w-6 h-6" />,
             roleLabel: 'ADMIN',
             features: [
-                'Unlimited cases',
-                'Unlimited AI Investigations',
+                '20 cases/month',
+                '8 AI Investigations/mo',
+                'Admin Dashboard',
+                'Add team seats (from ₹4,999/seat)',
                 'Organization management',
-                'Buy per-member seats',
                 'Priority Support'
             ],
             recommended: false,
@@ -129,7 +130,7 @@ const Pricing: React.FC = () => {
         },
         {
             q: 'How do Firm seats work?',
-            a: 'After subscribing to the Firm plan, you can buy additional seats for team members. Each seat is a separate monthly subscription (Starter or Professional tier) that you can assign to invited members.'
+            a: 'Each seat is available as a Starter (₹4,999/mo) or Professional (₹8,999/mo) tier. After payment, the invited member receives an email with an accept link. Accepted members get the plan limits of their seat tier.'
         }
     ];
 
@@ -485,30 +486,26 @@ const Pricing: React.FC = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {renderCategory('Core Features')}
-                                    {renderRow('Active Cases', '5', '20', 'Unlimited')}
-                                    {renderRow('Document Storage', '5 GB', '50 GB', 'Unlimited')}
-                                    {renderRow('Case Management', true, true, true)}
-                                    {renderRow('Client Communication', true, true, true)}
+                                    {renderCategory('Usage Limits')}
+                                    {renderRow('Cases / Month', '5', '20', '20')}
+                                    {renderRow('AI Investigations', '3', '8', '8')}
+                                    {renderRow('AskAI Messages', '150', '300', '300')}
+                                    {renderRow('Document Drafting', '5 docs', '15 docs', '15 docs')}
+                                    {renderRow('Document OCR', '100 pages', '500 pages', '500 pages')}
+                                    {renderRow('Check Sources', true, true, true)}
+                                    {renderRow('Case Law Search', '10', '50', '50')}
+                                    {renderRow('Precedent Finder', true, true, true)}
+                                    {renderRow('Export Reports', '2', '10', '10')}
+
+                                    {renderCategory('Account & Team')}
                                     {renderRow('Role', 'Advocate', 'Advocate', 'Admin')}
+                                    {renderRow('Admin Dashboard', false, false, true)}
+                                    {renderRow('Add Team Seats', false, false, '₹4,999–₹8,999/seat')}
                                     {renderRow('Organization Management', false, false, true)}
-                                    {renderRow('Team Seats', false, false, 'Buy per-member')}
 
-                                    {renderCategory('AI & Intelligence')}
-                                    {renderRow('AI Investigations/mo', '2', '10', 'Unlimited')}
-                                    {renderRow('AI Document Review', 'Basic', 'Advanced', 'Advanced')}
-                                    {renderRow('RAG (Graph + Vector)', 'Standard', 'Standard', 'Standard')}
-                                    {renderRow('AI Legal Research', false, true, true)}
-                                    {renderRow('AI Document Drafting', false, true, true)}
-
-                                    {renderCategory('Security & Compliance')}
-                                    {renderRow('Data Encryption', 'AES-256', 'AES-256', 'AES-256')}
-                                    {renderRow('SOC2 Compliance', false, true, true)}
-                                    {renderRow('Audit Logs', false, true, true)}
-
-                                    {renderCategory('Support & Services')}
+                                    {renderCategory('Support')}
                                     {renderRow('Email Support', true, true, true)}
-                                    {renderRow('Priority Support', false, true, true)}
+                                    {renderRow('Priority Support', false, false, true)}
                                 </tbody>
                             </table>
                         </div>

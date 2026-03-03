@@ -341,11 +341,28 @@ const acceptInvitation = async (req, res, next) => {
             status: 'ACTIVE',
             joinedAt: new Date()
         });
+
+        // Assign the seat that was purchased for this invite
+        if (invitation.seatId) {
+            const seat = org.seats.id(invitation.seatId);
+            if (seat && seat.status === 'ACTIVE') {
+                seat.assignedTo = acceptingUser._id;
+            }
+        }
+
         await org.save({ session });
 
         // Update user
         acceptingUser.organizationId = org._id;
         acceptingUser.role = 'ADVOCATE';
+
+        // Activate the plan for the invited user
+        if (invitation.seatPlan) {
+            acceptingUser.subscriptionPlan = invitation.seatPlan;
+            acceptingUser.subscriptionStatus = 'ACTIVE';
+            acceptingUser.subscriptionExpiresAt = org.subscriptionExpiresAt;
+        }
+
         await acceptingUser.save({ session });
 
         await session.commitTransaction();

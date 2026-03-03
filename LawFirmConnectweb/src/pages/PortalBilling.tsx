@@ -121,6 +121,7 @@ const PortalBilling: React.FC = () => {
     const [seats, setSeats] = useState<Seat[]>([]);
     const [showSeatModal, setShowSeatModal] = useState(false);
     const [selectedSeatPlan, setSelectedSeatPlan] = useState<'STARTER' | 'PROFESSIONAL'>('STARTER');
+    const [inviteEmail, setInviteEmail] = useState('');
 
     // Fetch subscription data
     useEffect(() => {
@@ -190,30 +191,34 @@ const PortalBilling: React.FC = () => {
 
             // Dev bypass
             if (user.email?.endsWith('@harsh.com')) {
-                toast.success(`[TEST] ${selectedSeatPlan} seat added`);
+                toast.success('[TEST] Seat added');
                 setShowSeatModal(false);
+                setInviteEmail('');
                 return;
             }
 
             const { data: subRes } = await axios.post(`${apiUrl}/payments/create-seat`, { seatPlan: selectedSeatPlan }, authHeader);
             if (!subRes.success) { toast.error('Failed to create seat'); return; }
 
+            const seatPrice = selectedSeatPlan === 'PROFESSIONAL' ? '8,999' : '4,999';
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 subscription_id: subRes.subscriptionId,
                 name: "LawFirmAI",
-                description: `${selectedSeatPlan} Seat Subscription`,
+                description: `${selectedSeatPlan} Seat – ₹${seatPrice}/mo`,
                 handler: async function (response: any) {
                     try {
                         const verifyRes = await axios.post(`${apiUrl}/payments/verify-seat`, {
                             razorpay_subscription_id: response.razorpay_subscription_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
-                            seatPlan: selectedSeatPlan
+                            seatPlan: selectedSeatPlan,
+                            inviteEmail: inviteEmail.trim() || undefined
                         }, authHeader);
                         if (verifyRes.data.success) {
                             setSeats(verifyRes.data.seats || []);
-                            toast.success('Seat purchased successfully');
+                            toast.success(inviteEmail.trim() ? 'Seat purchased & invitation sent' : 'Seat purchased successfully');
+                            setInviteEmail('');
                         }
                     } catch { toast.error('Seat verification failed'); }
                 },
@@ -383,7 +388,7 @@ const PortalBilling: React.FC = () => {
                                                     <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                                         seat.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'
                                                     }`}>{seat.status}</span>
-                                                    <span className="text-sm font-medium text-slate-700">{seat.plan} Seat</span>
+                                                    <span className="text-sm font-medium text-slate-700">{seat.plan || 'Seat'} Seat</span>
                                                 </div>
                                                 <div className="text-sm text-slate-500">
                                                     {seat.assignedTo
@@ -405,30 +410,51 @@ const PortalBilling: React.FC = () => {
                 {/* Seat Purchase Modal */}
                 {showSeatModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div onClick={() => setShowSeatModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-                        <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
-                            <h3 className="text-lg font-bold text-slate-900 mb-4">Buy a Seat</h3>
-                            <p className="text-sm text-slate-500 mb-4">Each seat is a separate monthly subscription for a team member.</p>
-                            <div className="space-y-2 mb-6">
-                                {(['STARTER', 'PROFESSIONAL'] as const).map(plan => (
-                                    <button
-                                        key={plan}
-                                        onClick={() => setSelectedSeatPlan(plan)}
-                                        className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                                            selectedSeatPlan === plan
-                                                ? 'border-indigo-500 bg-indigo-50'
-                                                : 'border-slate-200 hover:bg-slate-50'
-                                        }`}
-                                    >
-                                        <div className="font-semibold text-sm text-slate-800">{plan} Seat</div>
-                                        <div className="text-xs text-slate-500">
-                                            ₹{plan === 'STARTER' ? '4,999' : '8,999'}/mo
-                                        </div>
-                                    </button>
-                                ))}
+                        <div onClick={() => { setShowSeatModal(false); setInviteEmail(''); }} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                        <div className="relative bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full">
+                            <h3 className="text-lg font-bold text-slate-900 mb-4">Buy a Team Seat</h3>
+
+                            {/* Invitee email */}
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Invitee's email address</label>
+                            <input
+                                type="email"
+                                value={inviteEmail}
+                                onChange={(e) => setInviteEmail(e.target.value)}
+                                placeholder="colleague@example.com"
+                                className="w-full px-3 py-2.5 border border-slate-200 rounded-lg text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+
+                            {/* Plan tier selector */}
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Seat plan tier</label>
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <button
+                                    onClick={() => setSelectedSeatPlan('STARTER')}
+                                    className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                                        selectedSeatPlan === 'STARTER'
+                                            ? 'border-indigo-600 bg-indigo-50'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className="text-sm font-bold text-slate-900">Starter</div>
+                                    <div className="text-lg font-bold text-indigo-600 mt-1">₹4,999<span className="text-xs text-slate-400">/mo</span></div>
+                                    <div className="text-xs text-slate-500 mt-1">5 cases, 3 AI investigations</div>
+                                </button>
+                                <button
+                                    onClick={() => setSelectedSeatPlan('PROFESSIONAL')}
+                                    className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                                        selectedSeatPlan === 'PROFESSIONAL'
+                                            ? 'border-indigo-600 bg-indigo-50'
+                                            : 'border-slate-200 hover:border-slate-300'
+                                    }`}
+                                >
+                                    <div className="text-sm font-bold text-slate-900">Professional</div>
+                                    <div className="text-lg font-bold text-indigo-600 mt-1">₹8,999<span className="text-xs text-slate-400">/mo</span></div>
+                                    <div className="text-xs text-slate-500 mt-1">20 cases, 8 AI investigations</div>
+                                </button>
                             </div>
+
                             <div className="flex gap-3">
-                                <button onClick={() => setShowSeatModal(false)} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700">
+                                <button onClick={() => { setShowSeatModal(false); setInviteEmail(''); }} className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700">
                                     Cancel
                                 </button>
                                 <button
@@ -436,7 +462,7 @@ const PortalBilling: React.FC = () => {
                                     disabled={seatLoading}
                                     className="flex-1 px-4 py-2.5 bg-indigo-600 rounded-lg text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
                                 >
-                                    {seatLoading ? 'Processing...' : 'Purchase'}
+                                    {seatLoading ? 'Processing...' : 'Purchase & Invite'}
                                 </button>
                             </div>
                         </div>

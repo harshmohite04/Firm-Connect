@@ -290,6 +290,47 @@ def get_web_search_llm(model: str = "sonar-pro"):
         return get_llm(task_tier="standard")
 
 
+def get_combined_web_research(query: str) -> str:
+    """
+    Use BOTH Serper (raw Google results) and Perplexity (AI-synthesized research)
+    for maximum quality. Falls back gracefully if either key is missing.
+
+    Returns combined formatted string with both sources of web intelligence.
+    """
+    sections = []
+
+    # 1. Serper: raw Google search results (fast, factual URLs + snippets)
+    serper_key = os.getenv("SERPER_API_KEY")
+    if serper_key:
+        try:
+            from src.serper_search import serper_web_search
+            serper_results = serper_web_search(query, num_results=10)
+            if not serper_results.startswith("[ERROR]"):
+                sections.append(f"### Google Search Results\n{serper_results}")
+            else:
+                logger.warning(f"Serper returned error: {serper_results}")
+        except Exception as e:
+            logger.warning(f"Serper search failed: {e}")
+
+    # 2. Perplexity: AI-synthesized research with citations
+    perplexity_key = os.getenv("PERPLEXITY_API_KEY")
+    if perplexity_key:
+        try:
+            pplx = get_perplexity_llm()
+            response = pplx.invoke(
+                f"Research Indian legal context for: {query}. "
+                f"Cite specific statutes, sections, and landmark Supreme Court / High Court judgments."
+            )
+            sections.append(f"### AI Legal Research\n{response.content}")
+        except Exception as e:
+            logger.warning(f"Perplexity research failed: {e}")
+
+    if not sections:
+        return "[No web research available — both SERPER_API_KEY and PERPLEXITY_API_KEY are missing or failed]"
+
+    return "\n\n".join(sections)
+
+
 def get_llm_with_retry(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"):
     """Get an LLM instance with automatic retry on transient failures."""
     llm = get_llm(model_name=model_name, task_tier=task_tier)

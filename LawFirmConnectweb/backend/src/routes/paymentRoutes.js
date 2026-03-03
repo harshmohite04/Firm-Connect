@@ -4,6 +4,9 @@ const razorpay = require('../utils/razorpayConfig');
 const crypto = require('crypto');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
+const TeamInvitation = require('../models/TeamInvitation');
+const sendEmail = require('../utils/emailService');
+const { orgSeatInvitationTemplate, orgSeatInvitationNewUserTemplate } = require('../utils/organizationInvitationTemplate');
 const { protect, admin } = require('../middlewares/authMiddleware');
 
 // Map plan names to env-based Razorpay plan IDs
@@ -139,10 +142,9 @@ router.post('/verify-subscription', protect, async (req, res) => {
 router.post('/create-seat', protect, admin, async (req, res) => {
     try {
         const { seatPlan } = req.body; // 'STARTER' | 'PROFESSIONAL'
-
-        const razorpayPlanId = SEAT_PLAN_MAP[seatPlan];
-        if (!razorpayPlanId) {
-            return res.status(400).json({ success: false, message: `Invalid seat plan: ${seatPlan}` });
+        const razorpaySeatPlanId = SEAT_PLAN_MAP[seatPlan];
+        if (!razorpaySeatPlanId) {
+            return res.status(400).json({ success: false, message: `Invalid seat plan: ${seatPlan}. Must be STARTER or PROFESSIONAL.` });
         }
 
         const user = await User.findById(req.user._id);
@@ -151,14 +153,14 @@ router.post('/create-seat', protect, admin, async (req, res) => {
         }
 
         const subscription = await razorpay.subscriptions.create({
-            plan_id: razorpayPlanId,
+            plan_id: razorpaySeatPlanId,
             total_count: 12,
             customer_notify: 1,
             notes: {
                 userId: req.user._id.toString(),
                 organizationId: user.organizationId.toString(),
-                seatPlan,
-                type: 'seat'
+                type: 'seat',
+                seatPlan
             }
         });
 
@@ -179,7 +181,7 @@ router.post('/create-seat', protect, admin, async (req, res) => {
 // =====================================================
 router.post('/verify-seat', protect, admin, async (req, res) => {
     try {
-        const { razorpay_subscription_id, razorpay_payment_id, razorpay_signature, seatPlan } = req.body;
+        const { razorpay_subscription_id, razorpay_payment_id, razorpay_signature, seatPlan, inviteEmail } = req.body;
 
         // Verify HMAC signature
         const body = razorpay_payment_id + '|' + razorpay_subscription_id;
@@ -201,16 +203,68 @@ router.post('/verify-seat', protect, admin, async (req, res) => {
 
         org.seats.push({
             razorpaySubscriptionId: razorpay_subscription_id,
-            plan: seatPlan,
+            plan: seatPlan || 'STARTER',
             status: 'ACTIVE',
             assignedTo: null,
             createdAt: new Date()
         });
         await org.save();
 
+        const newSeat = org.seats[org.seats.length - 1];
+
+        // Send invitation email if inviteEmail provided
+        if (inviteEmail) {
+            const invitedEmail = inviteEmail.toLowerCase().trim();
+            const adminName = `${user.firstName} ${user.lastName}`;
+            let invitedUser = await User.findOne({ email: invitedEmail });
+            let generatedPassword = null;
+            let isNewUser = false;
+
+            if (!invitedUser) {
+                isNewUser = true;
+                generatedPassword = crypto.randomBytes(12).toString('hex');
+                invitedUser = await User.create({
+                    firstName: invitedEmail.split('@')[0],
+                    lastName: 'Member',
+                    email: invitedEmail,
+                    password: generatedPassword,
+                    role: 'ADVOCATE',
+                    status: 'VERIFIED'
+                });
+            }
+
+            const invitation = await TeamInvitation.create({
+                organizationId: org._id,
+                invitedBy: req.user._id,
+                invitedEmail,
+                invitedUserId: invitedUser._id,
+                seatId: newSeat._id,
+                seatPlan: seatPlan || 'STARTER'
+            });
+
+            const frontendUrl = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
+            const acceptLink = `${frontendUrl}/invite/${invitation.token}/accept`;
+            const rejectLink = `${frontendUrl}/invite/${invitation.token}/reject`;
+
+            try {
+                const htmlContent = isNewUser
+                    ? orgSeatInvitationNewUserTemplate(org.name, adminName, seatPlan || 'STARTER', acceptLink, rejectLink, generatedPassword)
+                    : orgSeatInvitationTemplate(org.name, adminName, seatPlan || 'STARTER', acceptLink, rejectLink);
+
+                await sendEmail({
+                    email: invitedEmail,
+                    subject: `You're invited to join ${org.name}`,
+                    html: htmlContent,
+                    message: `You have been invited to join ${org.name} on LawFirmConnect.`
+                });
+            } catch (emailError) {
+                console.error('Failed to send seat invitation email:', emailError);
+            }
+        }
+
         res.json({
             success: true,
-            message: `${seatPlan} seat added to organization`,
+            message: inviteEmail ? 'Seat added and invitation sent' : 'Seat added to organization',
             seats: org.seats
         });
     } catch (error) {

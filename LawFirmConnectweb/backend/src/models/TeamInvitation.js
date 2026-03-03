@@ -23,6 +23,15 @@ const teamInvitationSchema = new mongoose.Schema({
         ref: 'User',
         default: null
     },
+    seatId: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null
+    },
+    seatPlan: {
+        type: String,
+        enum: ['STARTER', 'PROFESSIONAL'],
+        default: null
+    },
     status: {
         type: String,
         enum: ['pending', 'accepted', 'rejected'],
