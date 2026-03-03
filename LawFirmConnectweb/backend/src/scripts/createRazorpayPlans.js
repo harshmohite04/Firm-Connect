@@ -16,8 +16,8 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env.
 const Razorpay = require('razorpay');
 
 const razorpay = new Razorpay({
-    key_id: "rzp_live_SDP3lAYaf3uoiv",
-    key_secret: "ktKelOL130OpOj77DsiHK7c0"
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
 const plans = [

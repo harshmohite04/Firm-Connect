@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { CheckCircle, X, Lock, ChevronDown, Sparkles, Shield, Zap, Mail, Building2 } from 'lucide-react';
+import { CheckCircle, X, Lock, ChevronDown, Sparkles, Zap, Mail, Building2 } from 'lucide-react';
 import axios from 'axios';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
