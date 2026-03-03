@@ -42,6 +42,7 @@ import SubscriptionGuard from "./components/SubscriptionGuard";
 import FirmConnect from "./pages/FirmConnect";
 import OrganizationPage from "./pages/Organization";
 import InviteAccept from "./pages/InviteAccept";
+import InviteSetup from "./pages/InviteSetup";
 
 // ScrollToTop component to handle scroll position on route change
 const ScrollToTop = () => {
@@ -191,6 +192,7 @@ const App: React.FC = () => {
           />
 
           {/* Invitation Routes (semi-public) */}
+          <Route path="/invite/:token/setup" element={<InviteSetup />} />
           <Route path="/invite/:token/accept" element={<InviteAccept />} />
           <Route path="/invite/:token/reject" element={<InviteAccept />} />
 

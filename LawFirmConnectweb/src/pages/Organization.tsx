@@ -158,7 +158,7 @@ const OrganizationPage: React.FC = () => {
                         <p className="text-sm mb-1" style={{ color: 'var(--color-text-secondary)' }}>Subscription</p>
                         <p className="text-xl font-bold text-green-600">{org.subscriptionStatus}</p>
                         <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                            Expires {new Date(org.subscriptionExpiresAt).toLocaleDateString()}
+                            Auto-renews monthly
                         </p>
                     </div>
                 </div>

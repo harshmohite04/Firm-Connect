@@ -23,7 +23,9 @@
       "Bash(head:*)",
       "Bash(python3:*)",
       "Bash(test:*)",
-      "Bash(\"D:\\\\harsh\\\\Code_Playground\\\\Law Firm Connect\\\\CheckOne\\\\Firm-Connect\\\\utils\\\\system_settings.py\":*)"
+      "Bash(\"D:\\\\harsh\\\\Code_Playground\\\\Law Firm Connect\\\\CheckOne\\\\Firm-Connect\\\\utils\\\\system_settings.py\":*)",
+      "Bash(xargs grep:*)",
+      "Bash(node:*)"
     ]
   }
 }

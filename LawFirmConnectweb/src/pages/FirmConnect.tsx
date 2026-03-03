@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import organizationService from '../services/organizationService';
-import type { Organization, OrganizationMember, Invitation } from '../services/organizationService';
+import type { Organization, OrganizationMember, Invitation, MyInvitation } from '../services/organizationService';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2, MoreVertical, Eye } from 'lucide-react';
+import { UserPlus, Users, Mail, Clock, CheckCircle, Building2, Crown, Shield, Trash2, MoreVertical, Eye, X } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 declare global {
@@ -26,11 +26,15 @@ const FirmConnect: React.FC = () => {
     const [userRole, setUserRole] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [showSeatUpgrade, setShowSeatUpgrade] = useState(false);
-    const [seatCount, setSeatCount] = useState(1);
+    const [selectedSeatPlan, setSelectedSeatPlan] = useState<'STARTER' | 'PROFESSIONAL'>('STARTER');
     const [updatingSeats, setUpdatingSeats] = useState(false);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [myInvitations, setMyInvitations] = useState<MyInvitation[]>([]);
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
+    const [showCancelSeatConfirm, setShowCancelSeatConfirm] = useState(false);
+    const [seatToCancel, setSeatToCancel] = useState<{ id: string; assignedName: string | null } | null>(null);
+    const [cancellingSeat, setCancellingSeat] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
 
@@ -71,7 +75,15 @@ const FirmConnect: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Error fetching org data:', error);
-            if (error?.response?.status !== 404) {
+            if (error?.response?.status === 404) {
+                // No org — check if there are pending invitations for this user
+                try {
+                    const invs = await organizationService.getMyInvitations();
+                    setMyInvitations(invs);
+                } catch {
+                    // Ignore — user just has no invitations
+                }
+            } else {
                 toast.error('Failed to load organization data');
             }
         } finally {
@@ -114,62 +126,111 @@ const FirmConnect: React.FC = () => {
         }
     };
 
+    const handleCancelSeat = (seatId: string, assignedName: string | null) => {
+        setSeatToCancel({ id: seatId, assignedName });
+        setShowCancelSeatConfirm(true);
+    };
+
+    const confirmCancelSeat = async () => {
+        if (!seatToCancel) return;
+        try {
+            setCancellingSeat(true);
+            const result = await organizationService.cancelSeat(seatToCancel.id);
+            toast.success(result.message || 'Seat cancelled');
+            fetchData();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to cancel seat');
+        } finally {
+            setCancellingSeat(false);
+            setSeatToCancel(null);
+            setShowCancelSeatConfirm(false);
+        }
+    };
+
+    const handleAcceptInvitation = async (token: string) => {
+        try {
+            const result = await organizationService.acceptInvitation(token);
+            toast.success(result.message || 'Invitation accepted!');
+            fetchData(); // Reload — user now has an org
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to accept invitation');
+        }
+    };
+
+    const handleDeclineInvitation = async (token: string) => {
+        try {
+            await organizationService.rejectInvitation(token);
+            toast.success('Invitation declined');
+            setMyInvitations(prev => prev.filter(inv => inv.token !== token));
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to decline invitation');
+        }
+    };
+
+    const handleRevokeInvitation = async (invitationId: string) => {
+        try {
+            await organizationService.revokeInvitation(invitationId);
+            toast.success('Invitation revoked');
+            fetchData();
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to revoke invitation');
+        }
+    };
+
     const handleAddSeats = async () => {
         try {
             setUpdatingSeats(true);
 
             // @harsh.com users bypass payment
             if (userEmail.endsWith('@harsh.com')) {
-                const result = await organizationService.updateSeats(seatCount);
+                const result = await organizationService.updateSeats(1);
                 toast.success(result.message);
                 setShowSeatUpgrade(false);
-                setSeatCount(1);
                 fetchData();
                 return;
             }
 
-            // All other users go through Razorpay payment
-            const pricePerSeat = org?.plan === 'STARTER' ? 299 : 499;
-            const totalAmount = pricePerSeat * seatCount;
-
+            // All other users go through Razorpay subscription-based seat purchase
             const userStr = localStorage.getItem('user');
             const user = userStr ? JSON.parse(userStr) : null;
             const token = user?.token;
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
             const authHeader = { headers: { Authorization: `Bearer ${token}` } };
 
-            // Create Razorpay order
-            const { data: orderData } = await axios.post(
-                `${apiUrl}/payments/create-order`,
-                { planId: org?.plan || 'PROFESSIONAL', amount: totalAmount },
+            // Create seat subscription
+            const { data: subRes } = await axios.post(
+                `${apiUrl}/payments/create-seat`,
+                { seatPlan: selectedSeatPlan },
                 authHeader
             );
 
-            if (!orderData.success) {
-                toast.error('Failed to initiate payment');
+            if (!subRes.success) {
+                toast.error('Failed to create seat subscription');
                 setUpdatingSeats(false);
                 return;
             }
 
-            // Open Razorpay checkout
+            const seatPrice = selectedSeatPlan === 'PROFESSIONAL' ? '8,999' : '4,999';
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                amount: orderData.order.amount,
-                currency: 'INR',
+                subscription_id: subRes.subscriptionId,
                 name: 'LawFirmAI',
-                description: `Add ${seatCount} seat(s) to your plan`,
-                order_id: orderData.order.id,
+                description: `${selectedSeatPlan} Seat – ₹${seatPrice}/mo`,
                 handler: async function (response: any) {
                     try {
-                        // Use the payment_id from Razorpay to verify on backend
-                        const result = await organizationService.updateSeats(
-                            seatCount,
-                            response.razorpay_payment_id
-                        );
-                        toast.success(result.message);
-                        setShowSeatUpgrade(false);
-                        setSeatCount(1);
-                        fetchData();
+                        const verifyRes = await axios.post(`${apiUrl}/payments/verify-seat`, {
+                            razorpay_subscription_id: response.razorpay_subscription_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            seatPlan: selectedSeatPlan,
+                        }, authHeader);
+                        if (verifyRes.data.success) {
+                            toast.success('Seat purchased successfully');
+                            setShowSeatUpgrade(false);
+                            fetchData();
+                        } else {
+                            toast.error('Seat verification failed');
+                        }
                     } catch (err: any) {
                         toast.error(err?.response?.data?.message || 'Seat upgrade failed after payment');
                     } finally {
@@ -192,7 +253,7 @@ const FirmConnect: React.FC = () => {
             return; // loading cleared by handler or ondismiss
 
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to update seats');
+            toast.error(error?.response?.data?.message || 'Failed to purchase seat');
         } finally {
             setUpdatingSeats(false);
         }
@@ -211,14 +272,65 @@ const FirmConnect: React.FC = () => {
     if (!org) {
         return (
             <PortalLayout>
-                <div className="max-w-2xl mx-auto text-center py-20">
-                    <Building2 className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
-                    <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>No Organization Found</h2>
-                    <p style={{ color: 'var(--color-text-secondary)' }}>
-                        {userRole === 'ADVOCATE'
-                            ? 'You are not part of any firm yet. Ask your firm admin to invite you.'
-                            : 'Purchase a plan from the Pricing page to create your firm.'}
-                    </p>
+                <div className="max-w-2xl mx-auto py-20">
+                    {myInvitations.length > 0 ? (
+                        <div>
+                            <div className="text-center mb-8">
+                                <Mail className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-accent)' }} />
+                                <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>
+                                    You Have Pending Invitation{myInvitations.length > 1 ? 's' : ''}
+                                </h2>
+                                <p style={{ color: 'var(--color-text-secondary)' }}>
+                                    A firm has invited you to join. Accept to start collaborating.
+                                </p>
+                            </div>
+                            <div className="space-y-4">
+                                {myInvitations.map((inv) => (
+                                    <div key={inv._id} className="card-surface p-6 rounded-xl">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-accent-soft)' }}>
+                                                    <Building2 className="h-6 w-6" style={{ color: 'var(--color-accent)' }} />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-lg" style={{ color: 'var(--color-text-primary)' }}>
+                                                        {inv.organizationId?.name || 'Unknown Firm'}
+                                                    </p>
+                                                    <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                                                        Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => handleDeclineInvitation(inv.token)}
+                                                    className="px-4 py-2 text-sm font-medium rounded-lg border transition-colors hover:bg-red-50 text-red-600 border-red-200"
+                                                >
+                                                    Decline
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAcceptInvitation(inv.token)}
+                                                    className="btn-gradient px-5 py-2 text-sm font-semibold rounded-lg"
+                                                >
+                                                    Accept
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center">
+                            <Building2 className="mx-auto h-16 w-16 mb-6" style={{ color: 'var(--color-text-tertiary)' }} />
+                            <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--color-text-primary)' }}>No Organization Found</h2>
+                            <p style={{ color: 'var(--color-text-secondary)' }}>
+                                {userRole === 'ADVOCATE'
+                                    ? 'You are not part of any firm yet. Ask your firm admin to invite you.'
+                                    : 'Purchase a plan from the Pricing page to create your firm.'}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </PortalLayout>
         );
@@ -268,26 +380,38 @@ const FirmConnect: React.FC = () => {
                                 </button>
                             ) : (
                                 <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100 space-y-3">
-                                    <div className="flex items-center gap-3 flex-wrap">
-                                        <label className="text-sm font-medium text-slate-700">Seats to add:</label>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={50 - totalSeats}
-                                            value={seatCount}
-                                            onChange={(e) => setSeatCount(Math.max(1, parseInt(e.target.value) || 1))}
-                                            className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-center font-semibold"
-                                        />
-                                        <span className="text-sm text-slate-500">
-                                            New total: {totalSeats + seatCount} seats
-                                        </span>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Select plan for the new seat</label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={() => setSelectedSeatPlan('STARTER')}
+                                            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                                                selectedSeatPlan === 'STARTER'
+                                                    ? 'border-indigo-600 bg-indigo-50'
+                                                    : 'border-slate-200 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <div className="text-sm font-bold text-slate-900">Starter</div>
+                                            <div className="text-xs font-semibold text-indigo-600">₹4,999/mo</div>
+                                            <div className="text-xs text-slate-500 mt-1">5 cases, 5 AI investigations</div>
+                                        </button>
+                                        <button
+                                            onClick={() => setSelectedSeatPlan('PROFESSIONAL')}
+                                            className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                                                selectedSeatPlan === 'PROFESSIONAL'
+                                                    ? 'border-indigo-600 bg-indigo-50'
+                                                    : 'border-slate-200 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <div className="text-sm font-bold text-slate-900">Professional</div>
+                                            <div className="text-xs font-semibold text-indigo-600">₹8,999/mo</div>
+                                            <div className="text-xs text-slate-500 mt-1">20 cases, 12 AI investigations</div>
+                                        </button>
                                     </div>
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between pt-1">
                                         <p className="text-sm text-slate-600">
                                             <span className="font-semibold text-slate-800">
-                                                ₹{org.plan === 'STARTER' ? 4999 : 4999}/seat/month
+                                                ₹{selectedSeatPlan === 'PROFESSIONAL' ? '8,999' : '4,999'}/seat/month
                                             </span>
-                                            {' · '}Total: <span className="font-bold text-indigo-700">₹{(org.plan === 'STARTER' ? 4999 : 4999) * seatCount}/month</span>
                                             {userEmail.endsWith('@harsh.com') && <span className="ml-2 text-xs text-amber-600 font-medium">(Bypass — no charge)</span>}
                                         </p>
                                         <div className="flex items-center gap-2">
@@ -299,7 +423,7 @@ const FirmConnect: React.FC = () => {
                                                 {updatingSeats ? 'Processing...' : 'Confirm'}
                                             </button>
                                             <button
-                                                onClick={() => { setShowSeatUpgrade(false); setSeatCount(1); }}
+                                                onClick={() => { setShowSeatUpgrade(false); setSelectedSeatPlan('STARTER'); }}
                                                 className="px-3 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
                                             >
                                                 Cancel
@@ -311,6 +435,48 @@ const FirmConnect: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Seat List (Admin Only) */}
+                {userRole === 'ADMIN' && org.seats && org.seats.length > 0 && (
+                    <div className="card-surface p-6 mb-8">
+                        <h3 className="font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--color-text-primary)' }}>
+                            <Shield className="h-5 w-5" style={{ color: 'var(--color-accent)' }} />
+                            Seats ({org.seats.filter(s => s.status === 'ACTIVE').length} active)
+                        </h3>
+                        <div className="space-y-3">
+                            {org.seats.filter(s => s.status === 'ACTIVE').map((seat) => (
+                                <div key={seat._id} className="flex items-center justify-between py-3 px-4 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                            seat.plan === 'PROFESSIONAL'
+                                                ? 'text-purple-700 bg-purple-100'
+                                                : 'text-blue-700 bg-blue-100'
+                                        }`}>
+                                            {seat.plan}
+                                        </span>
+                                        <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>
+                                            {seat.assignedTo
+                                                ? `${seat.assignedTo.firstName} ${seat.assignedTo.lastName}`
+                                                : <span className="italic text-slate-400">Unassigned</span>
+                                            }
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleCancelSeat(
+                                            seat._id,
+                                            seat.assignedTo ? `${seat.assignedTo.firstName} ${seat.assignedTo.lastName}` : null
+                                        )}
+                                        disabled={!!seat.assignedTo}
+                                        title={seat.assignedTo ? 'Remove the member first' : 'Cancel this seat'}
+                                        className={`flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${seat.assignedTo ? 'text-red-400 bg-red-50 opacity-50 cursor-not-allowed' : 'text-red-600 bg-red-50 hover:bg-red-100'}`}
+                                    >
+                                        <Trash2 className="h-3 w-3" /> Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Invite Form (Admin Only) */}
                 {userRole === 'ADMIN' && (
@@ -359,9 +525,13 @@ const FirmConnect: React.FC = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-medium text-amber-600 bg-amber-100 px-3 py-1 rounded-full">
-                                        Pending
-                                    </span>
+                                    <button
+                                        onClick={() => handleRevokeInvitation(inv._id)}
+                                        className="flex items-center gap-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+                                        title="Revoke invitation"
+                                    >
+                                        <X className="h-3 w-3" /> Revoke
+                                    </button>
                                 </div>
                             ))}
                         </div>
@@ -459,6 +629,22 @@ const FirmConnect: React.FC = () => {
                     message={`Remove ${memberToRemove?.name || 'this member'} from the organization? They will lose portal access.`}
                     confirmText="Remove"
                     cancelText="Cancel"
+                    type="danger"
+                />
+
+                {/* Cancel Seat Confirmation */}
+                <ConfirmationModal
+                    isOpen={showCancelSeatConfirm}
+                    onClose={() => { setShowCancelSeatConfirm(false); setSeatToCancel(null); }}
+                    onConfirm={confirmCancelSeat}
+                    title="Cancel Seat"
+                    message={
+                        seatToCancel?.assignedName
+                            ? `This will cancel the seat subscription and remove ${seatToCancel.assignedName} from the organization. Continue?`
+                            : 'Cancel this seat subscription?'
+                    }
+                    confirmText={cancellingSeat ? 'Cancelling...' : 'Cancel Seat'}
+                    cancelText="Keep"
                     type="danger"
                 />
             </div>

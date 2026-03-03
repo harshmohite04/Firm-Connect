@@ -226,4 +226,88 @@ const orgSeatInvitationNewUserTemplate = (orgName, adminName, seatPlan, acceptLi
     `;
 };
 
-module.exports = { organizationInvitationTemplate, organizationExistingUserTemplate, orgSeatInvitationTemplate, orgSeatInvitationNewUserTemplate };
+const organizationInvitationSetupTemplate = (orgName, adminName, setupLink) => {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #334155;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .info-box {
+            background-color: #f1f5f9;
+            border-left: 4px solid #0f172a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #0f172a;
+            color: #ffffff;
+            padding: 14px 32px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to LawFirmConnect</h1>
+        </div>
+        <div class="content">
+            <h2>You have been invited to join ${orgName}</h2>
+            <p>Hello,</p>
+            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmConnect.</p>
+
+            <div class="info-box">
+                <p><strong>Organization:</strong> ${orgName}</p>
+                <p><strong>Role:</strong> Attorney</p>
+            </div>
+
+            <p>Click below to create your account and join the organization:</p>
+
+            <div style="text-align: center;">
+                <a href="${setupLink}" class="btn">Set Up Your Account</a>
+            </div>
+
+            <p style="margin-top: 24px; font-size: 12px; color: #94a3b8;">This invitation expires in 3 days.</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+};
+
+module.exports = { organizationInvitationTemplate, organizationExistingUserTemplate, orgSeatInvitationTemplate, orgSeatInvitationNewUserTemplate, organizationInvitationSetupTemplate };

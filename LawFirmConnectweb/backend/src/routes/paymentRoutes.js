@@ -274,6 +274,58 @@ router.post('/verify-seat', protect, admin, async (req, res) => {
 });
 
 // =====================================================
+// POST /payments/cancel-seat
+// Admin cancels a specific seat subscription
+// =====================================================
+router.post('/cancel-seat', protect, admin, async (req, res) => {
+    try {
+        const { seatId } = req.body;
+        if (!seatId) {
+            return res.status(400).json({ success: false, message: 'seatId is required' });
+        }
+
+        const org = await Organization.findOne({ ownerId: req.user._id });
+        if (!org) {
+            return res.status(404).json({ success: false, message: 'Organization not found' });
+        }
+
+        const seat = org.seats.id(seatId);
+        if (!seat) {
+            return res.status(404).json({ success: false, message: 'Seat not found' });
+        }
+
+        // Block removal of occupied seats — admin must remove the member first
+        if (seat.assignedTo) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot remove an occupied seat. Remove the member first, then cancel the seat.'
+            });
+        }
+
+        // Cancel Razorpay subscription for this seat
+        if (seat.razorpaySubscriptionId) {
+            try {
+                await razorpay.subscriptions.cancel(seat.razorpaySubscriptionId);
+            } catch (rzpErr) {
+                console.error('Razorpay seat cancel error:', rzpErr);
+            }
+        }
+
+        seat.status = 'INACTIVE';
+        await org.save();
+
+        res.json({
+            success: true,
+            message: 'Seat cancelled successfully',
+            seats: org.seats
+        });
+    } catch (error) {
+        console.error('Cancel Seat Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to cancel seat' });
+    }
+});
+
+// =====================================================
 // POST /payments/cancel-subscription
 // Cancels the user's Razorpay subscription
 // =====================================================

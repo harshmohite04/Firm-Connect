@@ -48,6 +48,15 @@ export interface Invitation {
   expiresAt: string;
 }
 
+export interface MyInvitation {
+  _id: string;
+  organizationId: { _id: string; name: string };
+  invitedEmail: string;
+  token: string;
+  status: "pending";
+  expiresAt: string;
+}
+
 export interface CaseForReassignment {
   _id: string;
   title: string;
@@ -133,6 +142,45 @@ const updateSeats = async (
   return response.data;
 };
 
+const getMyInvitations = async (): Promise<MyInvitation[]> => {
+  const response = await api.get("/organization/my-invitations");
+  return response.data.invitations;
+};
+
+const revokeInvitation = async (
+  invitationId: string,
+): Promise<{ message: string }> => {
+  const response = await api.delete(`/organization/invitations/${invitationId}`);
+  return response.data;
+};
+
+export interface InvitationInfo {
+  invitedEmail: string;
+  organizationName: string;
+  expiresAt: string;
+  userExists: boolean;
+}
+
+const getInvitationInfo = async (token: string): Promise<InvitationInfo> => {
+  const response = await api.get(`/organization/invitations/${token}/info`);
+  return response.data.invitation;
+};
+
+const completeInviteSetup = async (
+  token: string,
+  data: { firstName: string; lastName: string; phone: string; password: string },
+): Promise<any> => {
+  const response = await api.post(`/organization/invitations/${token}/setup`, data);
+  return response.data;
+};
+
+const cancelSeat = async (
+  seatId: string,
+): Promise<{ success: boolean; message: string; seats: Organization["seats"] }> => {
+  const response = await api.post("/payments/cancel-seat", { seatId });
+  return response.data;
+};
+
 const organizationService = {
   getOrganization,
   getMembers,
@@ -140,9 +188,14 @@ const organizationService = {
   getInvitations,
   acceptInvitation,
   rejectInvitation,
+  getMyInvitations,
+  revokeInvitation,
   removeMember,
   reassignCases,
   updateSeats,
+  getInvitationInfo,
+  completeInviteSetup,
+  cancelSeat,
 };
 
 export default organizationService;
