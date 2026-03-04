@@ -48,9 +48,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(newTheme);
   };
 
-  // Prevent flash of unstyled content (FOUC) by not rendering until mounted
+  // Prevent FOUC but always wrap in Provider so useTheme() never fails
   if (!mounted) {
-    return <>{children}</>;
+    return (
+      <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
+        {children}
+      </ThemeContext.Provider>
+    );
   }
 
   return (
