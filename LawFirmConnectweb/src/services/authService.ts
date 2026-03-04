@@ -72,6 +72,48 @@ const getCurrentUser = async (): Promise<User> => {
   return response.data;
 };
 
+const sendOTP = async (email: string): Promise<{ message: string }> => {
+  const response = await api.post("/auth/send-otp", { email });
+  return response.data;
+};
+
+const verifyOTP = async (
+  email: string,
+  otp: string,
+  purpose: "VERIFY_EMAIL" | "RESET_PASSWORD",
+): Promise<{ verified: boolean; resetToken?: string }> => {
+  const response = await api.post("/auth/verify-otp", { email, otp, purpose });
+  return response.data;
+};
+
+const resendOTP = async (
+  email: string,
+  purpose: "VERIFY_EMAIL" | "RESET_PASSWORD",
+): Promise<{ message: string }> => {
+  const response = await api.post("/auth/resend-otp", { email, purpose });
+  return response.data;
+};
+
+const forgotPassword = async (
+  email: string,
+): Promise<{ message: string }> => {
+  const response = await api.post("/auth/forgot-password", { email });
+  return response.data;
+};
+
+const resetPassword = async (
+  email: string,
+  resetToken: string,
+  newPassword: string,
+): Promise<{ message: string }> => {
+  const response = await api.post("/auth/reset-password", {
+    email,
+    resetToken,
+    newPassword,
+  });
+  return response.data;
+};
+
 const getOrganizations = async (): Promise<OrganizationSummary[]> => {
   const response = await api.get("/organization/public"); // Note: Ensure backend route is /organization/public
   return response.data?.organizations || [];
@@ -83,6 +125,11 @@ const authService = {
   logout,
   getCurrentUser,
   getOrganizations,
+  sendOTP,
+  verifyOTP,
+  resendOTP,
+  forgotPassword,
+  resetPassword,
 };
 
 export default authService;

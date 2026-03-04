@@ -3,24 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 // Icons
-const GlobeIcon = () => (
-    <svg className="w-6 h-6" style={{ color: 'var(--color-accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-);
-
-const CpuChipIcon = () => (
-    <svg className="w-6 h-6" style={{ color: 'var(--color-accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-    </svg>
-);
-
-const HeartIcon = () => (
-    <svg className="w-6 h-6" style={{ color: 'var(--color-accent)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-    </svg>
-);
-
 const CheckIcon = () => (
     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3" style={{ color: 'var(--color-accent)' }}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -53,43 +35,25 @@ const AboutUs: React.FC = () => {
                         {/* Badge */}
                         <div className="badge-glow">
                             <SparkleIcon />
-                            <span>{t('aboutUs.heroTitle').split(' ')[0] || 'OUR STORY'}</span>
+                            <span>{t('aboutUs.missionLabel')}</span>
                         </div>
 
                         {/* Headline */}
                         <div className="max-w-4xl mx-auto">
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-[1.1] mb-6 tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                                {t('aboutUs.heroTitle').replace(/Technology|Innovation/gi, '').trim()}{' '}
-                                <span className="text-gradient">{t('aboutUs.heroTitle').match(/Technology|Innovation/gi)?.[0] || 'Technology'}</span>
+                                {t('aboutUs.missionTitle')}
                             </h1>
 
                             <p className="text-lg lg:text-xl mb-10 leading-relaxed max-w-2xl mx-auto" style={{ color: 'var(--color-text-secondary)' }}>
-                                {t('aboutUs.heroSubtitle')}
+                                {t('aboutUs.missionDesc')}
                             </p>
-
-                            {/* CTA Buttons */}
-                            <div className="flex flex-col sm:flex-row gap-4 mb-10 justify-center">
-                                <Link to="/pricing" className="btn-gradient text-center inline-flex items-center justify-center gap-2 text-base">
-                                    {t('aboutUs.scheduleConsultation') || 'Get Started'}
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                    </svg>
-                                </Link>
-                                <Link to="/platform" className="btn-ghost text-center inline-flex items-center justify-center gap-2 text-base">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t('aboutUs.viewProfile') || 'Watch Demo'}
-                                </Link>
-                            </div>
 
                             {/* Trust Badges */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-6 text-sm font-medium justify-center" style={{ color: 'var(--color-text-secondary)' }}>
                                 {[
                                     t('aboutUs.topRated') || 'Top Rated Platform',
                                     t('aboutUs.noWinNoFee') || 'No Win No Fee',
-                                    'AI-Powered Research',
+                                    t('hero.successRate'),
                                 ].map((badge, i) => (
                                     <div key={i} className="flex items-center justify-center gap-2">
                                         <span className="flex items-center justify-center w-6 h-6 rounded-full" style={{ backgroundColor: 'var(--color-accent-soft)' }}>
@@ -104,63 +68,7 @@ const AboutUs: React.FC = () => {
                 </div>
             </section>
 
-            {/* Stats Banner */}
-            <section className="py-16 relative overflow-hidden text-white" style={{ background: 'var(--gradient-accent)' }}>
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-white opacity-5 rounded-full blur-[120px] translate-x-1/2 -translate-y-1/2"></div>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center md:divide-x md:divide-white/20">
-                        {[
-                            { value: '9', key: 'yearsExperience' },
-                            { value: '3 Cr+', key: 'recovered' },
-                            { value: '5+', key: 'casesWon' },
-                            { value: '24/7', key: 'expertAttorneys' },
-                        ].map((stat, i) => (
-                            <div key={i} className="space-y-2 px-4">
-                                <div className="text-4xl md:text-5xl font-extrabold tracking-tight">{stat.value}</div>
-                                <div className="text-xs font-semibold uppercase tracking-wider text-white/70">{t(`aboutUs.${stat.key}`)}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* Mission & Values Section */}
-            <section className="section-alt py-24">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16 space-y-3">
-                        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
-                            {t('aboutUs.missionLabel') || 'OUR VALUES'}
-                        </span>
-                        <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                            {t('aboutUs.missionTitle') || 'Built on Foundation of Trust'}
-                        </h2>
-                        <p className="text-lg max-w-2xl mx-auto font-medium leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                            {t('aboutUs.missionDesc')}
-                        </p>
-                    </div>
-
-                    {/* Values Cards */}
-                    <div className="grid md:grid-cols-3 gap-6">
-                        {[
-                            { titleKey: 'integrity', icon: <GlobeIcon />, descKey: 'integrityDesc' },
-                            { titleKey: 'excellence', icon: <CpuChipIcon />, descKey: 'excellenceDesc' },
-                            { titleKey: 'clientCentric', icon: <HeartIcon />, descKey: 'clientCentricDesc' },
-                        ].map((value, idx) => (
-                            <div key={idx} className="card-surface p-8 flex flex-col items-center text-center">
-                                <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-6" style={{ backgroundColor: 'var(--color-accent-soft)' }}>
-                                    {value.icon}
-                                </div>
-                                <h3 className="text-xl font-bold mb-3 tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-                                    {t(`aboutUs.${value.titleKey}`)}
-                                </h3>
-                                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-                                    {t(`aboutUs.${value.descKey}`)}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+         
 
             {/* History Timeline Section */}
             <section className="py-24" style={{ backgroundColor: 'var(--color-bg-primary)' }}>
@@ -181,7 +89,7 @@ const AboutUs: React.FC = () => {
                         <div className="space-y-10 order-1 lg:order-2">
                             <div className="space-y-3">
                                 <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
-                                    {t('aboutUs.historyTitle') ? 'OUR JOURNEY' : 'OUR JOURNEY'}
+                                    {t('aboutUs.historyTitle').toUpperCase()}
                                 </span>
                                 <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
                                     {t('aboutUs.historyTitle') || 'Our Evolution'}
@@ -223,7 +131,7 @@ const AboutUs: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <div className="mb-16 space-y-3">
                         <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
-                            LEADERSHIP
+                            {t('aboutUs.leadershipLabel')}
                         </span>
                         <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
                             {t('aboutUs.foundersTitle') || 'Led by Visionaries'}

@@ -12,9 +12,9 @@ const Stats: React.FC = () => {
     const { t } = useTranslation();
 
     const stats = [
-        { value: '10,000+', label: t('stats.experience'), icon: icons[0] },
-        { value: '500+', label: t('stats.casesWon'), icon: icons[1] },
-        { value: '98%', label: t('stats.attorneys'), icon: icons[2] },
+        { value: '9', label: t('stats.experience'), icon: icons[0] },
+        { value: '3', label: t('stats.casesWon'), icon: icons[1] },
+        { value: '5+', label: t('stats.attorneys'), icon: icons[2] },
         { value: '24/7', label: t('stats.support'), icon: icons[3] },
     ];
 
