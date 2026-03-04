@@ -63,6 +63,61 @@ const SparkleIcon = () => (
     </svg>
 );
 
+// Pipeline Agent Icons
+const DocAnalystIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+);
+
+const EntityExtractorIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const AuditorIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+    </svg>
+);
+
+const PrimaryInvestigatorIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+);
+
+const CrossExaminerIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
+const EvidenceValidatorIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+);
+
+const LegalResearcherIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+);
+
+const RiskAssessorIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    </svg>
+);
+
+const FinalJudgeIcon = () => (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l3 9a5.002 5.002 0 01-6.001 0M18 7l-3 9m3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+    </svg>
+);
+
 const PlatformOverview: React.FC = () => {
     const { t } = useTranslation();
 
@@ -79,15 +134,15 @@ const PlatformOverview: React.FC = () => {
     ];
 
     const pipelineSteps = [
-        { step: 1, key: 'docAnalyst' },
-        { step: 2, key: 'entityExtractor' },
-        { step: 3, key: 'auditor' },
-        { step: 4, key: 'primaryInvestigator' },
-        { step: 5, key: 'crossExaminer' },
-        { step: 6, key: 'evidenceValidator' },
-        { step: 7, key: 'legalResearcher' },
-        { step: 8, key: 'riskAssessor' },
-        { step: 9, key: 'finalJudge' },
+        { icon: <DocAnalystIcon />, key: 'docAnalyst' },
+        { icon: <EntityExtractorIcon />, key: 'entityExtractor' },
+        { icon: <AuditorIcon />, key: 'auditor' },
+        { icon: <PrimaryInvestigatorIcon />, key: 'primaryInvestigator' },
+        { icon: <CrossExaminerIcon />, key: 'crossExaminer' },
+        { icon: <EvidenceValidatorIcon />, key: 'evidenceValidator' },
+        { icon: <LegalResearcherIcon />, key: 'legalResearcher' },
+        { icon: <RiskAssessorIcon />, key: 'riskAssessor' },
+        { icon: <FinalJudgeIcon />, key: 'finalJudge' },
     ];
 
     const useCases = [
@@ -289,11 +344,11 @@ const PlatformOverview: React.FC = () => {
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {pipelineSteps.map((item) => (
-                            <div key={item.step} className="card-surface p-6 flex items-center gap-4 group">
-                                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold text-white transition-transform group-hover:scale-110"
+                        {pipelineSteps.map((item, idx) => (
+                            <div key={item.key} className="card-surface p-6 flex items-center gap-4 group">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white transition-transform group-hover:scale-110"
                                      style={{ background: 'var(--gradient-accent)' }}>
-                                    {item.step}
+                                    {item.icon}
                                 </div>
                                 <div className="space-y-0.5">
                                     <h4 className="text-sm font-bold uppercase tracking-wide" style={{ color: 'var(--color-text-primary)' }}>

@@ -88,7 +88,7 @@ const Hero: React.FC = () => {
                                 <span className="flex items-center justify-center w-6 h-6 rounded-full" style={{ backgroundColor: 'var(--color-accent-soft)' }}>
                                     <CheckIcon />
                                 </span>
-                                AI-Powered Research
+                                {t('hero.successRate')}
                             </div>
                         </div>
                     </div>

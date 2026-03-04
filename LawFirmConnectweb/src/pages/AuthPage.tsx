@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -24,9 +24,17 @@ const ShieldIcon = () => (
     </svg>
 );
 
+const CheckCircleIcon = () => (
+    <svg className="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+    </svg>
+);
+
 interface AuthPageProps {
     initialMode: 'signin' | 'signup';
 }
+
+type AuthMode = 'signin' | 'signup' | 'forgot-password' | 'reset-password';
 
 const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     const { t } = useTranslation();
@@ -35,22 +43,70 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     const from = location.state?.from;
     const redirectPath = from?.pathname || '/portal';
 
-    const [mode, setMode] = useState<'signin' | 'signup'>(initialMode);
+    const [mode, setMode] = useState<AuthMode>(initialMode);
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
+    // Sign in fields
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+
+    // Sign up fields
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
     const [signUpPassword, setSignUpPassword] = useState('');
 
+    // OTP / email verification (signup)
+    const [emailVerified, setEmailVerified] = useState(false);
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [verifyingOtp, setVerifyingOtp] = useState(false);
+    const [sendingOtp, setSendingOtp] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Forgot / Reset password
+    const [fpEmail, setFpEmail] = useState('');
+    const [fpOtp, setFpOtp] = useState('');
+    const [fpOtpSent, setFpOtpSent] = useState(false);
+    const [resetToken, setResetToken] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [fpResendCooldown, setFpResendCooldown] = useState(0);
+    const fpCooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Cleanup cooldown timers
+    useEffect(() => {
+        return () => {
+            if (cooldownRef.current) clearInterval(cooldownRef.current);
+            if (fpCooldownRef.current) clearInterval(fpCooldownRef.current);
+        };
+    }, []);
+
+    const startCooldown = (setter: React.Dispatch<React.SetStateAction<number>>, ref: React.MutableRefObject<ReturnType<typeof setInterval> | null>) => {
+        setter(60);
+        if (ref.current) clearInterval(ref.current);
+        ref.current = setInterval(() => {
+            setter(prev => {
+                if (prev <= 1) {
+                    if (ref.current) clearInterval(ref.current);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
+
     const toggleMode = () => {
         setError('');
         setShowPassword(false);
+        // Reset OTP state when switching
+        setEmailVerified(false);
+        setOtpSent(false);
+        setOtp('');
         setMode(mode === 'signin' ? 'signup' : 'signin');
     };
 
@@ -63,6 +119,61 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         if (!/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) errors.push(t('signUp.pwdSpecial'));
         return errors;
     };
+
+    // ─── Signup OTP Handlers ───────────────────────────────
+
+    const handleSendOTP = async () => {
+        if (!email || !/\S+@\S+\.\S+/.test(email)) {
+            setError(t('otp.invalidEmail'));
+            return;
+        }
+        setError('');
+        setSendingOtp(true);
+        try {
+            await authService.sendOTP(email);
+            setOtpSent(true);
+            startCooldown(setResendCooldown, cooldownRef);
+            toast.success(t('otp.sent'));
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('otp.sendError'));
+        } finally {
+            setSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (otp.length !== 6) {
+            setError(t('otp.invalidOtp'));
+            return;
+        }
+        setError('');
+        setVerifyingOtp(true);
+        try {
+            const result = await authService.verifyOTP(email, otp, 'VERIFY_EMAIL');
+            if (result.verified) {
+                setEmailVerified(true);
+                toast.success(t('otp.verified'));
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('otp.verifyError'));
+        } finally {
+            setVerifyingOtp(false);
+        }
+    };
+
+    const handleResendOTP = async () => {
+        if (resendCooldown > 0) return;
+        setError('');
+        try {
+            await authService.resendOTP(email, 'VERIFY_EMAIL');
+            startCooldown(setResendCooldown, cooldownRef);
+            toast.success(t('otp.resent'));
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('otp.sendError'));
+        }
+    };
+
+    // ─── Auth Handlers ─────────────────────────────────────
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -82,6 +193,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         e.preventDefault();
         setError('');
 
+        const isHarshDomain = email.toLowerCase().endsWith('@harsh.com');
+        if (!isHarshDomain && !emailVerified) {
+            setError(t('otp.verifyFirst'));
+            return;
+        }
+
         const passwordErrors = getPasswordErrors(signUpPassword);
         if (passwordErrors.length > 0) {
             setError(`${t('signUp.pwdRequirements')} ${passwordErrors.join(', ')}`);
@@ -91,7 +208,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         setIsLoading(true);
         try {
             const data = await authService.register({ firstName, lastName, email, phone, password: signUpPassword });
-            // Auto-login: store token in localStorage, then redirect to pricing
             localStorage.setItem('user', JSON.stringify(data));
             toast.success(t('signUp.successMessage'));
             navigate('/pricing', { state: { needsSubscription: true } });
@@ -103,12 +219,156 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         }
     };
 
+    // ─── Forgot Password Handlers ──────────────────────────
+
+    const handleForgotPasswordSendOTP = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!fpEmail || !/\S+@\S+\.\S+/.test(fpEmail)) {
+            setError(t('forgotPassword.invalidEmail'));
+            return;
+        }
+        setError('');
+        setIsLoading(true);
+        try {
+            await authService.forgotPassword(fpEmail);
+            setFpOtpSent(true);
+            startCooldown(setFpResendCooldown, fpCooldownRef);
+            toast.success(t('forgotPassword.otpSent'));
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('forgotPassword.sendError'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleForgotPasswordVerifyOTP = async () => {
+        if (fpOtp.length !== 6) {
+            setError(t('otp.invalidOtp'));
+            return;
+        }
+        setError('');
+        setVerifyingOtp(true);
+        try {
+            const result = await authService.verifyOTP(fpEmail, fpOtp, 'RESET_PASSWORD');
+            if (result.verified && result.resetToken) {
+                setResetToken(result.resetToken);
+                setMode('reset-password');
+                toast.success(t('forgotPassword.otpVerified'));
+            }
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('otp.verifyError'));
+        } finally {
+            setVerifyingOtp(false);
+        }
+    };
+
+    const handleFpResendOTP = async () => {
+        if (fpResendCooldown > 0) return;
+        setError('');
+        try {
+            await authService.resendOTP(fpEmail, 'RESET_PASSWORD');
+            startCooldown(setFpResendCooldown, fpCooldownRef);
+            toast.success(t('otp.resent'));
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('otp.sendError'));
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (newPassword !== confirmPassword) {
+            setError(t('forgotPassword.passwordMismatch'));
+            return;
+        }
+
+        const passwordErrors = getPasswordErrors(newPassword);
+        if (passwordErrors.length > 0) {
+            setError(`${t('signUp.pwdRequirements')} ${passwordErrors.join(', ')}`);
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            await authService.resetPassword(fpEmail, resetToken, newPassword);
+            toast.success(t('forgotPassword.resetSuccess'));
+            // Reset state and go to signin
+            setFpEmail('');
+            setFpOtp('');
+            setFpOtpSent(false);
+            setResetToken('');
+            setNewPassword('');
+            setConfirmPassword('');
+            setMode('signin');
+        } catch (err: any) {
+            setError(err.response?.data?.message || t('forgotPassword.resetError'));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const inputClass = "block w-full px-4 py-3 rounded-xl text-sm transition-all focus:outline-none focus:ring-2";
     const inputStyle = {
         backgroundColor: 'var(--color-bg-tertiary)',
         border: '1px solid var(--color-surface-border)',
         color: 'var(--color-text-primary)',
     };
+
+    const isHarshEmail = email.toLowerCase().endsWith('@harsh.com');
+    const signupDisabled = !isHarshEmail && !emailVerified;
+
+    // ─── Render Helpers ────────────────────────────────────
+
+    const renderOtpInput = (
+        value: string,
+        onChange: (v: string) => void,
+        onVerify: () => void,
+        onResend: () => void,
+        cooldown: number,
+        loading: boolean
+    ) => (
+        <div className="space-y-2">
+            <label className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>
+                {t('otp.title')}
+            </label>
+            <div className="flex gap-2">
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className={inputClass}
+                    style={inputStyle}
+                    placeholder={t('otp.placeholder')}
+                />
+                <button
+                    type="button"
+                    onClick={onVerify}
+                    disabled={loading || value.length !== 6}
+                    className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    style={{ background: 'var(--gradient-cta)' }}
+                >
+                    {loading ? t('otp.verifying') : t('otp.verify')}
+                </button>
+            </div>
+            <div className="flex items-center justify-between">
+                <p className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                    {t('otp.subtitle')}
+                </p>
+                <button
+                    type="button"
+                    onClick={onResend}
+                    disabled={cooldown > 0}
+                    className="text-xs font-semibold disabled:opacity-50"
+                    style={{ color: 'var(--color-accent)' }}
+                >
+                    {cooldown > 0 ? `${t('otp.resend')} (${cooldown}s)` : t('otp.resend')}
+                </button>
+            </div>
+        </div>
+    );
 
     return (
         <div className="min-h-screen flex items-center justify-center p-6 lg:p-14" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
@@ -128,10 +388,16 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
                     <div className="flex-grow flex flex-col justify-center w-full mx-auto">
                         <h1 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'var(--color-text-primary)' }}>
-                            {mode === 'signin' ? t('signIn.title') : t('signUp.title')}
+                            {mode === 'signin' && t('signIn.title')}
+                            {mode === 'signup' && t('signUp.title')}
+                            {mode === 'forgot-password' && t('forgotPassword.title')}
+                            {mode === 'reset-password' && t('forgotPassword.resetTitle')}
                         </h1>
                         <p className="text-sm leading-relaxed mb-8" style={{ color: 'var(--color-text-secondary)' }}>
-                            {mode === 'signin' ? t('signIn.subtitle') : t('signUp.subtitle')}
+                            {mode === 'signin' && t('signIn.subtitle')}
+                            {mode === 'signup' && t('signUp.subtitle')}
+                            {mode === 'forgot-password' && t('forgotPassword.subtitle')}
+                            {mode === 'reset-password' && t('forgotPassword.resetSubtitle')}
                         </p>
 
                         {error && (
@@ -140,7 +406,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                             </div>
                         )}
 
-                        {mode === 'signin' ? (
+                        {/* ─── Sign In Form ─────────────────── */}
+                        {mode === 'signin' && (
                             <form className="space-y-5" onSubmit={handleLogin}>
                                 <div className="space-y-4">
                                     <div>
@@ -177,9 +444,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                                         </label>
                                     </div>
                                     <div className="text-sm">
-                                        <a href="#" className="font-semibold" style={{ color: 'var(--color-accent)' }}>
+                                        <button
+                                            type="button"
+                                            onClick={() => { setError(''); setMode('forgot-password'); }}
+                                            className="font-semibold"
+                                            style={{ color: 'var(--color-accent)' }}
+                                        >
                                             {t('signIn.forgotPassword')}
-                                        </a>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -196,8 +468,59 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                                     </p>
                                 </div>
                             </form>
-                        ) : (
+                        )}
+
+                        {/* ─── Sign Up Form ─────────────────── */}
+                        {mode === 'signup' && (
                             <form className="space-y-4" onSubmit={handleRegister}>
+                                {/* Email + Verify Button */}
+                                <div>
+                                    <label htmlFor="signup-email" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('signUp.emailLabel')}</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            id="signup-email"
+                                            type="email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => {
+                                                setEmail(e.target.value);
+                                                // Reset verification if email changes
+                                                if (emailVerified) {
+                                                    setEmailVerified(false);
+                                                    setOtpSent(false);
+                                                    setOtp('');
+                                                }
+                                            }}
+                                            readOnly={emailVerified}
+                                            className={`${inputClass} ${emailVerified ? 'opacity-75' : ''}`}
+                                            style={inputStyle}
+                                            placeholder={t('signUp.emailPlaceholder')}
+                                        />
+                                        {!emailVerified && !isHarshEmail && (
+                                            <button
+                                                type="button"
+                                                onClick={handleSendOTP}
+                                                disabled={sendingOtp || !email}
+                                                className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                                style={{ background: 'var(--gradient-cta)' }}
+                                            >
+                                                {sendingOtp ? t('otp.sending') : otpSent ? t('otp.resend') : t('otp.sendVerify')}
+                                            </button>
+                                        )}
+                                        {emailVerified && (
+                                            <div className="flex items-center px-3">
+                                                <CheckCircleIcon />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* OTP Input (shown after send) */}
+                                {otpSent && !emailVerified && !isHarshEmail && (
+                                    renderOtpInput(otp, setOtp, handleVerifyOTP, handleResendOTP, resendCooldown, verifyingOtp)
+                                )}
+
+                                {/* Rest of signup form */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="firstName" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('signUp.firstName')}</label>
@@ -209,12 +532,6 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                                         <input id="lastName" type="text" required value={lastName} onChange={(e) => setLastName(e.target.value)}
                                             className={inputClass} style={inputStyle} placeholder={t('signUp.lastNamePlaceholder')} />
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label htmlFor="signup-email" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('signUp.emailLabel')}</label>
-                                    <input id="signup-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-                                        className={inputClass} style={inputStyle} placeholder={t('signUp.emailPlaceholder')} />
                                 </div>
 
                                 <div>
@@ -236,7 +553,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                                     <p className="mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{t('signUp.passwordHint')}</p>
                                 </div>
 
-                                <button type="submit" disabled={isLoading} className="btn-gradient w-full flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading || signupDisabled}
+                                    className="btn-gradient w-full flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                    title={signupDisabled ? t('otp.verifyFirst') : ''}
+                                >
                                     {isLoading ? t('signUp.processing') : (<><LockIcon /> {t('signUp.createAccount')}</>)}
                                 </button>
 
@@ -251,12 +573,96 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                             </form>
                         )}
 
+                        {/* ─── Forgot Password Form ─────────── */}
+                        {mode === 'forgot-password' && (
+                            <form className="space-y-5" onSubmit={handleForgotPasswordSendOTP}>
+                                <div>
+                                    <label htmlFor="fp-email" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('forgotPassword.emailLabel')}</label>
+                                    <input
+                                        id="fp-email" type="email" required
+                                        value={fpEmail} onChange={(e) => setFpEmail(e.target.value)}
+                                        readOnly={fpOtpSent}
+                                        className={`${inputClass} ${fpOtpSent ? 'opacity-75' : ''}`}
+                                        style={inputStyle}
+                                        placeholder={t('signIn.emailPlaceholder')}
+                                    />
+                                </div>
+
+                                {!fpOtpSent && (
+                                    <button type="submit" disabled={isLoading} className="btn-gradient w-full flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                        {isLoading ? t('otp.sending') : t('forgotPassword.sendOtp')}
+                                    </button>
+                                )}
+
+                                {fpOtpSent && (
+                                    renderOtpInput(fpOtp, setFpOtp, handleForgotPasswordVerifyOTP, handleFpResendOTP, fpResendCooldown, verifyingOtp)
+                                )}
+
+                                <div className="text-center mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setError(''); setFpOtpSent(false); setFpOtp(''); setMode('signin'); }}
+                                        className="text-sm font-semibold"
+                                        style={{ color: 'var(--color-accent)' }}
+                                    >
+                                        {t('forgotPassword.backToLogin')}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* ─── Reset Password Form ──────────── */}
+                        {mode === 'reset-password' && (
+                            <form className="space-y-5" onSubmit={handleResetPassword}>
+                                <div>
+                                    <label htmlFor="new-password" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('forgotPassword.newPassword')}</label>
+                                    <div className="relative">
+                                        <input
+                                            id="new-password" type={showPassword ? "text" : "password"} required
+                                            value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
+                                            className={`${inputClass} pr-12`} style={inputStyle}
+                                            placeholder={t('forgotPassword.newPasswordPlaceholder')}
+                                        />
+                                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer" onClick={() => setShowPassword(!showPassword)}>
+                                            <EyeIcon />
+                                        </div>
+                                    </div>
+                                    <p className="mt-1 text-xs" style={{ color: 'var(--color-text-tertiary)' }}>{t('signUp.passwordHint')}</p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="confirm-password" className="block text-xs font-bold mb-1.5" style={{ color: 'var(--color-text-primary)' }}>{t('forgotPassword.confirmPassword')}</label>
+                                    <input
+                                        id="confirm-password" type={showPassword ? "text" : "password"} required
+                                        value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className={inputClass} style={inputStyle}
+                                        placeholder={t('forgotPassword.confirmPasswordPlaceholder')}
+                                    />
+                                </div>
+
+                                <button type="submit" disabled={isLoading} className="btn-gradient w-full flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed">
+                                    {isLoading ? t('signUp.processing') : (<><LockIcon /> {t('forgotPassword.resetButton')}</>)}
+                                </button>
+
+                                <div className="text-center mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setError(''); setMode('signin'); }}
+                                        className="text-sm font-semibold"
+                                        style={{ color: 'var(--color-accent)' }}
+                                    >
+                                        {t('forgotPassword.backToLogin')}
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
                         <hr className="my-8" style={{ borderColor: 'var(--color-surface-border)' }} />
 
                         <div className="flex flex-col gap-2">
                             <div className="flex items-center gap-2 text-xs font-bold text-emerald-500 tracking-wider">
                                 <ShieldIcon />
-                                {mode === 'signin' ? t('signIn.sslSecure') : t('signUp.sslSecure')}
+                                {(mode === 'signin' || mode === 'forgot-password' || mode === 'reset-password') ? t('signIn.sslSecure') : t('signUp.sslSecure')}
                             </div>
                             {mode === 'signin' && (
                                 <p className="text-[10px] leading-normal" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -283,9 +689,9 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                         {/* Top: feature badges */}
                         <div className="space-y-3 mt-8">
                             {[
-                                { icon: '⚡', text: 'AI-Powered Case Intelligence' },
-                                { icon: '🔒', text: 'Bank-Grade Security (256-bit SSL)' },
-                                { icon: '📊', text: 'Real-time Analytics Dashboard' },
+                                { icon: '\u26A1', text: 'AI-Powered Case Intelligence' },
+                                { icon: '\uD83D\uDD12', text: 'Bank-Grade Security (256-bit SSL)' },
+                                { icon: '\uD83D\uDCCA', text: 'Real-time Analytics Dashboard' },
                             ].map((item, i) => (
                                 <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 w-fit">
                                     <span className="text-lg">{item.icon}</span>
@@ -302,7 +708,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                                 </span>
                             )}
                             <h2 className="text-2xl font-bold text-white leading-tight mb-4 tracking-tight">
-                                {mode === 'signin' ? t('signIn.rightQuote') : t('signUp.rightQuote')}
+                                {(mode === 'signin' || mode === 'forgot-password' || mode === 'reset-password') ? t('signIn.rightQuote') : t('signUp.rightQuote')}
                             </h2>
                             <div className="w-12 h-1 rounded-full mb-6" style={{ background: 'var(--gradient-accent)' }}></div>
                             {mode === 'signin' && (

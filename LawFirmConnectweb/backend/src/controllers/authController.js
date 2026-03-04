@@ -11,8 +11,246 @@ const geoip = require('geoip-lite');
 const Organization = require('../models/Organization');
 const TeamInvitation = require('../models/TeamInvitation'); // Added if we need it, though we might just push to members array directly
 
-// Environment-based toggle for email verification
-// const REQUIRE_EMAIL_VERIFICATION = process.env.REQUIRE_EMAIL_VERIFICATION === 'true';
+// ─── Helpers ───────────────────────────────────────────────
+
+const generateOTP = () => {
+    return crypto.randomInt(100000, 999999).toString();
+};
+
+const sendOTPEmail = async (email, otp, purpose) => {
+    const purposeLabel = purpose === 'VERIFY_EMAIL' ? 'Email Verification' : 'Password Reset';
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #f9fafb; border-radius: 12px;">
+            <h2 style="color: #1e293b; margin-bottom: 8px;">LawFirmAI — ${purposeLabel}</h2>
+            <p style="color: #64748b; font-size: 14px;">Your one-time verification code is:</p>
+            <div style="text-align: center; margin: 24px 0;">
+                <span style="display: inline-block; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1e40af; background: #eff6ff; padding: 16px 32px; border-radius: 8px; border: 1px solid #bfdbfe;">
+                    ${otp}
+                </span>
+            </div>
+            <p style="color: #64748b; font-size: 13px;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+            <p style="color: #94a3b8; font-size: 11px;">If you did not request this code, please ignore this email.</p>
+        </div>
+    `;
+
+    await sendEmail({
+        email,
+        subject: `${otp} — Your LawFirmAI ${purposeLabel} Code`,
+        message: `Your LawFirmAI ${purposeLabel} code is: ${otp}. It expires in 10 minutes.`,
+        html
+    });
+};
+
+// ─── OTP Endpoints ─────────────────────────────────────────
+
+// @desc    Send OTP for email verification (pre-signup)
+// @route   POST /auth/send-otp
+// @access  Public
+const sendVerificationOTP = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+        }
+
+        const { email } = req.body;
+
+        // Check if email is already registered
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(409).json({ message: 'An account with this email already exists.' });
+        }
+
+        // Delete any existing OTPs for this email/purpose
+        await OTP.deleteMany({ email, purpose: 'VERIFY_EMAIL' });
+
+        const otp = generateOTP();
+        await OTP.create({
+            email,
+            otp,
+            purpose: 'VERIFY_EMAIL',
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 min
+        });
+
+        await sendOTPEmail(email, otp, 'VERIFY_EMAIL');
+
+        res.json({ message: 'Verification code sent to your email.' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Verify OTP
+// @route   POST /auth/verify-otp
+// @access  Public
+const verifyOTP = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+        }
+
+        const { email, otp, purpose } = req.body;
+
+        const record = await OTP.findOne({ email, otp, purpose, expiresAt: { $gt: new Date() } });
+        if (!record) {
+            return res.status(400).json({ message: 'Invalid or expired verification code.' });
+        }
+
+        // For RESET_PASSWORD: generate a short-lived reset token
+        if (purpose === 'RESET_PASSWORD') {
+            const resetToken = crypto.randomBytes(32).toString('hex');
+            record.resetToken = resetToken;
+            record.otp = '__USED__'; // invalidate OTP but keep record for resetToken
+            record.expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 more min for reset
+            await record.save();
+            return res.json({ verified: true, resetToken });
+        }
+
+        // For VERIFY_EMAIL: delete the OTP (will be re-verified at registration via a fresh check)
+        // We keep a marker: store a special record so registerUser can confirm
+        record.otp = '__VERIFIED__';
+        record.expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min to complete signup
+        await record.save();
+
+        res.json({ verified: true });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Resend OTP
+// @route   POST /auth/resend-otp
+// @access  Public
+const resendOTP = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+        }
+
+        const { email, purpose } = req.body;
+
+        // For VERIFY_EMAIL, check email isn't already registered
+        if (purpose === 'VERIFY_EMAIL') {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(409).json({ message: 'An account with this email already exists.' });
+            }
+        }
+
+        // For RESET_PASSWORD, check user exists (but use generic response)
+        if (purpose === 'RESET_PASSWORD') {
+            const user = await User.findOne({ email });
+            if (!user) {
+                // Generic response to prevent email enumeration
+                return res.json({ message: 'If an account exists, a new code has been sent.' });
+            }
+        }
+
+        await OTP.deleteMany({ email, purpose });
+
+        const otp = generateOTP();
+        await OTP.create({
+            email,
+            otp,
+            purpose,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+        });
+
+        await sendOTPEmail(email, otp, purpose);
+
+        const msg = purpose === 'RESET_PASSWORD'
+            ? 'If an account exists, a new code has been sent.'
+            : 'A new verification code has been sent.';
+        res.json({ message: msg });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Forgot password — send OTP
+// @route   POST /auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+        }
+
+        const { email } = req.body;
+
+        // Generic response to prevent email enumeration
+        const genericMsg = 'If an account with that email exists, a reset code has been sent.';
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.json({ message: genericMsg });
+        }
+
+        await OTP.deleteMany({ email, purpose: 'RESET_PASSWORD' });
+
+        const otp = generateOTP();
+        await OTP.create({
+            email,
+            otp,
+            purpose: 'RESET_PASSWORD',
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+        });
+
+        await sendOTPEmail(email, otp, 'RESET_PASSWORD');
+
+        res.json({ message: genericMsg });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Reset password using token
+// @route   POST /auth/reset-password
+// @access  Public
+const resetPassword = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
+        }
+
+        const { email, resetToken, newPassword } = req.body;
+
+        // Find valid reset token
+        const record = await OTP.findOne({
+            email,
+            purpose: 'RESET_PASSWORD',
+            resetToken,
+            expiresAt: { $gt: new Date() }
+        });
+
+        if (!record) {
+            return res.status(400).json({ message: 'Invalid or expired reset token. Please try again.' });
+        }
+
+        // Update password
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ message: 'User not found.' });
+        }
+
+        user.password = newPassword; // pre-save hook in User model will hash it
+        await user.save();
+
+        // Clean up all reset OTPs for this email
+        await OTP.deleteMany({ email, purpose: 'RESET_PASSWORD' });
+
+        res.json({ message: 'Password reset successfully. Please log in with your new password.' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ─── Registration & Login ──────────────────────────────────
 
 // @desc    Register a new user
 // @route   POST /auth/register
@@ -22,7 +260,7 @@ const registerUser = async (req, res, next) => {
         // Check validation results from express-validator
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
                 errors: errors.array().map(err => ({
                     field: err.path,
@@ -41,6 +279,25 @@ const registerUser = async (req, res, next) => {
             throw new Error('User already exists with this email or phone');
         }
 
+        const isHarshDomain = email.toLowerCase().endsWith('@harsh.com');
+
+        // Verify email was confirmed via OTP (skip for @harsh.com)
+        if (!isHarshDomain) {
+            const verifiedRecord = await OTP.findOne({
+                email,
+                purpose: 'VERIFY_EMAIL',
+                otp: '__VERIFIED__',
+                expiresAt: { $gt: new Date() }
+            });
+
+            if (!verifiedRecord) {
+                return res.status(400).json({ message: 'Email not verified. Please verify your email first.' });
+            }
+
+            // Clean up the verification record
+            await OTP.deleteMany({ email, purpose: 'VERIFY_EMAIL' });
+        }
+
         // Set status based on verification requirement
         const initialStatus = 'VERIFIED';
 
@@ -48,7 +305,6 @@ const registerUser = async (req, res, next) => {
         // Role upgrades happen at payment time (FIRM plan → ADMIN).
         const role = 'ADVOCATE';
 
-        const isHarshDomain = email.toLowerCase().endsWith('@harsh.com');
         const user = await User.create({
             firstName,
             lastName,
@@ -135,7 +391,7 @@ const loginUser = async (req, res, next) => {
         // Check validation results from express-validator
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 message: 'Validation failed',
                 errors: errors.array().map(err => ({
                     field: err.path,
@@ -170,7 +426,7 @@ const loginUser = async (req, res, next) => {
         if (!isPasswordValid) {
             // Increment failed attempts
             await user.incrementLoginAttempts();
-            
+
             // Check if account just got locked
             const updatedUser = await User.findById(user._id);
             if (updatedUser.isLocked) {
@@ -304,5 +560,10 @@ const getCurrentUser = async (req, res, next) => {
 module.exports = {
     registerUser,
     loginUser,
-    getCurrentUser
+    getCurrentUser,
+    sendVerificationOTP,
+    verifyOTP,
+    resendOTP,
+    forgotPassword,
+    resetPassword
 };
