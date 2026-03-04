@@ -17,7 +17,7 @@ def document_analyst(state: InvestigatorState) -> Dict[str, Any]:
     """
     Reads each document, identifies type, extracts key metadata.
     """
-    llm = get_llm_with_retry(task_tier="fast")
+    llm = get_llm_with_retry(task_tier="fast", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=DocAnalysisOutput)
 
     prompt = ChatPromptTemplate.from_template(
@@ -79,7 +79,7 @@ def entity_fact_extractor(state: InvestigatorState) -> Dict[str, Any]:
     Performs deep extraction of facts from raw document text.
     Ensures every fact has a direct quote and source.
     """
-    llm = get_llm_with_retry(task_tier="fast")
+    llm = get_llm_with_retry(task_tier="fast", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=DeepExtractionOutput)
 
     prompt = ChatPromptTemplate.from_template(

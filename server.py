@@ -433,7 +433,8 @@ async def chat(
             query=body.message,
             case_id=body.caseId,
             history=recent_history,
-            top_k=body.top_k
+            top_k=body.top_k,
+            user_id=user_id
         )
 
         # Extract context items from result using metadata (set in rag.py retriever)
@@ -550,7 +551,8 @@ async def chat_stream(
                         query=body.message,
                         case_id=body.caseId,
                         history=recent_history,
-                        top_k=body.top_k
+                        top_k=body.top_k,
+                        user_id=user_id
                     ))
                 ):
                     # Parse event to capture answer/contexts for DB save
@@ -1590,6 +1592,7 @@ async def run_investigation(
             raise HTTPException(status_code=404, detail="No documents found for this case. Please upload and process documents before running investigation.")
 
         # 2. Initialize State
+        user_id = get_user_id(current_user)
         initial_state = {
             "documents": doc_list,
             "entities": [],
@@ -1598,6 +1601,7 @@ async def run_investigation(
             "revision_count": 0,
             "errors": [],
             "focus_questions": body.focusQuestions or [],
+            "user_id": user_id,
         }
 
         # 3. Invoke Graph (async to avoid blocking the event loop)
@@ -1698,6 +1702,7 @@ async def run_investigation_stream(
     if not doc_list:
         raise HTTPException(status_code=404, detail="No documents found for this case.")
 
+    user_id = get_user_id(current_user)
     initial_state = {
         "documents": doc_list,
         "entities": [],
@@ -1706,6 +1711,7 @@ async def run_investigation_stream(
         "revision_count": 0,
         "errors": [],
         "focus_questions": body.focusQuestions or [],
+        "user_id": user_id,
     }
 
     async def event_generator():
@@ -1843,6 +1849,7 @@ async def _run_investigation_background(job_id: str, case_id: str, focus_questio
             "revision_count": 0,
             "errors": [],
             "focus_questions": focus_questions,
+            "user_id": user_id,
         }
 
         total_steps = len(_STEP_ORDER)

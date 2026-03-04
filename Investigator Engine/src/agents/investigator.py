@@ -19,7 +19,7 @@ def primary_investigator(state: InvestigatorState) -> Dict[str, Any]:
     Handles feedback from the Cross-Examiner if present.
     Incorporates custom focus questions if provided.
     """
-    llm = get_llm_with_retry(task_tier="powerful")
+    llm = get_llm_with_retry(task_tier="powerful", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=InvestigatorOutput)
 
     # Check if this is a refinement round

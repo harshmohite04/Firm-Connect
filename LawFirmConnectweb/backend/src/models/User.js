@@ -52,6 +52,9 @@ const userSchema = new mongoose.Schema(
     },
     razorpaySubscriptionId: { type: String, default: null },
     subscriptionExpiresAt: { type: Date, default: null },
+
+    // Per-user AI model override (null = use global system default)
+    aiPreset: { type: String, enum: ['deepseek', 'openai'], default: null },
   },
   {
     timestamps: true,

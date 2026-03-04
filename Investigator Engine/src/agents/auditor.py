@@ -13,7 +13,7 @@ def audit_timeline(state: InvestigatorState) -> Dict[str, Any]:
     Specifically audits the timeline for consistency.
     Identifies if two documents give different dates for the same event.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=AuditOutput)
 
     # Context: Facts with dates

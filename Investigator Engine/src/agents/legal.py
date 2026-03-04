@@ -30,7 +30,7 @@ def legal_researcher(state: InvestigatorState) -> Dict[str, Any]:
     )
 
     # Step 2: Feed combined research into main LLM for structured analysis
-    llm = get_llm_with_retry(task_tier="powerful")
+    llm = get_llm_with_retry(task_tier="powerful", user_id=state.get("user_id"))
 
     prompt = ChatPromptTemplate.from_template(
         """
@@ -81,7 +81,7 @@ def risk_assessor(state: InvestigatorState) -> Dict[str, Any]:
     """
     Identifies vulnerabilities.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=RiskOutput)
 
     prompt = ChatPromptTemplate.from_template(
@@ -176,7 +176,7 @@ def final_judge(state: InvestigatorState) -> Dict[str, Any]:
     Synthesizes the Final Legal Intelligence Report.
     Generates sections independently to avoid context window overflow.
     """
-    llm = get_llm_with_retry(task_tier="powerful")
+    llm = get_llm_with_retry(task_tier="powerful", user_id=state.get("user_id"))
 
     # Build metadata header
     metadata_header = _build_report_metadata(state)
