@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from utils.system_settings import load_provider_preset
+from utils.system_settings import load_provider_preset, get_effective_preset
 
 load_dotenv()
 
@@ -189,14 +189,14 @@ def mock_llm_func(input_val):
     print("  [MockLLM] Processing request...")
     return AIMessage(content="{}")
 
-def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard"):
+def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard", user_id: str = None):
     """
     Get an LLM instance.
 
     task_tier: "fast" (extraction), "standard" (analysis), "powerful" (synthesis)
     The tier can override the model via env vars LLM_TIER_FAST, LLM_TIER_STANDARD, LLM_TIER_POWERFUL.
 
-    Provider selection: Dynamic based on system_settings (with fallback to LLM_PROVIDER env var)
+    Provider selection: Dynamic based on system_settings with per-user override support.
     """
     # Check tier-based override from environment
     tier_env_key = _TIER_DEFAULTS.get(task_tier)
@@ -214,9 +214,9 @@ def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard"):
             target_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
             return ChatOllama(model=target_model, temperature=0.1)
 
-    # Get LLM provider from system settings (dynamic)
+    # Get LLM provider from system settings (dynamic, with per-user override)
     try:
-        provider = load_provider_preset()
+        provider = get_effective_preset(user_id)
     except Exception as e:
         logger.warning(f"Could not load provider preset: {e}. Falling back to env var.")
         provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
@@ -270,14 +270,14 @@ def get_perplexity_llm(model: str = "sonar-pro"):
     )
 
 
-def get_web_search_llm(model: str = "sonar-pro"):
+def get_web_search_llm(model: str = "sonar-pro", user_id: str = None):
     """
-    Get a web search LLM based on current preset.
+    Get a web search LLM based on current preset, with per-user override.
     - Preset A (DeepSeek): Returns Serper-based search wrapper
     - Preset B (OpenAI): Returns Perplexity LLM instance
     """
     try:
-        provider = load_provider_preset()
+        provider = get_effective_preset(user_id)
     except Exception as e:
         logger.warning(f"Could not load provider preset: {e}. Falling back to env var.")
         provider = os.getenv("LLM_PROVIDER", "deepseek").lower()
@@ -287,7 +287,7 @@ def get_web_search_llm(model: str = "sonar-pro"):
     else:
         # For DeepSeek: use standard LLM (will be called via SerperSearchTool)
         # The actual Serper integration happens in the agent using get_serper_search()
-        return get_llm(task_tier="standard")
+        return get_llm(task_tier="standard", user_id=user_id)
 
 
 def get_combined_web_research(query: str) -> str:
@@ -331,9 +331,9 @@ def get_combined_web_research(query: str) -> str:
     return "\n\n".join(sections)
 
 
-def get_llm_with_retry(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard"):
+def get_llm_with_retry(model_name: str = "openai/gpt-oss-120b", task_tier: str = "standard", user_id: str = None):
     """Get an LLM instance with automatic retry on transient failures."""
-    llm = get_llm(model_name=model_name, task_tier=task_tier)
+    llm = get_llm(model_name=model_name, task_tier=task_tier, user_id=user_id)
 
     # Only apply .with_retry() if the LLM supports it (not mock)
     if hasattr(llm, "with_retry"):

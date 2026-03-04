@@ -12,7 +12,7 @@ from neo4j_graphrag.retrievers.external.qdrant.qdrant import QdrantNeo4jRetrieve
 from neo4j_graphrag.types import LLMMessage, RetrieverResultItem
 
 from utils.embeddings import embedder, embed_text
-from utils.system_settings import load_provider_preset
+from utils.system_settings import load_provider_preset, get_effective_preset
 
 
 load_dotenv()
@@ -38,9 +38,9 @@ RAG_MODEL = os.getenv("RAG_MODEL", "gpt-4o-mini")
 driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
 qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
-def _get_llm_provider():
-    """Get LLM provider based on current preset (dynamic)"""
-    provider = load_provider_preset()
+def _get_llm_provider(user_id=None):
+    """Get LLM provider based on current preset (dynamic), with optional per-user override"""
+    provider = get_effective_preset(user_id)
 
     if provider == "openai" and OPENAI_API_KEY:
         return OpenAILLM(
@@ -56,9 +56,9 @@ def _get_llm_provider():
             base_url="https://api.deepseek.com"
         )
 
-def _get_stream_client():
-    """Get streaming client based on current preset (dynamic)"""
-    provider = load_provider_preset()
+def _get_stream_client(user_id=None):
+    """Get streaming client based on current preset (dynamic), with optional per-user override"""
+    provider = get_effective_preset(user_id)
 
     if provider == "openai" and OPENAI_API_KEY:
         return OpenAI(api_key=OPENAI_API_KEY), RAG_MODEL
@@ -107,11 +107,11 @@ Answer (include [N] citations):
 
 
 # ---------- ASK FUNCTION ----------
-def ask(query: str, case_id: str, history: list = [], top_k=5):
+def ask(query: str, case_id: str, history: list = [], top_k=5, user_id=None):
     print(f"Generating answer for Case: {case_id}...\n")
 
-    # Get fresh LLM based on current preset
-    current_llm = _get_llm_provider()
+    # Get fresh LLM based on current preset (with per-user override)
+    current_llm = _get_llm_provider(user_id)
 
     # Define Qdrant Filter
     qdrant_filter = models.Filter(
@@ -260,15 +260,15 @@ CONTEXT FORMAT: Each chunk is numbered [N] with its source filename. Use highest
 Answer format: Direct, factual, structured with inline [N] citations. No disclaimers."""
 
 
-def ask_stream(query: str, case_id: str, history: list = [], top_k=5):
+def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=None):
     """Generator that yields SSE-formatted events: contexts, token, done, or error."""
     import json as json_module
     import re as _re
 
     print(f"[STREAM] Generating answer for Case: {case_id}...\n")
 
-    # Get fresh stream client based on current preset
-    current_stream_client, current_stream_model = _get_stream_client()
+    # Get fresh stream client based on current preset (with per-user override)
+    current_stream_client, current_stream_model = _get_stream_client(user_id)
 
     # --- Retrieval (same logic as ask()) ---
     qdrant_filter = models.Filter(

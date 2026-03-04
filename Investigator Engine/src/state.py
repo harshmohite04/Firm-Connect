@@ -62,3 +62,6 @@ class InvestigatorState(TypedDict):
 
     # Control logic
     revision_count: int
+
+    # Per-user AI model override
+    user_id: Optional[str]

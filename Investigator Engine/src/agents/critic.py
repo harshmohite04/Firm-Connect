@@ -16,7 +16,7 @@ def cross_examiner(state: InvestigatorState) -> Dict[str, Any]:
     """
     Advanced Cross-Examiner that uses ground facts and citations to find gaps.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=CritiqueOutput)
 
     # Prepare Fact context with Citations
@@ -77,7 +77,7 @@ def resolve_conflicts(state: InvestigatorState) -> Dict[str, Any]:
     if not state.get("conflicts"):
         return {"conflicts": []}
 
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=ResolutionOutput)
 
     conflicts_text = ""
@@ -151,7 +151,7 @@ def evidence_validator(state: InvestigatorState) -> Dict[str, Any]:
     """
     Checks if hypotheses are supported by specific facts.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=ValidationOutput)
 
     prompt = ChatPromptTemplate.from_template(
@@ -191,7 +191,7 @@ def gap_detector(state: InvestigatorState) -> Dict[str, Any]:
     """
     Identifies missing documents or proof.
     """
-    llm = get_llm_with_retry(task_tier="standard")
+    llm = get_llm_with_retry(task_tier="standard", user_id=state.get("user_id"))
     parser = get_json_parser(pydantic_object=GapOutput)
 
     prompt = ChatPromptTemplate.from_template(
