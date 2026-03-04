@@ -344,7 +344,7 @@ const PlatformOverview: React.FC = () => {
                     </div>
 
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {pipelineSteps.map((item, idx) => (
+                        {pipelineSteps.map((item) => (
                             <div key={item.key} className="card-surface p-6 flex items-center gap-4 group">
                                 <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-white transition-transform group-hover:scale-110"
                                      style={{ background: 'var(--gradient-accent)' }}>
