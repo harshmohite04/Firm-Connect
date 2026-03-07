@@ -110,7 +110,7 @@ const inviteTeamMember = async (req, res, next) => {
 
         await sendEmail({
             email: userToInvite.email,
-            subject: 'Team Invitation - LawFirmConnect',
+            subject: 'Team Invitation - LawFirmAI',
             html: emailHtml
         });
 

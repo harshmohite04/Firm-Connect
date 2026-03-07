@@ -64,12 +64,12 @@ const organizationInvitationTemplate = (orgName, adminName, password, loginLink)
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to LawFirmConnect</h1>
+            <h1>Welcome to LawFirmAI</h1>
         </div>
         <div class="content">
             <h2>You have been invited to join ${orgName}</h2>
             <p>Hello,</p>
-            <p><strong>${adminName}</strong> has created an account for you to join their organization on LawFirmConnect.</p>
+            <p><strong>${adminName}</strong> has created an account for you to join their organization on LawFirmAI.</p>
             
             <div class="info-box">
                 <p><strong>Organization:</strong> ${orgName}</p>
@@ -143,12 +143,12 @@ const orgSeatInvitationTemplate = (orgName, adminName, seatPlan, acceptLink, rej
 <body>
     <div class="container">
         <div class="header">
-            <h1>You're Invited to LawFirmConnect</h1>
+            <h1>You're Invited to LawFirmAI</h1>
         </div>
         <div class="content">
             <h2>Join ${orgName}</h2>
             <p>Hello,</p>
-            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmConnect.</p>
+            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmAI.</p>
 
             <div class="plan-box">
                 <p><strong>Organization:</strong> ${orgName}</p>
@@ -193,12 +193,12 @@ const orgSeatInvitationNewUserTemplate = (orgName, adminName, seatPlan, acceptLi
 <body>
     <div class="container">
         <div class="header">
-            <h1>You're Invited to LawFirmConnect</h1>
+            <h1>You're Invited to LawFirmAI</h1>
         </div>
         <div class="content">
             <h2>Join ${orgName}</h2>
             <p>Hello,</p>
-            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmConnect. An account has been created for you.</p>
+            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmAI. An account has been created for you.</p>
 
             <div class="plan-box">
                 <p><strong>Organization:</strong> ${orgName}</p>
@@ -284,12 +284,12 @@ const organizationInvitationSetupTemplate = (orgName, adminName, setupLink) => {
 <body>
     <div class="container">
         <div class="header">
-            <h1>Welcome to LawFirmConnect</h1>
+            <h1>Welcome to LawFirmAI</h1>
         </div>
         <div class="content">
             <h2>You have been invited to join ${orgName}</h2>
             <p>Hello,</p>
-            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmConnect.</p>
+            <p><strong>${adminName}</strong> has invited you to join their organization on LawFirmAI.</p>
 
             <div class="info-box">
                 <p><strong>Organization:</strong> ${orgName}</p>

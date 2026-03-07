@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Security Configuration Setup Script
-Automates initial security setup for Law Firm Connect
+Automates initial security setup for LawFirmAI
 """
 
 import os
@@ -91,7 +91,7 @@ def check_required_env_vars():
 
 def main():
     print("=" * 60)
-    print("Law Firm Connect - Security Configuration Setup")
+    print("LawFirmAI - Security Configuration Setup")
     print("=" * 60)
     print()
     

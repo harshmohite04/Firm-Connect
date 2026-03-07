@@ -23,7 +23,7 @@ const sendEmail = async (options) => {
 
     // Define email options
     const mailOptions = {
-        from: `"${process.env.FROM_NAME || 'LawFirmConnect'}" <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL}>`,
+        from: `"${process.env.FROM_NAME || 'LawFirmAI'}" <${process.env.FROM_EMAIL || process.env.SMTP_EMAIL}>`,
         to: options.email,
         subject: options.subject,
         text: options.message, // Fallback plain text

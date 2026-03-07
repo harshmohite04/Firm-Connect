@@ -1,8 +1,8 @@
-# Law Firm Connect Portal Redesign - START HERE 🚀
+# LawFirmAI Portal Redesign - START HERE 🚀
 
 ## ✅ What's Ready
 
-You now have a complete, comprehensive UI/UX redesign plan for all 10 Law Firm Connect portal pages.
+You now have a complete, comprehensive UI/UX redesign plan for all 10 LawFirmAI portal pages.
 
 ### Files Created
 - ✅ **prompts/** - Design specs for all 10 pages
@@ -190,7 +190,7 @@ Generate all 10 pages at once by:
 ## 📂 File Structure
 
 ```
-Law Firm Connect/
+LawFirmAI/
 ├── START_HERE.md (This file)
 ├── REDESIGN_PLAN.md (Complete improvement details)
 ├── DESIGN.md (Design system reference)

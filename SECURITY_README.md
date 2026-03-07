@@ -27,7 +27,7 @@ uvicorn server:app --host 0.0.0.0 --port 8000 --workers 4
 
 **Node.js Backend:**
 ```bash
-cd LawFirmConnectweb/backend
+cd LawFirmAIweb/backend
 npm install
 npm start
 ```
@@ -80,7 +80,7 @@ python test_security.py
 ## 📋 Testing Checklist
 
 - [ ] Start Python server: `uvicorn server:app --reload`
-- [ ] Start Node.js server: `cd LawFirmConnectweb/backend && npm start`
+- [ ] Start Node.js server: `cd LawFirmAIweb/backend && npm start`
 - [ ] Run security tests: `python test_security.py`
 - [ ] Test login/authentication
 - [ ] Test file upload (valid/invalid types)

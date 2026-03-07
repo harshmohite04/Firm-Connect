@@ -131,9 +131,9 @@ const teamInvitationTemplate = (inviterName, caseName, caseCategory, acceptLink,
             </p>
         </div>
         <div class="footer">
-            <p><strong>LawFirmConnect</strong></p>
+            <p><strong>LawFirmAI</strong></p>
             <p>This is an automated message. Please do not reply to this email.</p>
-            <p>&copy; 2025 LawFirmConnect. All rights reserved.</p>
+            <p>&copy; 2025 LawFirmAI. All rights reserved.</p>
         </div>
     </div>
 </body>

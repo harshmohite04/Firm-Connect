@@ -111,7 +111,7 @@ except ImportError as e:
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
-    title="Law Firm Connect API",
+    title="LawFirmAI API",
     version="1.1.0",
     description="Secure API for law firm case management with RAG and document generation"
 )

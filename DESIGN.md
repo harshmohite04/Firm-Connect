@@ -1,8 +1,8 @@
-# Law Firm Connect - Design System
+# LawFirmAI - Design System
 
 ## 1. Brand Identity
 
-**Name:** Law Firm Connect Portal
+**Name:** LawFirmAI Portal
 **Purpose:** Premium legal case management and client collaboration platform
 **Target Audience:** Legal professionals, law firms, clients
 **Aesthetic:** Modern professional, sophisticated, trustworthy

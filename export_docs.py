@@ -68,7 +68,7 @@ def create_docx():
     doc = Document()
     
     # Main Title
-    title = doc.add_heading('Law Firm Connect - Project Documentation', 0)
+    title = doc.add_heading('LawFirmAI - Project Documentation', 0)
     title.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
     doc.add_paragraph(f'Generated on {os.popen("date /t").read().strip()}')
     
