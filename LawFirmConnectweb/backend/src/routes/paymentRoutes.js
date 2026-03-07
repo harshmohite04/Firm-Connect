@@ -255,7 +255,7 @@ router.post('/verify-seat', protect, admin, async (req, res) => {
                     email: invitedEmail,
                     subject: `You're invited to join ${org.name}`,
                     html: htmlContent,
-                    message: `You have been invited to join ${org.name} on LawFirmConnect.`
+                    message: `You have been invited to join ${org.name} on LawFirmAI.`
                 });
             } catch (emailError) {
                 console.error('Failed to send seat invitation email:', emailError);

@@ -688,7 +688,7 @@ const PortalCases: React.FC = () => {
 
                 {/* ── Footer ── */}
                 <div style={styles.footer}>
-                    © {new Date().getFullYear()} Law Firm Connect (LawFirmAI). All rights reserved.
+                    © {new Date().getFullYear()} LawFirmAI. All rights reserved.
                 </div>
             </div>
         </PortalLayout>

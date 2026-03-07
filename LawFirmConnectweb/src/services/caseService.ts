@@ -57,30 +57,6 @@ export interface BillingRecord {
   receiptUrl?: string;
 }
 
-// -- Health Score Types --
-
-export interface CaseHealthDimension {
-  name: string;
-  label: string;
-  score: number;
-  maxScore: number;
-}
-
-export interface CaseRedFlag {
-  category: string;
-  severity: "critical" | "warning" | "info";
-  message: string;
-  actionable: string;
-}
-
-export interface CaseHealthScore {
-  score: number;
-  rating: "healthy" | "needs_attention" | "at_risk" | "critical";
-  dimensions: CaseHealthDimension[];
-  redFlags: CaseRedFlag[];
-  computedAt: string;
-}
-
 // -- Main Case Endpoints --
 
 const getCases = async (userId?: string): Promise<Case[]> => {
@@ -466,13 +442,6 @@ const saveGeneratedDocument = async (
   return response.data;
 };
 
-// -- Health Score --
-
-const getCaseHealth = async (id: string): Promise<CaseHealthScore> => {
-  const response = await api.get(`/cases/${id}/health`);
-  return response.data;
-};
-
 const caseService = {
   getCases,
   getCaseById,
@@ -492,8 +461,6 @@ const caseService = {
   updateCaseSettings,
   generateDocument,
   saveGeneratedDocument,
-  getCaseHealth,
-
   runInvestigation,
   runInvestigationStream,
   getInvestigationReports,

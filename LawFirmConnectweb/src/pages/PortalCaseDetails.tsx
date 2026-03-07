@@ -44,7 +44,7 @@ const PortalCaseDetails: React.FC = () => {
       (!loading && caseData && location.pathname === `/portal/cases/${id}`) ||
       location.pathname === `/portal/cases/${id}/`
     ) {
-      navigate("overview", { replace: true });
+      navigate("activity", { replace: true });
     }
   }, [loading, caseData, id, location.pathname, navigate]);
 
@@ -106,9 +106,6 @@ const PortalCaseDetails: React.FC = () => {
           </div>
 
           <div className="flex gap-8">
-            <NavLink to="overview" className={getNavLinkClass} style={({ isActive }) => getNavLinkStyle(isActive)}>
-              Overview
-            </NavLink>
             <NavLink to="activity" className={getNavLinkClass} style={({ isActive }) => getNavLinkStyle(isActive)}>
               {t('caseDetails.activity')}
             </NavLink>

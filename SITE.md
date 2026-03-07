@@ -1,8 +1,8 @@
-# Law Firm Connect - Site Documentation
+# LawFirmAI - Site Documentation
 
 ## 1. Vision & Purpose
 
-**Project:** Law Firm Connect Portal
+**Project:** LawFirmAI Portal
 **Goal:** Provide legal professionals and clients with a modern, intuitive platform for case management, real-time communication, and document collaboration.
 **Success Metric:** Streamlined workflows, improved client satisfaction, reduced administrative overhead.
 
@@ -226,7 +226,7 @@
 
 ## 14. Contact & Support
 
-- **Project Repo:** `/law-firm-connect/`
+- **Project Repo:** `/lawfirmai/`
 - **Design Files:** Stitch Project ID: `9452438034255087540`
 - **Issues/Feedback:** Claude Code + GitHub Issues
 - **Questions:** @harshmohite04

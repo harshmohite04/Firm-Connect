@@ -78,7 +78,7 @@ custom_prompt = RagTemplate(
         You are a legal assistant and law firm operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
 
         RULES:
-        1. If context describes "Law Firm Connect" or specific cases, use that data.
+        1. If context describes "LawFirmAI" or specific cases, use that data.
         2. NEVER say "I don't know" or "no information" if context has relevant data.
         3. For workflows: use case-specific details and legal procedures.
         4. For data fields/tables: extract exact field names from context tables.
@@ -247,7 +247,7 @@ def ask(query: str, case_id: str, history: list = [], top_k=5, user_id=None):
 SYSTEM_INSTRUCTIONS = """You are a legal assistant and law firm operations expert. Answer ALL questions using ONLY the provided CONTEXT chunks.
 
 RULES:
-1. If context describes "Law Firm Connect" or specific cases, use that data.
+1. If context describes "LawFirmAI" or specific cases, use that data.
 2. NEVER say "I don't know" or "no information" if context has relevant data.
 3. For workflows: use case-specific details and legal procedures.
 4. For data fields/tables: extract exact field names from context tables.

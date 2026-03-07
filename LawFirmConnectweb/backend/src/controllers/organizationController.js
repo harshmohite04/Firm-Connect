@@ -186,7 +186,7 @@ const inviteMember = async (req, res, next) => {
                 const htmlContent = organizationInvitationSetupTemplate(org.name, `${admin.firstName} ${admin.lastName}`, setupLink);
                 await sendEmail({
                     email: normalizedEmail,
-                    subject: `Welcome to ${org.name} on LawFirmConnect`,
+                    subject: `Welcome to ${org.name} on LawFirmAI`,
                     html: htmlContent,
                     message: `You have been invited to join ${org.name}. Set up your account at ${setupLink}`
                 });
