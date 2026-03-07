@@ -44,7 +44,7 @@ def _get_llm_provider(user_id=None):
 
     if provider == "openai" and OPENAI_API_KEY:
         return OpenAILLM(
-            model_name=RAG_MODEL,
+            model_name="gpt-4o",
             model_params={"temperature": 0.1},
             api_key=OPENAI_API_KEY,
         )
@@ -61,7 +61,7 @@ def _get_stream_client(user_id=None):
     provider = get_effective_preset(user_id)
 
     if provider == "openai" and OPENAI_API_KEY:
-        return OpenAI(api_key=OPENAI_API_KEY), RAG_MODEL
+        return OpenAI(api_key=OPENAI_API_KEY), "gpt-4o"
     else:
         return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), DEEPSEEK_MODEL
 

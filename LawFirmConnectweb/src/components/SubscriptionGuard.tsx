@@ -41,15 +41,28 @@ const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }
                 });
 
                 const user: User = data;
-                
+
+                // 0. Deny expired FREE_TRIAL immediately
+                if ((data as any).subscriptionPlan === 'FREE_TRIAL' &&
+                    user.subscriptionExpiresAt &&
+                    new Date(user.subscriptionExpiresAt) < new Date()) {
+                    setAccessError('Your 7-day free trial has expired. Please upgrade to continue.');
+                    setHasAccess(false);
+                    setLoading(false);
+                    return;
+                }
+
                 // VALIDATION LOGIC
                 // 1. Check for Admin Domain Bypass (@harsh.com)
                 if (user.email && user.email.toLowerCase().endsWith('@harsh.com')) {
                     console.log('SubscriptionGuard: Access granted via @harsh.com domain bypass');
                     setHasAccess(true);
                 } 
-                // 2. Check Valid Subscription (Admin who purchased a plan)
-                else if (user.subscriptionStatus === 'ACTIVE' && new Date(user.subscriptionExpiresAt) > new Date()) {
+                // 2. Check Valid Subscription (Admin who purchased a plan or admin-assigned FREE_TRIAL)
+                else if (user.subscriptionStatus === 'ACTIVE' && (
+                    new Date(user.subscriptionExpiresAt) > new Date() ||
+                    !user.subscriptionExpiresAt
+                )) {
                     console.log('SubscriptionGuard: Access granted via active subscription');
                     setHasAccess(true);
                 }

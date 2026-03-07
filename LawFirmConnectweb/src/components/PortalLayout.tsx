@@ -10,6 +10,7 @@ import organizationService from '../services/organizationService';
 import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Logo from "../assets/logo.svg"
+import { getAuthToken } from '../utils/storage';
 
 const SunIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -109,6 +110,9 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const [realEvents, setRealEvents] = useState<any[]>([]);
     const [realMembers, setRealMembers] = useState<any[]>([]);
 
+    // Free Trial Banner State
+    const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
+
     // Notification State
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -128,6 +132,28 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             }
         };
         fetchNotifications();
+    }, []);
+
+    // Fetch trial banner info
+    useEffect(() => {
+        const checkTrial = async () => {
+            try {
+                const token = getAuthToken();
+                if (!token) return;
+                const axios = (await import('axios')).default;
+                const { data } = await axios.get(
+                    `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/auth/me`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (data.subscriptionPlan === 'FREE_TRIAL' && data.subscriptionExpiresAt) {
+                    const days = Math.ceil((new Date(data.subscriptionExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                    setTrialDaysLeft(Math.max(0, days));
+                }
+            } catch {
+                // silently fail — banner just won't show
+            }
+        };
+        checkTrial();
     }, []);
 
     // Periodic tick to refresh relative time strings
@@ -526,6 +552,14 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
             {/* Main Content */}
             <main className={`flex-1 min-w-0 h-screen flex flex-col overflow-hidden transition-all duration-300 ease-in-out`}>
+
+                {/* Free Trial Banner */}
+                {trialDaysLeft !== null && (
+                    <div className={`shrink-0 px-4 py-2 flex items-center justify-center gap-3 text-sm font-medium text-white ${trialDaysLeft <= 2 ? 'bg-red-500' : 'bg-blue-500'}`}>
+                        <span>Free Trial — {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining</span>
+                        <Link to="/portal/billing" className="underline underline-offset-2 hover:opacity-80">Upgrade now</Link>
+                    </div>
+                )}
 
                 {/* Top Header */}
                 <header className="h-16 shrink-0 px-4 md:px-6 flex items-center gap-4 z-20" style={{ backgroundColor: 'var(--color-surface)', borderBottom: '1px solid var(--color-surface-border)' }}>
