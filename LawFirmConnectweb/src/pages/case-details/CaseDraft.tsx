@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { useOutletContext, useNavigate } from 'react-router-dom';
@@ -119,6 +119,14 @@ const CaseDraft: React.FC = () => {
     const [showAddDocumentModal, setShowAddDocumentModal] = useState(false);
     const [isCustomDocument, setIsCustomDocument] = useState(false);
     const [customDocumentName, setCustomDocumentName] = useState('');
+    const [templateSearch, setTemplateSearch] = useState('');
+    const [activeCategory, setActiveCategory] = useState<string>('All');
+
+    // Text selection "Ask" tooltip state
+    const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
+    const [pendingDocText, setPendingDocText] = useState<string | null>(null);   // text highlighted, shown in tooltip
+    const [selectedDocText, setSelectedDocText] = useState<string | null>(null); // committed reference chip
+    const chatInputRef = useRef<HTMLDivElement>(null);
 
     // Version history state
     const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -131,6 +139,14 @@ const CaseDraft: React.FC = () => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    const categories = useMemo(() => ['All', ...Array.from(new Set(templates.map(t => t.category)))], [templates]);
+    const filteredTemplates = useMemo(() => {
+        return templates.filter(t => t.id !== 'blank')
+            .filter(t => activeCategory === 'All' || t.category === activeCategory)
+            .filter(t => !templateSearch ||
+                t.name.toLowerCase().includes(templateSearch.toLowerCase()) ||
+                t.description.toLowerCase().includes(templateSearch.toLowerCase()));
+    }, [templates, activeCategory, templateSearch]);
 
     // Load templates and draft sessions on mount
     useEffect(() => {
@@ -211,18 +227,43 @@ const CaseDraft: React.FC = () => {
             );
             setSessionId(session.session_id);
             setSelectedTemplate(templateId);
-            
-            // Add welcome message
-            if (isCustomDocument) {
+
+            if (!isCustomDocument) {
+                // Auto-generate: immediately send a generation request
+                const tmpl = templates.find(t => t.id === templateId);
+                const autoMessage = `Generate a complete ${tmpl?.name} using the case documents and context.`;
+
                 setMessages([{
                     role: 'assistant',
-                    content: `Great! I'll help you create "${title}". I have access to all the documents you've uploaded for this case. Tell me what you'd like to include in this document.`
+                    content: `Generating your ${tmpl?.name}...`
                 }]);
+                setIsGenerating(true);
+
+                try {
+                    const response = await caseService.sendDraftMessage(
+                        caseData._id,
+                        session.session_id,
+                        autoMessage,
+                        '',
+                        templateId
+                    );
+                    setMessages([
+                        { role: 'assistant', content: response.ai_message }
+                    ]);
+                    setDocumentContent(response.document_content);
+                } catch (error) {
+                    setMessages([{
+                        role: 'assistant',
+                        content: 'Failed to auto-generate. Please describe what you need.'
+                    }]);
+                } finally {
+                    setIsGenerating(false);
+                }
             } else {
-                const template = templates.find(t => t.id === templateId);
+                // Custom document: keep the conversational approach
                 setMessages([{
                     role: 'assistant',
-                    content: `Great! I'll help you create a ${template?.name}. I can use information from your uploaded case documents. What details would you like to include?`
+                    content: `I'll help you create "${title}". I have access to all the documents you've uploaded for this case. Tell me what you'd like to include.`
                 }]);
             }
 
@@ -230,6 +271,8 @@ const CaseDraft: React.FC = () => {
             setIsCustomDocument(false);
             setCustomDocumentName('');
             setSelectedTemplate('');
+            setTemplateSearch('');
+            setActiveCategory('All');
             
             // Reload sessions
             loadDraftSessions();
@@ -265,23 +308,61 @@ const CaseDraft: React.FC = () => {
         }
     };
 
+    // ---- Text selection "Ask" tooltip ----
+    const handleEditorMouseUp = (e: React.MouseEvent) => {
+        // Textarea elements don't support window.getSelection() — use selectionStart/selectionEnd
+        const textarea = (e.currentTarget as HTMLElement).querySelector('textarea');
+        if (!textarea) { setSelectionCoords(null); return; }
+
+        // Small delay to let the browser finalize the selection
+        setTimeout(() => {
+            const { selectionStart, selectionEnd, value } = textarea;
+            if (selectionStart === selectionEnd) { setSelectionCoords(null); return; }
+
+            const selText = value.slice(selectionStart, selectionEnd).trim();
+            if (!selText) { setSelectionCoords(null); return; }
+
+            // Position tooltip above the mouse cursor
+            setSelectionCoords({ x: e.clientX, y: e.clientY - 10 });
+            setPendingDocText(selText);
+        }, 10);
+    };
+
+    // Dismiss tooltip on mousedown anywhere
+    useEffect(() => {
+        const handleClick = () => {
+            setSelectionCoords(null);
+            setPendingDocText(null);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
     const handleSendMessage = async () => {
         if (!inputMessage.trim() || !sessionId) return;
 
+        // If there's a selected doc reference, prepend it as context
+        const messageToSend = selectedDocText
+            ? `[Regarding this text from the document: "${selectedDocText}"]\n${inputMessage}`
+            : inputMessage;
+
         const userMessage: Message = {
             role: 'user',
-            content: inputMessage
+            content: selectedDocText
+                ? `> **Ref:** "${selectedDocText.length > 120 ? selectedDocText.slice(0, 120) + '...' : selectedDocText}"\n\n${inputMessage}`
+                : inputMessage
         };
 
         setMessages(prev => [...prev, userMessage]);
         setInputMessage('');
+        setSelectedDocText(null);
         setIsGenerating(true);
 
         try {
             const response = await caseService.sendDraftMessage(
                 caseData._id,
                 sessionId,
-                inputMessage,
+                messageToSend,
                 documentContent,
                 selectedTemplate
             );
@@ -485,8 +566,8 @@ const CaseDraft: React.FC = () => {
 
                 {/* Add Document Modal */}
                 {showAddDocumentModal && (
-                    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => { setShowAddDocumentModal(false); setIsCustomDocument(false); setCustomDocumentName(''); setSelectedTemplate(''); }}>
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 backdrop-blur-sm" onClick={() => { setShowAddDocumentModal(false); setIsCustomDocument(false); setCustomDocumentName(''); setSelectedTemplate(''); setTemplateSearch(''); setActiveCategory('All'); }}>
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                             <div className="p-6 border-b border-slate-200">
                                 <h3 className="text-2xl font-bold text-slate-900">{t('portal.drafting.modalTitle')}</h3>
                                 <p className="text-sm text-slate-600 mt-1">{t('portal.drafting.modalSubtitle')}</p>
@@ -520,40 +601,120 @@ const CaseDraft: React.FC = () => {
                                     )}
                                 </div>
 
+                                {/* Search and Category Filters */}
+                                {!isCustomDocument && (
+                                    <div className="mb-4">
+                                        <input
+                                            type="text"
+                                            value={templateSearch}
+                                            onChange={(e) => setTemplateSearch(e.target.value)}
+                                            placeholder="Search templates..."
+                                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+                                        />
+                                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                                            {categories.map(cat => (
+                                                <button
+                                                    key={cat}
+                                                    onClick={() => setActiveCategory(cat)}
+                                                    className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${
+                                                        activeCategory === cat
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                    }`}
+                                                >
+                                                    {cat}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Template Grid */}
                                 <div className="mb-4">
                                     <h4 className="font-bold text-slate-700 mb-3">{t('portal.drafting.chooseTemplate')}</h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {templates.filter(t => t.id !== 'blank').map(template => (
-                                            <button
-                                                key={template.id}
-                                                onClick={() => {
-                                                    setSelectedTemplate(template.id);
-                                                    setIsCustomDocument(false);
-                                                }}
-                                                className={`p-4 border-2 rounded-lg text-left transition-all ${
-                                                    selectedTemplate === template.id
-                                                        ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-slate-200 hover:border-blue-300 bg-white'
-                                                }`}
-                                            >
-                                                <div className="flex items-start justify-between mb-2">
-                                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">
-                                                        {template.category}
-                                                    </span>
-                                                    {selectedTemplate === template.id && (
-                                                        <div className="text-blue-500">
-                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                            </svg>
+                                    {activeCategory === 'All' && !templateSearch ? (
+                                        // Grouped by category
+                                        <>
+                                            {categories.filter(c => c !== 'All').map(cat => {
+                                                const catTemplates = templates.filter(t => t.id !== 'blank' && t.category === cat);
+                                                if (catTemplates.length === 0) return null;
+                                                return (
+                                                    <div key={cat} className="mb-5">
+                                                        <h5 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2">{cat}</h5>
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            {catTemplates.map(template => (
+                                                                <button
+                                                                    key={template.id}
+                                                                    onClick={() => {
+                                                                        setSelectedTemplate(template.id);
+                                                                        setIsCustomDocument(false);
+                                                                    }}
+                                                                    className={`p-3 border-2 rounded-lg text-left transition-all ${
+                                                                        selectedTemplate === template.id
+                                                                            ? 'border-blue-500 bg-blue-50'
+                                                                            : 'border-slate-200 hover:border-blue-300 bg-white'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex items-start justify-between mb-1">
+                                                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">
+                                                                            {template.category}
+                                                                        </span>
+                                                                        {selectedTemplate === template.id && (
+                                                                            <div className="text-blue-500">
+                                                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                                </svg>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                    <h4 className="font-bold text-slate-900 text-sm mb-1">{template.name}</h4>
+                                                                    <p className="text-xs text-slate-600 line-clamp-2">{template.description}</p>
+                                                                </button>
+                                                            ))}
                                                         </div>
-                                                    )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </>
+                                    ) : (
+                                        // Flat filtered grid
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {filteredTemplates.map(template => (
+                                                <button
+                                                    key={template.id}
+                                                    onClick={() => {
+                                                        setSelectedTemplate(template.id);
+                                                        setIsCustomDocument(false);
+                                                    }}
+                                                    className={`p-3 border-2 rounded-lg text-left transition-all ${
+                                                        selectedTemplate === template.id
+                                                            ? 'border-blue-500 bg-blue-50'
+                                                            : 'border-slate-200 hover:border-blue-300 bg-white'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-start justify-between mb-1">
+                                                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded">
+                                                            {template.category}
+                                                        </span>
+                                                        {selectedTemplate === template.id && (
+                                                            <div className="text-blue-500">
+                                                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                                </svg>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <h4 className="font-bold text-slate-900 text-sm mb-1">{template.name}</h4>
+                                                    <p className="text-xs text-slate-600 line-clamp-2">{template.description}</p>
+                                                </button>
+                                            ))}
+                                            {filteredTemplates.length === 0 && (
+                                                <div className="col-span-3 text-center py-8 text-slate-400">
+                                                    No templates match your search.
                                                 </div>
-                                                <h4 className="font-bold text-slate-900 text-sm mb-1">{template.name}</h4>
-                                                <p className="text-xs text-slate-600 line-clamp-2">{template.description}</p>
-                                            </button>
-                                        ))}
-                                    </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -564,6 +725,8 @@ const CaseDraft: React.FC = () => {
                                         setIsCustomDocument(false);
                                         setCustomDocumentName('');
                                         setSelectedTemplate('');
+                                        setTemplateSearch('');
+                                        setActiveCategory('All');
                                     }}
                                     className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
                                 >
@@ -699,7 +862,22 @@ const CaseDraft: React.FC = () => {
                     </div>
 
                     {/* Input */}
-                    <div className="p-4 border-t border-slate-200">
+                    <div ref={chatInputRef} className="p-4 border-t border-slate-200">
+                        {/* Reference chip from document selection */}
+                        {selectedDocText && (
+                            <div className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                                <SparklesIcon />
+                                <span className="flex-1 truncate">
+                                    <span className="font-semibold">Ref:</span> "{selectedDocText.length > 80 ? selectedDocText.slice(0, 80) + '...' : selectedDocText}"
+                                </span>
+                                <button
+                                    onClick={() => setSelectedDocText(null)}
+                                    className="ml-1 text-blue-400 hover:text-blue-600 font-bold text-base leading-none"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        )}
                         <div className="flex gap-2">
                             <TransliterateInput
                                 value={inputMessage}
@@ -731,6 +909,7 @@ const CaseDraft: React.FC = () => {
                         <LineNumberedEditor
                             value={documentContent}
                             onChangeText={setDocumentContent}
+                            onMouseUp={handleEditorMouseUp}
                             className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
                             placeholder={t('portal.drafting.docContentPlaceholder')}
                         />
@@ -900,6 +1079,34 @@ const CaseDraft: React.FC = () => {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* "Ask" Tooltip (floating on document text selection) */}
+            {selectionCoords && pendingDocText && (
+                <div
+                    className="fixed z-50 transform -translate-x-1/2 -translate-y-[120%] bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-2xl cursor-pointer hover:bg-slate-800 transition-all animate-in fade-in zoom-in-95 duration-200 border border-white/10 ring-1 ring-black/20"
+                    style={{ top: selectionCoords.y, left: selectionCoords.x }}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Commit the pending text as a reference chip
+                        setSelectedDocText(pendingDocText);
+                        setPendingDocText(null);
+                        setSelectionCoords(null);
+                        // Focus the chat input
+                        const input = chatInputRef.current?.querySelector('input, textarea');
+                        if (input) (input as HTMLElement).focus();
+                    }}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        Ask
+                    </div>
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/90 backdrop-blur-md rotate-45 border-r border-b border-white/10"></div>
                 </div>
             )}
         </div>

@@ -217,7 +217,10 @@ def final_judge(state: InvestigatorState) -> Dict[str, Any]:
         response = chain.invoke({
             "narrative": smart_truncate(state.get("case_narrative", ""), 4000),
             "timeline": smart_truncate(format_timeline(state.get("timeline", [])), 3000),
-            "entities": smart_truncate(", ".join(state.get("entities", [])), 2000),
+            "entities": smart_truncate(", ".join(
+                e if isinstance(e, str) else e.get("name", str(e)) if isinstance(e, dict) else str(e)
+                for e in state.get("entities", [])
+            ), 2000),
             "facts": smart_truncate(format_facts(state.get("facts", [])), 4000),
             "challenges": format_challenges(state.get("challenges", [])),
             "gaps": format_evidence_gaps(state.get("evidence_gaps", [])),

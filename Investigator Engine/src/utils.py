@@ -205,6 +205,18 @@ def get_llm(model_name: str = "gpt-4o-mini", task_tier: str = "standard", user_i
         if tier_model:
             model_name = tier_model
 
+    # Preset-aware model override: ensures correct models per provider
+    PRESET_MODEL_MAP = {
+        "openai": {"fast": "gpt-4o", "standard": "gpt-4o", "powerful": "gpt-4o"},
+        "deepseek": {"fast": "deepseek-chat", "standard": "deepseek-chat", "powerful": "deepseek-chat"},
+    }
+    try:
+        _preset_provider = get_effective_preset(user_id)
+        if _preset_provider in PRESET_MODEL_MAP and task_tier in PRESET_MODEL_MAP[_preset_provider]:
+            model_name = PRESET_MODEL_MAP[_preset_provider][task_tier]
+    except Exception:
+        pass
+
     # Check for Ollama preference
     use_ollama = str(os.getenv("USE_OLLAMA", "")).lower().replace('"', '').replace("'", "")
     if use_ollama == "true":

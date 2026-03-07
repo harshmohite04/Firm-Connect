@@ -6,6 +6,7 @@ interface LineNumberedEditorProps {
     onChangeText: (text: string) => void;
     className?: string;
     placeholder?: string;
+    onMouseUp?: (e: React.MouseEvent) => void;
 }
 
 const LineNumberedEditor: React.FC<LineNumberedEditorProps> = ({
@@ -13,6 +14,7 @@ const LineNumberedEditor: React.FC<LineNumberedEditorProps> = ({
     onChangeText,
     className,
     placeholder,
+    onMouseUp,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const gutterRef = useRef<HTMLDivElement>(null);
@@ -94,7 +96,7 @@ const LineNumberedEditor: React.FC<LineNumberedEditorProps> = ({
     }, [syncScroll]);
 
     return (
-        <div ref={containerRef} className="flex flex-1 min-h-0 overflow-hidden relative">
+        <div ref={containerRef} className="flex flex-1 min-h-0 overflow-hidden relative" onMouseUp={onMouseUp}>
             {/* Hidden mirror div — replicates textarea styling to measure wrapped line heights */}
             <div
                 ref={mirrorRef}

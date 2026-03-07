@@ -4,6 +4,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 import shutil
+import re
 
 # --- Environment Setup (Must be first) ---
 import os
@@ -1048,21 +1049,39 @@ async def retry_ingest(
     try:
         validate_case_id(body.caseId)
         safe_filename = sanitize_filename(body.filename)
-        
-        # Check if file exists
+
+        # Check if file exists - try direct match first, then look up in document_status
         file_path = f"documents/{safe_filename}"
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File not found on server")
+            # Try finding the actual filename from document_status collection
+            doc_status = document_status_collection.find_one(
+                {"case_id": body.caseId, "filename": safe_filename}
+            )
+            if not doc_status:
+                # Also try partial match on the filename (original name may differ from upload path name)
+                doc_status = document_status_collection.find_one(
+                    {"case_id": body.caseId, "filename": {"$regex": re.escape(safe_filename), "$options": "i"}}
+                )
+            if doc_status and os.path.exists(f"documents/{doc_status['filename']}"):
+                safe_filename = doc_status['filename']
+                file_path = f"documents/{safe_filename}"
+            else:
+                # Last resort: scan documents/ directory for a partial match
+                for f_name in os.listdir("documents"):
+                    if safe_filename.lower() in f_name.lower() or f_name.lower() in safe_filename.lower():
+                        safe_filename = f_name
+                        file_path = f"documents/{safe_filename}"
+                        break
+                else:
+                    raise HTTPException(status_code=404, detail="File not found on server")
             
-        # Read content
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
-        except:
-            # Maybe binary? But we only ingest text...
-            # For now try reading as binary and decoding with error ignore
-             with open(file_path, "rb") as f:
-                content = f.read().decode("utf-8", errors="ignore")
+        # Read content using page-aware loader (handles PDFs, DOCX, etc.)
+        from ingestion.loader import parse_file_with_pages
+        page_data = parse_file_with_pages(file_path)
+        content = "\n".join(p.get("text", "") for p in page_data)
+
+        if not content.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from file or file is empty.")
 
         # Set status to Processing
         document_status_collection.update_one(
@@ -1115,6 +1134,14 @@ async def reload_config(request: Request):
     except Exception as e:
         logger.error(f"Error reloading config: {e}")
         raise HTTPException(status_code=500, detail="Failed to reload configuration")
+
+@app.post("/api/admin/clear-user-cache/{user_id}")
+@limiter.limit("30/minute")
+async def clear_user_preset_cache(request: Request, user_id: str):
+    """Clear per-user AI preset cache (called by Admin Dashboard after preset change)."""
+    from utils.system_settings import clear_user_cache
+    clear_user_cache(user_id)
+    return {"status": "ok", "message": f"Cache cleared for user {user_id}"}
 
 # ---------- CONVERSATIONAL DRAFT ENDPOINTS ----------
 
@@ -1508,45 +1535,8 @@ async def restore_draft_version(
 @limiter.limit("60/minute")
 async def get_templates(request: Request):
     """Get available document templates"""
-    templates = [
-        {
-            "id": "noc",
-            "name": "No Objection Certificate (NOC)",
-            "description": "Generate NOC for property, employment, or other purposes",
-            "category": "Certificate"
-        },
-        {
-            "id": "demand_letter",
-            "name": "Demand Letter",
-            "description": "Legal demand letter for payment or action",
-            "category": "Letter"
-        },
-        {
-            "id": "legal_notice",
-            "name": "Legal Notice",
-            "description": "Formal legal notice under law",
-            "category": "Notice"
-        },
-        {
-            "id": "contract",
-            "name": "Contract Agreement",
-            "description": "Standard contract or agreement template",
-            "category": "Contract"
-        },
-        {
-            "id": "affidavit",
-            "name": "Affidavit",
-            "description": "Sworn statement of facts",
-            "category": "Affidavit"
-        },
-        {
-            "id": "blank",
-            "name": "Blank Document",
-            "description": "Start from scratch with AI assistance",
-            "category": "General"
-        }
-    ]
-    return templates
+    from investigation.templates import get_all_metadata
+    return get_all_metadata()
 
 @app.post("/investigation/run", response_model=InvestigatorResponse)
 @limiter.limit("5/minute")
@@ -1965,13 +1955,15 @@ async def run_investigation_background(
     if not doc_list:
         raise HTTPException(status_code=404, detail="No documents found for this case.")
 
+    user_id = get_user_id(current_user)
+
     # Create job record
     import uuid
     job_id = str(uuid.uuid4())
     investigation_jobs_collection.insert_one({
         "_id": job_id,
         "case_id": body.caseId,
-        "user_id": current_user.get("user_id", "unknown"),
+        "user_id": user_id,
         "status": "running",
         "progress": 0,
         "progress_label": "Starting investigation...",
@@ -1984,7 +1976,7 @@ async def run_investigation_background(
     # Fire and forget — runs in the background
     asyncio.create_task(
         _run_investigation_background(
-            job_id, body.caseId, body.focusQuestions or [], current_user.get("user_id", "unknown"), doc_list
+            job_id, body.caseId, body.focusQuestions or [], user_id, doc_list
         )
     )
 

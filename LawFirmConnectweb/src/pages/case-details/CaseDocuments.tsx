@@ -128,7 +128,9 @@ const CaseDocuments: React.FC = () => {
     };
 
     const handleRetryIngest = async (doc: any) => {
-        const filename = sanitizeFilename(doc.filePath);
+        // Use fileName (original name) first since Python stores files under the original name.
+        // Fall back to filePath-derived name for backward compatibility.
+        const filename = sanitizeFilename(doc.fileName) || sanitizeFilename(doc.filePath);
         try {
             toast.loading("Retrying ingestion...");
             await ragService.retryIngest(id!, filename);

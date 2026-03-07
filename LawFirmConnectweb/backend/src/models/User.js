@@ -47,7 +47,7 @@ const userSchema = new mongoose.Schema(
     },
     subscriptionPlan: {
       type: String,
-      enum: ['STARTER', 'PROFESSIONAL', 'FIRM'],
+      enum: ['FREE_TRIAL', 'STARTER', 'PROFESSIONAL', 'FIRM'],
       default: null
     },
     razorpaySubscriptionId: { type: String, default: null },
