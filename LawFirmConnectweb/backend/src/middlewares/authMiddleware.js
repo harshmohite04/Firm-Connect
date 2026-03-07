@@ -67,8 +67,9 @@ const checkAccess = (req, res, next) => {
         return next();
     }
 
-    // 2. Check Subscription Status
-    if (req.user.subscriptionStatus === 'ACTIVE' && req.user.subscriptionExpiresAt > Date.now()) {
+    // 2. Check Subscription Status (null expiry = no expiry set, allow access)
+    if (req.user.subscriptionStatus === 'ACTIVE' &&
+        (!req.user.subscriptionExpiresAt || req.user.subscriptionExpiresAt > Date.now())) {
         return next();
     }
 

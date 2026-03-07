@@ -487,6 +487,14 @@ const loginUser = async (req, res, next) => {
         user.lastLoginDevice = deviceString;
         user.lastLoginLocation = locationString;
 
+        // Auto-deactivate expired FREE_TRIAL
+        if (user.subscriptionPlan === 'FREE_TRIAL' &&
+            user.subscriptionStatus === 'ACTIVE' &&
+            user.subscriptionExpiresAt &&
+            user.subscriptionExpiresAt < new Date()) {
+            user.subscriptionStatus = 'INACTIVE';
+        }
+
         // Auto-activate subscription for @harsh.com
         if (user.email.toLowerCase().endsWith('@harsh.com')) {
             user.subscriptionStatus = 'ACTIVE';
