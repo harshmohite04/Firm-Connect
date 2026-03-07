@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    getCases, createCase, getCaseById, deleteCase, 
+const {
+    getCases, createCase, getCaseById, deleteCase,
     getCaseDocuments, uploadDocument, deleteDocument,
     getCaseActivity, addCaseActivity,
     getCaseBilling, addCaseBilling,
-    updateCaseSettings
+    updateCaseSettings,
+    getCaseHealth
 } = require('../controllers/caseController');
 const {
     validateTeamMember,
@@ -30,6 +31,9 @@ router.route('/')
 router.route('/:id')
     .get(protect, verifyCaseAccess, getCaseById)
     .delete(protect, verifyCaseAccess, deleteCase); // Soft delete via main endpoint or settings
+
+// Health Score
+router.get('/:id/health', protect, verifyCaseAccess, getCaseHealth);
 
 // Tab: Active Documents
 router.route('/:id/documents')

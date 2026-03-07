@@ -24,6 +24,7 @@ import PortalProfile from "./pages/PortalProfile";
 import ProfileInfo from "./pages/profile/ProfileInfo";
 import ProfileSecurity from "./pages/profile/ProfileSecurity";
 import ProfileNotifications from "./pages/profile/ProfileNotifications";
+import CaseOverview from "./pages/case-details/CaseOverview";
 import CaseActivity from "./pages/case-details/CaseActivity";
 import CaseDocuments from "./pages/case-details/CaseDocuments";
 import CaseChat from "./pages/case-details/CaseChat";
@@ -125,7 +126,8 @@ const App: React.FC = () => {
               </SubscriptionGuard>
             }
           >
-            <Route index element={<Navigate to="activity" replace />} />
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<CaseOverview />} />
             <Route path="activity" element={<CaseActivity />} />
             <Route path="documents" element={<CaseDocuments />} />
             <Route path="chat" element={<CaseChat />} />
