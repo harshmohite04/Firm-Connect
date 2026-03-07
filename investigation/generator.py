@@ -1,70 +1,11 @@
 from rag.rag import ask
 from pydantic import BaseModel
 from typing import List, Dict, Optional
+from investigation.templates import TEMPLATES
 
 class DocumentGenerator:
     def __init__(self):
-        self.templates = {
-            "noc": """NO OBJECTION CERTIFICATE
-
-To Whom It May Concern,
-
-This is to certify that {party_name} has no objection to {subject_matter}.
-
-{additional_details}
-
-Issued on: {date}
-
-Authorized Signatory
-{organization}""",
-            
-            "demand_letter": """LEGAL DEMAND LETTER
-
-Date: {date}
-
-To,
-{recipient_name}
-{recipient_address}
-
-Subject: Demand for {subject}
-
-Dear Sir/Madam,
-
-{opening_paragraph}
-
-Facts of the Case:
-{facts}
-
-Legal Basis:
-{legal_basis}
-
-Demand:
-{demand_statement}
-
-Yours faithfully,
-{sender_name}
-{sender_credentials}""",
-            
-            "legal_notice": """LEGAL NOTICE
-
-Under Section {section} of {act}
-
-To,
-{recipient_details}
-
-Notice is hereby served upon you on behalf of {client_name} regarding {matter}.
-
-{notice_body}
-
-Take notice that if the above demands are not complied with within {timeframe}, legal proceedings will be initiated without further reference.
-
-Date: {date}
-Place: {place}
-
-{advocate_details}""",
-            
-            "blank": ""  # Empty for blank documents
-        }
+        self.templates = TEMPLATES
 
     def generate(self, case_id: str, instructions: str) -> str:
         """
@@ -111,30 +52,40 @@ Place: {place}
         ])
         
         # Get template if specified
-        template_content = self.templates.get(template, "") if template != "blank" else ""
-        
+        template_content = self.templates.get(template, "") if template else ""
+
         # Determine if this is initial generation or refinement
         is_initial = not current_document or len(current_document.strip()) < 50
-        
+
         if is_initial:
-            # Initial document generation
-            query = f"""You are a legal assistant helping draft a document interactively.
+            # Initial document generation - generate immediately without asking questions
+            template_instruction = ""
+            if template_content:
+                template_instruction = f"""
+Template structure:
+{template_content}
+
+Follow this template structure EXACTLY, filling in ALL placeholders with information from the case context."""
+
+            query = f"""You are an expert Indian legal document drafter.
 
 Template type: {template}
+{template_instruction}
+
 User request: {message}
 
-Based on the case context and user's request, do TWO things:
-1. Respond conversationally to acknowledge what you're doing and ask for any needed clarifications
-2. Generate an initial draft of the document
+Based on the case context and the template structure, do TWO things:
+1. Briefly acknowledge the document you are generating (1-2 sentences)
+2. Generate the COMPLETE document following the exact template structure, filling in ALL placeholders with information from the case context. Where specific information is not available from the case, use realistic placeholder text marked with [____].
 
 Previous conversation:
 {conversation_context}
 
 Format your response EXACTLY as follows:
-CHAT: [Your conversational response to the user]
-DOCUMENT: [The actual document content]
+CHAT: [Brief acknowledgement - do NOT ask questions, just generate]
+DOCUMENT: [The complete filled-in document following the template structure]
 
-Be helpful and professional. If you need more information, ask specific questions."""
+IMPORTANT: Generate the full document immediately. Do NOT ask clarifying questions. Use case context to fill details. For missing details, use [____] placeholders the user can fill later."""
         else:
             # Refinement of existing document — prepend line numbers for precise references
             numbered_lines = [f"{i}: {line}" for i, line in enumerate(current_document.split('\n'), start=1)]
