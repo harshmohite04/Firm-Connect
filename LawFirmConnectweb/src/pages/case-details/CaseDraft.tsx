@@ -122,6 +122,12 @@ const CaseDraft: React.FC = () => {
     const [templateSearch, setTemplateSearch] = useState('');
     const [activeCategory, setActiveCategory] = useState<string>('All');
 
+    // Text selection "Ask" tooltip state
+    const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
+    const [pendingDocText, setPendingDocText] = useState<string | null>(null);   // text highlighted, shown in tooltip
+    const [selectedDocText, setSelectedDocText] = useState<string | null>(null); // committed reference chip
+    const chatInputRef = useRef<HTMLDivElement>(null);
+
     // Version history state
     const [showVersionHistory, setShowVersionHistory] = useState(false);
     const [versions, setVersions] = useState<DraftVersion[]>([]);
@@ -302,23 +308,61 @@ const CaseDraft: React.FC = () => {
         }
     };
 
+    // ---- Text selection "Ask" tooltip ----
+    const handleEditorMouseUp = (e: React.MouseEvent) => {
+        // Textarea elements don't support window.getSelection() — use selectionStart/selectionEnd
+        const textarea = (e.currentTarget as HTMLElement).querySelector('textarea');
+        if (!textarea) { setSelectionCoords(null); return; }
+
+        // Small delay to let the browser finalize the selection
+        setTimeout(() => {
+            const { selectionStart, selectionEnd, value } = textarea;
+            if (selectionStart === selectionEnd) { setSelectionCoords(null); return; }
+
+            const selText = value.slice(selectionStart, selectionEnd).trim();
+            if (!selText) { setSelectionCoords(null); return; }
+
+            // Position tooltip above the mouse cursor
+            setSelectionCoords({ x: e.clientX, y: e.clientY - 10 });
+            setPendingDocText(selText);
+        }, 10);
+    };
+
+    // Dismiss tooltip on mousedown anywhere
+    useEffect(() => {
+        const handleClick = () => {
+            setSelectionCoords(null);
+            setPendingDocText(null);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
     const handleSendMessage = async () => {
         if (!inputMessage.trim() || !sessionId) return;
 
+        // If there's a selected doc reference, prepend it as context
+        const messageToSend = selectedDocText
+            ? `[Regarding this text from the document: "${selectedDocText}"]\n${inputMessage}`
+            : inputMessage;
+
         const userMessage: Message = {
             role: 'user',
-            content: inputMessage
+            content: selectedDocText
+                ? `> **Ref:** "${selectedDocText.length > 120 ? selectedDocText.slice(0, 120) + '...' : selectedDocText}"\n\n${inputMessage}`
+                : inputMessage
         };
 
         setMessages(prev => [...prev, userMessage]);
         setInputMessage('');
+        setSelectedDocText(null);
         setIsGenerating(true);
 
         try {
             const response = await caseService.sendDraftMessage(
                 caseData._id,
                 sessionId,
-                inputMessage,
+                messageToSend,
                 documentContent,
                 selectedTemplate
             );
@@ -818,7 +862,22 @@ const CaseDraft: React.FC = () => {
                     </div>
 
                     {/* Input */}
-                    <div className="p-4 border-t border-slate-200">
+                    <div ref={chatInputRef} className="p-4 border-t border-slate-200">
+                        {/* Reference chip from document selection */}
+                        {selectedDocText && (
+                            <div className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
+                                <SparklesIcon />
+                                <span className="flex-1 truncate">
+                                    <span className="font-semibold">Ref:</span> "{selectedDocText.length > 80 ? selectedDocText.slice(0, 80) + '...' : selectedDocText}"
+                                </span>
+                                <button
+                                    onClick={() => setSelectedDocText(null)}
+                                    className="ml-1 text-blue-400 hover:text-blue-600 font-bold text-base leading-none"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        )}
                         <div className="flex gap-2">
                             <TransliterateInput
                                 value={inputMessage}
@@ -850,6 +909,7 @@ const CaseDraft: React.FC = () => {
                         <LineNumberedEditor
                             value={documentContent}
                             onChangeText={setDocumentContent}
+                            onMouseUp={handleEditorMouseUp}
                             className="flex-1 w-full p-6 bg-white resize-none focus:outline-none font-serif text-base leading-relaxed text-slate-800"
                             placeholder={t('portal.drafting.docContentPlaceholder')}
                         />
@@ -1019,6 +1079,34 @@ const CaseDraft: React.FC = () => {
                             )}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* "Ask" Tooltip (floating on document text selection) */}
+            {selectionCoords && pendingDocText && (
+                <div
+                    className="fixed z-50 transform -translate-x-1/2 -translate-y-[120%] bg-slate-900/90 backdrop-blur-md text-white text-xs font-bold py-2.5 px-5 rounded-xl shadow-2xl cursor-pointer hover:bg-slate-800 transition-all animate-in fade-in zoom-in-95 duration-200 border border-white/10 ring-1 ring-black/20"
+                    style={{ top: selectionCoords.y, left: selectionCoords.x }}
+                    onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Commit the pending text as a reference chip
+                        setSelectedDocText(pendingDocText);
+                        setPendingDocText(null);
+                        setSelectionCoords(null);
+                        // Focus the chat input
+                        const input = chatInputRef.current?.querySelector('input, textarea');
+                        if (input) (input as HTMLElement).focus();
+                    }}
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        Ask
+                    </div>
+                    <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-slate-900/90 backdrop-blur-md rotate-45 border-r border-b border-white/10"></div>
                 </div>
             )}
         </div>

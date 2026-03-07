@@ -136,7 +136,12 @@ def entity_fact_extractor(state: InvestigatorState) -> Dict[str, Any]:
                 }
                 all_facts.append(fact_entry)
                 for ent in f_dict.get("entities", []):
-                    all_entities.add(ent)
+                    if isinstance(ent, str):
+                        all_entities.add(ent)
+                    elif isinstance(ent, dict):
+                        all_entities.add(ent.get("name", str(ent)))
+                    else:
+                        all_entities.add(str(ent))
 
         except Exception as e:
             print(f"Error in deep extraction for {doc['id']}: {e}")
