@@ -481,7 +481,6 @@
     "accept": "Accept",
     "reject": "Reject",
     "available": "Available",
-    "shared": "Shared",
     "selectChat": "Select a chat",
     "typePlaceholder": "Type your message here...",
     "searchByEmail": "Search for users by email to send a request.",
@@ -490,7 +489,11 @@
     "close": "Close",
     "friendRequestSent": "Friend request sent!",
     "userNotFound": "User not found",
-    "searchError": "Error searching for user"
+    "searchError": "Error searching for user",
+    "typing": "typing...",
+    "searchPlaceholder": "Search conversations...",
+    "noConversations": "No conversations yet",
+    "selectConversation": "Select a conversation to start messaging"
   },
   "contactUs": {
     "heroTitle": "Get in Touch",
@@ -558,6 +561,12 @@
     "eventSaveFailed": "Failed to save event",
     "eventDeleteFailed": "Failed to delete event",
     "noTitle": "(No Title)",
+    "monthView": "Month",
+    "agendaView": "Agenda",
+    "joinMeeting": "Join Meeting",
+    "noUpcoming": "No upcoming events",
+    "meetingLinkGenerated": "A Jitsi Meet link will be generated automatically",
+    "addAttendees": "Add attendees...",
     "categories": {
       "Meeting": "Meeting",
       "Court": "Court",
@@ -576,7 +585,9 @@
     "viewCases": "View Cases",
     "messagesBtn": "Messages",
     "activeCases": "Active Cases",
+    "pendingCases": "Pending Cases",
     "unreadMessages": "Unread Messages",
+    "upcomingEvents": "Upcoming Events",
     "nextHearing": "Next Hearing",
     "dueAmount": "Due Amount",
     "activeMatters": "Active Matters",
@@ -593,7 +604,14 @@
     "loading": "Loading your dashboard...",
     "error": "Something went wrong",
     "active": "Active",
-    "new": "New"
+    "new": "New",
+    "needsAttention": "Needs Your Attention",
+    "allCaughtUp": "You're all caught up!",
+    "todaySchedule": "Today's Schedule",
+    "noEventsToday": "No events today",
+    "overdueCase": "{{title}} has no activity for {{days}} days",
+    "upcomingDeadline": "{{title}} starts in {{time}}",
+    "startNewCase": "Start New Case"
   },
   "billing": {
     "title": "Billing & Invoices",

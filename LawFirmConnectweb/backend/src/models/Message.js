@@ -13,11 +13,18 @@ const messageSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        required: true
+        required: function() { return !this.attachment; }
     },
     read: {
         type: Boolean,
         default: false
+    },
+    attachment: {
+        filename: String,
+        originalName: String,
+        mimeType: String,
+        size: Number,
+        url: String
     }
 }, {
     timestamps: true

@@ -8,6 +8,7 @@ const TeamInvitation = require('../models/TeamInvitation');
 const sendEmail = require('../utils/emailService');
 const { orgSeatInvitationTemplate, orgSeatInvitationNewUserTemplate } = require('../utils/organizationInvitationTemplate');
 const { protect, admin } = require('../middlewares/authMiddleware');
+const OrgActivityLog = require('../models/OrgActivityLog');
 
 // Map plan names to env-based Razorpay plan IDs
 const PLAN_MAP = {
@@ -262,6 +263,18 @@ router.post('/verify-seat', protect, admin, async (req, res) => {
             }
         }
 
+        // Log activity
+        try {
+            await OrgActivityLog.create({
+                organizationId: org._id,
+                action: 'SEAT_ADDED',
+                actorId: req.user._id,
+                metadata: { seatPlan: seatPlan || 'STARTER', seatId: newSeat._id.toString() }
+            });
+        } catch (logErr) {
+            console.error('Failed to log seat activity:', logErr);
+        }
+
         res.json({
             success: true,
             message: inviteEmail ? 'Seat added and invitation sent' : 'Seat added to organization',
@@ -313,6 +326,18 @@ router.post('/cancel-seat', protect, admin, async (req, res) => {
 
         seat.status = 'INACTIVE';
         await org.save();
+
+        // Log activity
+        try {
+            await OrgActivityLog.create({
+                organizationId: org._id,
+                action: 'SEAT_CANCELLED',
+                actorId: req.user._id,
+                metadata: { seatId, seatPlan: seat.plan }
+            });
+        } catch (logErr) {
+            console.error('Failed to log seat activity:', logErr);
+        }
 
         res.json({
             success: true,

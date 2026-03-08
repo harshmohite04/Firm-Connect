@@ -18,6 +18,7 @@ export interface OrganizationMember {
 export interface Organization {
   _id: string;
   name: string;
+  description?: string;
   ownerId: {
     _id: string;
     firstName: string;
@@ -44,7 +45,7 @@ export interface Organization {
 export interface Invitation {
   _id: string;
   invitedEmail: string;
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "accepted" | "rejected" | "revoked";
   expiresAt: string;
 }
 
@@ -181,6 +182,57 @@ const cancelSeat = async (
   return response.data;
 };
 
+export interface OrgActivityLogEntry {
+  _id: string;
+  organizationId: string;
+  action: string;
+  actorId: { _id: string; firstName: string; lastName: string; email: string } | null;
+  targetId: { _id: string; firstName: string; lastName: string; email: string } | null;
+  metadata: Record<string, any>;
+  createdAt: string;
+}
+
+export interface InvitationHistoryEntry {
+  _id: string;
+  invitedEmail: string;
+  status: "accepted" | "rejected" | "revoked" | "expired";
+  createdAt: string;
+  acceptedAt?: string;
+  seatPlan?: string;
+}
+
+const leaveOrganization = async (): Promise<{ success: boolean; message: string; activeCases?: any[] }> => {
+  const response = await api.post("/organization/leave");
+  return response.data;
+};
+
+const updateOrganization = async (
+  data: { name?: string; description?: string },
+): Promise<{ success: boolean; message: string; organization: Organization }> => {
+  const response = await api.patch("/organization", data);
+  return response.data;
+};
+
+const deleteOrganization = async (): Promise<{ success: boolean; message: string }> => {
+  const response = await api.delete("/organization");
+  return response.data;
+};
+
+const getActivityLog = async (
+  params?: { type?: string; limit?: number; page?: number },
+): Promise<{
+  logs: OrgActivityLogEntry[];
+  pagination: { total: number; page: number; limit: number; pages: number };
+}> => {
+  const response = await api.get("/organization/activity-log", { params });
+  return response.data;
+};
+
+const getInvitationHistory = async (): Promise<InvitationHistoryEntry[]> => {
+  const response = await api.get("/organization/invitation-history");
+  return response.data.invitations;
+};
+
 const organizationService = {
   getOrganization,
   getMembers,
@@ -196,6 +248,11 @@ const organizationService = {
   getInvitationInfo,
   completeInviteSetup,
   cancelSeat,
+  leaveOrganization,
+  updateOrganization,
+  deleteOrganization,
+  getActivityLog,
+  getInvitationHistory,
 };
 
 export default organizationService;
