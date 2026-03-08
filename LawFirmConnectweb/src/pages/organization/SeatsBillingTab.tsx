@@ -19,7 +19,7 @@ interface SeatsBillingTabProps {
     onRefresh: () => void;
 }
 
-const SeatsBillingTab: React.FC<SeatsBillingTabProps> = ({ org, totalSeats, usedSeats, onRefresh }) => {
+const SeatsBillingTab: React.FC<SeatsBillingTabProps> = ({ org, totalSeats: _totalSeats, usedSeats: _usedSeats, onRefresh }) => {
     const [showSeatUpgrade, setShowSeatUpgrade] = useState(false);
     const [selectedSeatPlan, setSelectedSeatPlan] = useState<'STARTER' | 'PROFESSIONAL'>('STARTER');
     const [updatingSeats, setUpdatingSeats] = useState(false);
