@@ -1,6 +1,7 @@
 import axios from "axios";
 // Assuming types are defined or inferred
 import api from "./api";
+import { handleRateLimitError } from "../utils/rateLimitHandler";
 // or just:
 // import api from './api';
 
@@ -83,17 +84,24 @@ const createCase = async (caseData: any): Promise<Case> => {
   }
 
   // Use raw axios to ensure clean state
-  const response = await axios.post(
-    `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/cases`,
-    caseData,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Do NOT set Content-Type; let browser handle it for FormData
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || "http://localhost:5000"}/cases`,
+      caseData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Do NOT set Content-Type; let browser handle it for FormData
+        },
       },
-    },
-  );
-  return response.data;
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/cases");
+    }
+    throw error;
+  }
 };
 
 // Soft Delete via Settings or Main
@@ -270,17 +278,24 @@ const runInvestigation = async (
   caseId: string,
   focusQuestions?: string[],
 ): Promise<{ final_report: string; reportId?: string }> => {
-  const response = await axios.post(
-    `${RAG_API_URL}/investigation/run`,
-    {
-      caseId,
-      focusQuestions: focusQuestions || [],
-    },
-    {
-      headers: getAuthHeaders(),
-    },
-  );
-  return response.data;
+  try {
+    const response = await axios.post(
+      `${RAG_API_URL}/investigation/run`,
+      {
+        caseId,
+        focusQuestions: focusQuestions || [],
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/investigation");
+    }
+    throw error;
+  }
 };
 
 const runInvestigationStream = (
@@ -302,6 +317,11 @@ const runInvestigationStream = (
     signal: controller.signal,
   })
     .then(async (response) => {
+      if (response.status === 429) {
+        handleRateLimitError("/investigation/run-stream");
+        onError("Too many requests. Please wait a moment.");
+        return;
+      }
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         onError(errData.detail || `HTTP ${response.status}`);
@@ -349,35 +369,56 @@ const runInvestigationStream = (
 const getInvestigationReports = async (
   caseId: string,
 ): Promise<InvestigationReport[]> => {
-  const response = await axios.get(
-    `${RAG_API_URL}/investigation/reports/${caseId}`,
-    {
-      headers: getAuthHeaders(),
-    },
-  );
-  return response.data;
+  try {
+    const response = await axios.get(
+      `${RAG_API_URL}/investigation/reports/${caseId}`,
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/investigation");
+    }
+    throw error;
+  }
 };
 
 const startInvestigationBackground = async (
   caseId: string,
   focusQuestions?: string[],
 ): Promise<{ jobId: string }> => {
-  const response = await axios.post(
-    `${RAG_API_URL}/investigation/run-background`,
-    { caseId, focusQuestions: focusQuestions || [] },
-    { headers: getAuthHeaders() },
-  );
-  return response.data;
+  try {
+    const response = await axios.post(
+      `${RAG_API_URL}/investigation/run-background`,
+      { caseId, focusQuestions: focusQuestions || [] },
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/investigation");
+    }
+    throw error;
+  }
 };
 
 const getInvestigationStatus = async (
   jobId: string,
 ): Promise<InvestigationJobStatus> => {
-  const response = await axios.get(
-    `${RAG_API_URL}/investigation/status/${jobId}`,
-    { headers: getAuthHeaders() },
-  );
-  return response.data;
+  try {
+    const response = await axios.get(
+      `${RAG_API_URL}/investigation/status/${jobId}`,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/investigation");
+    }
+    throw error;
+  }
 };
 
 const getActiveInvestigationJob = async (
@@ -389,11 +430,18 @@ const getActiveInvestigationJob = async (
   progressLabel?: string;
   currentStep?: string;
 }> => {
-  const response = await axios.get(
-    `${RAG_API_URL}/investigation/active-job/${caseId}`,
-    { headers: getAuthHeaders() },
-  );
-  return response.data;
+  try {
+    const response = await axios.get(
+      `${RAG_API_URL}/investigation/active-job/${caseId}`,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/investigation");
+    }
+    throw error;
+  }
 };
 
 // -- Document Generation --
@@ -401,26 +449,24 @@ const generateDocument = async (
   caseId: string,
   instructions: string,
 ): Promise<string> => {
-  // using raw axios or api instance. server.py has /generate-document
-  // server.py runs on 8000, but caseService seems to use api instance which might point to 5000 (node backend)?
-  // Wait, the python server is likely the one with RAG.
-  // server.py is FastAPI on 8000.
-  // createCase uses localhost:5000.
-  // I need to hit the Python server for RAG.
-
-  // server.py has: @app.post("/generate-document")
-
-  const response = await axios.post(
-    `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/generate-document`,
-    {
-      caseId,
-      instructions,
-    },
-    {
-      headers: getAuthHeaders(),
-    },
-  );
-  return response.data.content;
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/generate-document`,
+      {
+        caseId,
+        instructions,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+    return response.data.content;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/generate-document");
+    }
+    throw error;
+  }
 };
 
 const saveGeneratedDocument = async (
@@ -428,18 +474,25 @@ const saveGeneratedDocument = async (
   filename: string,
   content: string,
 ): Promise<any> => {
-  const response = await axios.post(
-    `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/save-document`,
-    {
-      caseId,
-      filename,
-      content,
-    },
-    {
-      headers: getAuthHeaders(),
-    },
-  );
-  return response.data;
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_RAG_API_URL || "http://localhost:8000"}/save-document`,
+      {
+        caseId,
+        filename,
+        content,
+      },
+      {
+        headers: getAuthHeaders(),
+      },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/save-document");
+    }
+    throw error;
+  }
 };
 
 const caseService = {
@@ -493,36 +546,57 @@ const caseService = {
     template: string,
     title: string,
   ) => {
-    const response = await axios.post(
-      `${RAG_API_URL}/draft/session`,
-      {
-        caseId,
-        template,
-        title,
-      },
-      {
-        headers: getAuthHeaders(),
-      },
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/draft/session`,
+        {
+          caseId,
+          template,
+          title,
+        },
+        {
+          headers: getAuthHeaders(),
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   getDraftSessions: async (caseId: string) => {
-    const response = await axios.get(
-      `${RAG_API_URL}/draft/sessions/${caseId}`,
-      {
-        headers: getAuthHeaders(),
-      },
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/draft/sessions/${caseId}`,
+        {
+          headers: getAuthHeaders(),
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   getDraftSession: async (sessionId: string) => {
-    const response = await axios.get(
-      `${RAG_API_URL}/draft/session/${sessionId}`,
-      { headers: getAuthHeaders() },
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/draft/session/${sessionId}`,
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   sendDraftMessage: async (
@@ -532,44 +606,72 @@ const caseService = {
     currentDocument: string,
     template?: string,
   ) => {
-    const response = await axios.post(
-      `${RAG_API_URL}/draft/chat`,
-      {
-        caseId,
-        sessionId,
-        message,
-        currentDocument,
-        template,
-      },
-      {
-        headers: getAuthHeaders(),
-      },
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/draft/chat`,
+        {
+          caseId,
+          sessionId,
+          message,
+          currentDocument,
+          template,
+        },
+        {
+          headers: getAuthHeaders(),
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   getTemplates: async () => {
-    const response = await axios.get(`${RAG_API_URL}/draft/templates`, {
-      headers: getAuthHeaders(),
-    });
-    return response.data;
+    try {
+      const response = await axios.get(`${RAG_API_URL}/draft/templates`, {
+        headers: getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   // -- Draft Version Control --
   getDraftVersions: async (sessionId: string) => {
-    const response = await axios.get(
-      `${RAG_API_URL}/draft/session/${sessionId}/versions`,
-      { headers: getAuthHeaders() },
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/draft/session/${sessionId}/versions`,
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   getDraftVersion: async (sessionId: string, versionNumber: number) => {
-    const response = await axios.get(
-      `${RAG_API_URL}/draft/session/${sessionId}/version/${versionNumber}`,
-      { headers: getAuthHeaders() },
-    );
-    return response.data;
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/draft/session/${sessionId}/version/${versionNumber}`,
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   createDraftVersion: async (
@@ -577,21 +679,35 @@ const caseService = {
     label: string,
     content: string,
   ) => {
-    const response = await axios.post(
-      `${RAG_API_URL}/draft/session/${sessionId}/version`,
-      { label, content },
-      { headers: getAuthHeaders() },
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/draft/session/${sessionId}/version`,
+        { label, content },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 
   restoreDraftVersion: async (sessionId: string, versionNumber: number) => {
-    const response = await axios.post(
-      `${RAG_API_URL}/draft/session/${sessionId}/restore/${versionNumber}`,
-      {},
-      { headers: getAuthHeaders() },
-    );
-    return response.data;
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/draft/session/${sessionId}/restore/${versionNumber}`,
+        {},
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/draft");
+      }
+      throw error;
+    }
   },
 };
 

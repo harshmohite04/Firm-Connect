@@ -1,5 +1,6 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import { handleRateLimitError } from "../utils/rateLimitHandler";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000", // Backend URL
@@ -27,6 +28,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "");
+      return Promise.reject(error);
+    }
     if (
       error.response?.status === 401 &&
       error.response?.data?.code === "SESSION_EXPIRED"
