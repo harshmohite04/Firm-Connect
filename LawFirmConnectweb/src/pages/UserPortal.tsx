@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import portalService from '../services/portalService';
-import type { DashboardData, AttentionItem, ActivityItem, DashboardEvent } from '../services/portalService';
+import type { DashboardData, AttentionItem, DashboardEvent } from '../services/portalService';
 import { useTranslation } from 'react-i18next';
 import {
     Sparkles, Briefcase, Mail, Calendar, AlertCircle, Clock,
