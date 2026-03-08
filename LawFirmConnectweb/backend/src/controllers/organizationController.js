@@ -8,7 +8,15 @@ const teamInvitationTemplate = require('../utils/teamInvitationTemplate');
 const { organizationInvitationTemplate, organizationExistingUserTemplate, organizationInvitationSetupTemplate } = require('../utils/organizationInvitationTemplate');
 const crypto = require('crypto');
 const generateToken = require('../utils/generateToken');
+const OrgActivityLog = require('../models/OrgActivityLog');
 
+const logOrgActivity = async (organizationId, action, actorId, targetId = null, metadata = {}) => {
+    try {
+        await OrgActivityLog.create({ organizationId, action, actorId, targetId, metadata });
+    } catch (err) {
+        console.error('Failed to log org activity:', err);
+    }
+};
 
 // @desc    Get current user's organization
 // @route   GET /organization
@@ -203,6 +211,8 @@ const inviteMember = async (req, res, next) => {
             console.error('Failed to send invitation email:', emailError);
         }
 
+        await logOrgActivity(org._id, 'INVITE_SENT', admin._id, null, { email: normalizedEmail });
+
         res.status(201).json({
             success: true,
             message: isNewUser
@@ -332,6 +342,9 @@ const acceptInvitation = async (req, res, next) => {
 
         await acceptingUser.save();
 
+        await logOrgActivity(org._id, 'INVITE_ACCEPTED', acceptingUser._id);
+        await logOrgActivity(org._id, 'MEMBER_JOINED', acceptingUser._id);
+
         res.json({
             success: true,
             message: `You have joined ${org.name}`,
@@ -366,6 +379,8 @@ const rejectInvitation = async (req, res, next) => {
 
         invitation.status = 'rejected';
         await invitation.save();
+
+        await logOrgActivity(invitation.organizationId, 'INVITE_DECLINED', req.user?._id || null);
 
         res.json({ success: true, message: 'Invitation declined' });
     } catch (error) {
@@ -443,6 +458,8 @@ const removeMember = async (req, res, next) => {
                 { assignedLawyers: userId }
             ]
         }).select('_id title status');
+
+        await logOrgActivity(org._id, 'MEMBER_REMOVED', req.user._id, userId);
 
         res.json({
             success: true,
@@ -630,9 +647,11 @@ const revokeInvitation = async (req, res, next) => {
             throw new Error('Invitation not found');
         }
 
-        // Mark invitation as rejected (member was never added to org, so no cleanup needed)
-        invitation.status = 'rejected';
+        // Mark invitation as revoked (member was never added to org, so no cleanup needed)
+        invitation.status = 'revoked';
         await invitation.save();
+
+        await logOrgActivity(admin.organizationId, 'INVITE_REVOKED', admin._id, null, { email: invitation.invitedEmail });
 
         res.json({ success: true, message: 'Invitation revoked' });
     } catch (error) {
@@ -809,6 +828,9 @@ const completeInviteSetup = async (req, res, next) => {
         user.sessionToken = sessionToken;
         await user.save();
 
+        await logOrgActivity(org._id, 'INVITE_ACCEPTED', user._id);
+        await logOrgActivity(org._id, 'MEMBER_JOINED', user._id);
+
         res.status(201).json({
             success: true,
             _id: user._id,
@@ -820,6 +842,298 @@ const completeInviteSetup = async (req, res, next) => {
             subscriptionStatus: user.subscriptionStatus || 'INACTIVE',
             token: jwtToken
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Leave the organization (advocate only)
+// @route   POST /organization/leave
+// @access  Private (Advocate only)
+const leaveOrganization = async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user.role === 'ADMIN') {
+            res.status(403);
+            throw new Error('Admins cannot leave their own organization. Delete the organization instead.');
+        }
+
+        if (!user.organizationId) {
+            res.status(400);
+            throw new Error('You are not part of any organization');
+        }
+
+        const org = await Organization.findById(user.organizationId);
+        if (!org) {
+            res.status(404);
+            throw new Error('Organization not found');
+        }
+
+        // Check for active cases
+        const activeCases = await Case.find({
+            organizationId: org._id,
+            recordStatus: 1,
+            $or: [
+                { createdBy: user._id },
+                { leadAttorneyId: user._id },
+                { assignedLawyers: user._id }
+            ]
+        }).select('_id title status');
+
+        if (activeCases.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have active cases that must be reassigned before leaving.',
+                activeCases
+            });
+        }
+
+        // Soft remove member
+        const memberIndex = org.members.findIndex(
+            m => m.userId.toString() === user._id.toString() && m.status === 'ACTIVE'
+        );
+        if (memberIndex !== -1) {
+            org.members[memberIndex].status = 'REMOVED';
+            org.members[memberIndex].removedAt = new Date();
+        }
+
+        // Clear seat assignment
+        const assignedSeat = org.seats
+            ? org.seats.find(s => s.assignedTo && s.assignedTo.toString() === user._id.toString())
+            : null;
+        if (assignedSeat) {
+            assignedSeat.assignedTo = null;
+        }
+
+        await org.save();
+
+        // Clear user org reference
+        user.organizationId = null;
+        user.subscriptionStatus = 'INACTIVE';
+        user.subscriptionPlan = undefined;
+        user.subscriptionExpiresAt = undefined;
+        await user.save();
+
+        await logOrgActivity(org._id, 'MEMBER_LEFT', user._id);
+
+        res.json({ success: true, message: 'You have left the organization' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Update organization details
+// @route   PATCH /organization
+// @access  Private (Admin only)
+const updateOrganization = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can update the organization');
+        }
+
+        if (!admin.organizationId) {
+            res.status(400);
+            throw new Error('No organization found');
+        }
+
+        const org = await Organization.findById(admin.organizationId);
+        if (!org) {
+            res.status(404);
+            throw new Error('Organization not found');
+        }
+
+        const { name, description } = req.body;
+        const oldValues = {};
+        const newValues = {};
+
+        if (name !== undefined && name.trim() !== org.name) {
+            oldValues.name = org.name;
+            org.name = name.trim();
+            newValues.name = org.name;
+        }
+
+        if (description !== undefined && description.trim() !== org.description) {
+            oldValues.description = org.description;
+            org.description = description.trim();
+            newValues.description = org.description;
+        }
+
+        if (Object.keys(newValues).length === 0) {
+            return res.json({ success: true, message: 'No changes made', organization: org });
+        }
+
+        await org.save();
+        await logOrgActivity(org._id, 'ORG_UPDATED', admin._id, null, { oldValues, newValues });
+
+        res.json({ success: true, message: 'Organization updated', organization: org });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Delete organization
+// @route   DELETE /organization
+// @access  Private (Admin only)
+const deleteOrganization = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can delete the organization');
+        }
+
+        if (!admin.organizationId) {
+            res.status(400);
+            throw new Error('No organization found');
+        }
+
+        const org = await Organization.findById(admin.organizationId);
+        if (!org) {
+            res.status(404);
+            throw new Error('Organization not found');
+        }
+
+        // Check for active cases
+        const activeCases = await Case.find({
+            organizationId: org._id,
+            recordStatus: 1
+        }).select('_id');
+
+        if (activeCases.length > 0) {
+            res.status(400);
+            throw new Error(`Cannot delete organization with ${activeCases.length} active case(s). Close or delete all cases first.`);
+        }
+
+        // Cancel all active Razorpay seat subscriptions
+        for (const seat of org.seats) {
+            if (seat.status === 'ACTIVE' && seat.razorpaySubscriptionId) {
+                try {
+                    await razorpay.subscriptions.cancel(seat.razorpaySubscriptionId);
+                } catch (rzpErr) {
+                    console.error('Failed to cancel seat subscription:', rzpErr);
+                }
+            }
+        }
+
+        // Clear org reference from all active members
+        const activeMembers = org.members.filter(m => m.status === 'ACTIVE');
+        for (const member of activeMembers) {
+            const memberUser = await User.findById(member.userId);
+            if (memberUser) {
+                memberUser.organizationId = null;
+                memberUser.subscriptionStatus = 'INACTIVE';
+                memberUser.subscriptionPlan = undefined;
+                memberUser.subscriptionExpiresAt = undefined;
+                if (memberUser.role === 'ADMIN') {
+                    memberUser.role = 'ADVOCATE';
+                }
+                await memberUser.save();
+            }
+        }
+
+        // Delete pending invitations
+        await TeamInvitation.deleteMany({ organizationId: org._id, status: 'pending' });
+
+        await logOrgActivity(org._id, 'ORG_DELETED', admin._id, null, { orgName: org.name });
+
+        // Delete activity logs and the org
+        await OrgActivityLog.deleteMany({ organizationId: org._id });
+        await Organization.findByIdAndDelete(org._id);
+
+        res.json({ success: true, message: 'Organization deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get organization activity log
+// @route   GET /organization/activity-log
+// @access  Private (Admin only)
+const getActivityLog = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can view activity logs');
+        }
+
+        if (!admin.organizationId) {
+            res.status(400);
+            throw new Error('No organization found');
+        }
+
+        const { type, limit = 50, page = 1 } = req.query;
+        const query = { organizationId: admin.organizationId };
+        if (type) {
+            query.action = type;
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const total = await OrgActivityLog.countDocuments(query);
+
+        const logs = await OrgActivityLog.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .populate('actorId', 'firstName lastName email')
+            .populate('targetId', 'firstName lastName email');
+
+        res.json({
+            success: true,
+            logs,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / parseInt(limit))
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Get invitation history (non-pending)
+// @route   GET /organization/invitation-history
+// @access  Private (Admin only)
+const getInvitationHistory = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can view invitation history');
+        }
+
+        if (!admin.organizationId) {
+            res.status(400);
+            throw new Error('No organization found');
+        }
+
+        const invitations = await TeamInvitation.find({
+            organizationId: admin.organizationId,
+            $or: [
+                { status: { $in: ['accepted', 'rejected', 'revoked'] } },
+                { status: 'pending', expiresAt: { $lte: new Date() } }
+            ]
+        }).sort({ createdAt: -1 });
+
+        // Mark expired pending invitations
+        const history = invitations.map(inv => {
+            const obj = inv.toObject();
+            if (obj.status === 'pending' && new Date(obj.expiresAt) <= new Date()) {
+                obj.status = 'expired';
+            }
+            return obj;
+        });
+
+        res.json({ success: true, invitations: history });
     } catch (error) {
         next(error);
     }
@@ -839,5 +1153,10 @@ module.exports = {
     revokeInvitation,
     getMyInvitations,
     getInvitationByToken,
-    completeInviteSetup
+    completeInviteSetup,
+    leaveOrganization,
+    updateOrganization,
+    deleteOrganization,
+    getActivityLog,
+    getInvitationHistory
 };

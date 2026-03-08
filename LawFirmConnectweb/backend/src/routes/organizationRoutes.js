@@ -15,7 +15,12 @@ const {
     getPublicOrganizations,
     getMyInvitations,
     getInvitationByToken,
-    completeInviteSetup
+    completeInviteSetup,
+    leaveOrganization,
+    updateOrganization,
+    deleteOrganization,
+    getActivityLog,
+    getInvitationHistory
 } = require('../controllers/organizationController');
 const { protect } = require('../middlewares/authMiddleware');
 
@@ -33,6 +38,21 @@ router.delete('/members/:userId', protect, removeMember);
 router.post('/invite', protect, inviteMember);
 router.get('/invitations', protect, getInvitations);
 router.get('/my-invitations', protect, getMyInvitations);
+
+// Leave organization (advocate)
+router.post('/leave', protect, leaveOrganization);
+
+// Update organization (admin)
+router.patch('/', protect, updateOrganization);
+
+// Delete organization (admin)
+router.delete('/', protect, deleteOrganization);
+
+// Activity log (admin)
+router.get('/activity-log', protect, getActivityLog);
+
+// Invitation history (admin)
+router.get('/invitation-history', protect, getInvitationHistory);
 
 // Public invitation setup (no auth needed)
 router.get('/invitations/:token/info', getInvitationByToken);

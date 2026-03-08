@@ -7,10 +7,10 @@ import { notificationService } from '../services/notificationService';
 import caseService from '../services/caseService';
 import scheduleService from '../services/scheduleService';
 import organizationService from '../services/organizationService';
-import { io, Socket } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import Logo from "../assets/logo.svg"
 import { getAuthToken } from '../utils/storage';
+import { useSocket } from '../contexts/SocketContext';
 
 const SunIcon = () => (
     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -182,7 +182,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
     // Unread messages count for Messages tab
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
-    const socketRef = useRef<Socket | null>(null);
+    const { socket } = useSocket();
 
     // Mobile responsiveness state
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -213,9 +213,8 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Socket.IO for real-time unread count updates
+    // Fetch initial unread count + socket listeners using shared SocketContext
     useEffect(() => {
-        // Initial fetch
         const fetchUnreadCount = async () => {
             try {
                 const data = await messageService.getUnreadCount();
@@ -226,56 +225,53 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         };
         fetchUnreadCount();
 
-        // Get user ID for socket room
-        const storedUser = localStorage.getItem('user');
+        if (!socket) return;
+
+        const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
         if (!storedUser) return;
         const parsedUser = JSON.parse(storedUser);
         const currentUserId = parsedUser._id || parsedUser.id;
 
-        // Connect to socket
-        const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        socketRef.current = io(BACKEND_URL, {
-            transports: ['websocket', 'polling']
-        });
-
-        socketRef.current.emit('join', currentUserId);
-
-        // When new message arrives for me, increment count
-        socketRef.current.on('newMessage', (msg: any) => {
-            if (msg.recipient === currentUserId) {
+        const onNewMessage = (msg: any) => {
+            const recipientId = msg.recipient?._id || msg.recipient;
+            if (recipientId === currentUserId) {
                 setUnreadMessagesCount(prev => prev + 1);
             }
-        });
+        };
 
-        // When I read messages, refetch the count
-        socketRef.current.on('messagesRead', () => {
+        const onMessagesRead = () => {
             fetchUnreadCount();
-        });
+        };
 
-        // Listen for real-time notifications
-        socketRef.current.on('newNotification', (notification: Notification) => {
-            setNotifications(prev => [notification, ...prev].slice(0, 50));
+        const onNewNotification = (notification: any) => {
+            setNotifications((prev: any) => [notification, ...prev].slice(0, 50));
             setUnreadCount(prev => prev + 1);
             toast(notification.title + ': ' + notification.description, {
                 duration: 3000,
                 style: { fontSize: '13px', maxWidth: '360px' },
             });
-        });
+        };
 
-        // Single-device session enforcement: kicked out by another login
-        socketRef.current.on('session_expired', () => {
+        const onSessionExpired = () => {
             toast.error("You've been logged out because your account was signed in on another device.");
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            sessionStorage.removeItem('user');
             window.location.href = '/signin';
-        });
+        };
+
+        socket.on('newMessage', onNewMessage);
+        socket.on('messagesRead', onMessagesRead);
+        socket.on('newNotification', onNewNotification);
+        socket.on('session_expired', onSessionExpired);
 
         return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-            }
+            socket.off('newMessage', onNewMessage);
+            socket.off('messagesRead', onMessagesRead);
+            socket.off('newNotification', onNewNotification);
+            socket.off('session_expired', onSessionExpired);
         };
-    }, []);
+    }, [socket]);
 
     // Fetch real data for search on mount
     useEffect(() => {

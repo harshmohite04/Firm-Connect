@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { getEvents, createEvent, deleteEvent, updateEvent } = require('../controllers/scheduleController');
+const { getEvents, createEvent, deleteEvent, updateEvent, searchUsers } = require('../controllers/scheduleController');
 const { protect } = require('../middlewares/authMiddleware');
+
+router.get('/search-users', protect, searchUsers);
 
 router.route('/')
     .get(protect, getEvents)

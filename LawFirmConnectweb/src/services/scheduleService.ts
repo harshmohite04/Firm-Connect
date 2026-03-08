@@ -1,5 +1,12 @@
 import api from "./api";
 
+export interface AttendeeUser {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
 export interface CalendarEvent {
   _id: string;
   title: string;
@@ -10,11 +17,12 @@ export interface CalendarEvent {
   endTime: string;
   allDay: boolean;
   location?: string;
-  attendees?: string;
+  attendees?: AttendeeUser[];
   caseId?: string;
   status?: string;
   type?: string;
   isOnlineMeeting?: boolean;
+  meetingLink?: string;
 }
 
 const getEvents = async (): Promise<CalendarEvent[]> => {
@@ -39,11 +47,19 @@ const updateEvent = async (
   return response.data;
 };
 
+const searchUsers = async (query: string): Promise<AttendeeUser[]> => {
+  const response = await api.get(
+    `/schedule/search-users?q=${encodeURIComponent(query)}`
+  );
+  return response.data;
+};
+
 const scheduleService = {
   getEvents,
   createEvent,
   deleteEvent,
   updateEvent,
+  searchUsers,
 };
 
 export default scheduleService;

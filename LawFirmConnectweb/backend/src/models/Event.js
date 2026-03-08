@@ -19,14 +19,17 @@ const eventSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
-    startTime: String, // Storing time separately as per frontend logic
+    startTime: String,
     endTime: String,
     allDay: {
         type: Boolean,
         default: false
     },
     location: String,
-    attendees: [String], 
+    attendees: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     caseId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Case'
@@ -42,6 +45,10 @@ const eventSchema = new mongoose.Schema({
     isOnlineMeeting: {
         type: Boolean,
         default: false
+    },
+    meetingLink: {
+        type: String,
+        default: null
     }
 }, {
     timestamps: true
