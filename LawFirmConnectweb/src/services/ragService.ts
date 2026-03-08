@@ -1,4 +1,5 @@
 import axios from "axios";
+import { handleRateLimitError } from "../utils/rateLimitHandler";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
@@ -45,6 +46,12 @@ const ragService = {
           status,
         );
 
+        // Surface rate limit errors immediately — no retry
+        if (status === 429) {
+          handleRateLimitError(error.config?.url || "/ingest");
+          throw error;
+        }
+
         // Retry on 401 (auth race condition) or 5xx errors
         if ((status === 401 || status >= 500) && attempt < retries) {
           // Wait with exponential backoff before retrying
@@ -69,7 +76,10 @@ const ragService = {
         { headers: getAuthHeaders() },
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/retry-ingest");
+      }
       console.error("Retry ingest failed", error);
       throw error;
     }
@@ -102,7 +112,10 @@ const ragService = {
         },
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat");
+      }
       console.error("RAG Chat failed:", error);
       throw error;
     }
@@ -114,7 +127,10 @@ const ragService = {
         headers: getAuthHeaders(),
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/documents");
+      }
       console.error("Fetch document statuses failed:", error);
       return [];
     }
@@ -129,7 +145,10 @@ const ragService = {
         headers: getAuthHeaders(),
       });
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat");
+      }
       console.error("Fetch history failed:", error);
       throw error;
     }
@@ -148,7 +167,10 @@ const ragService = {
         },
       );
       return response.data; // { session_id, title, created_at }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat");
+      }
       console.error("Create session failed:", error);
       throw error;
     }
@@ -161,7 +183,10 @@ const ragService = {
         { headers: getAuthHeaders() },
       );
       return response.data; // [{ session_id, title, created_at }]
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat");
+      }
       console.error("Fetch sessions failed:", error);
       return [];
     }
@@ -177,7 +202,10 @@ const ragService = {
         { headers: getAuthHeaders() },
       );
       return response.data; // { filename, pages: [{text, page_number?, file_type?}] }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/document-text");
+      }
       console.error("Fetch document text failed:", error);
       throw error;
     }
@@ -210,6 +238,11 @@ const ragService = {
       signal: controller.signal,
     })
       .then(async (response) => {
+        if (response.status === 429) {
+          handleRateLimitError("/chat/stream");
+          onError("Too many requests. Please wait a moment.");
+          return;
+        }
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           onError(errData.detail || `HTTP ${response.status}`);
@@ -281,7 +314,10 @@ const ragService = {
         { headers: getAuthHeaders() },
       );
       return response.data.contexts;
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/check-sources");
+      }
       console.error("Check sources failed:", error);
       throw error;
     }

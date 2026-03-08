@@ -34,7 +34,7 @@ const teamInvitationSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'rejected'],
+        enum: ['pending', 'accepted', 'rejected', 'revoked'],
         default: 'pending'
     },
     token: {
@@ -53,9 +53,6 @@ const teamInvitationSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
-
-// Create index for automatic cleanup
-teamInvitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // Generate unique token before saving
 teamInvitationSchema.pre('save', function(next) {

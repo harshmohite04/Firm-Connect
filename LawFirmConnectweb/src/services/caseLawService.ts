@@ -1,4 +1,5 @@
 import axios from "axios";
+import { handleRateLimitError } from "../utils/rateLimitHandler";
 
 const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || "http://localhost:8000";
 
@@ -83,24 +84,45 @@ const searchCases = async (params: {
   fromdate?: string;
   todate?: string;
 }): Promise<CaseLawSearchResult> => {
-  const response = await axios.post(`${RAG_API_URL}/case-law/search`, params, {
-    headers: getAuthHeaders(),
-  });
-  return response.data;
+  try {
+    const response = await axios.post(`${RAG_API_URL}/case-law/search`, params, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const getDocument = async (docId: number): Promise<CaseLawDocument> => {
-  const response = await axios.get(`${RAG_API_URL}/case-law/doc/${docId}`, {
-    headers: getAuthHeaders(),
-  });
-  return response.data;
+  try {
+    const response = await axios.get(`${RAG_API_URL}/case-law/doc/${docId}`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const getDocMeta = async (docId: number): Promise<CaseLawMeta> => {
-  const response = await axios.get(`${RAG_API_URL}/case-law/meta/${docId}`, {
-    headers: getAuthHeaders(),
-  });
-  return response.data;
+  try {
+    const response = await axios.get(`${RAG_API_URL}/case-law/meta/${docId}`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const bookmarkCase = async (data: {
@@ -113,51 +135,86 @@ const bookmarkCase = async (data: {
   notes?: string;
   caseId?: string;
 }): Promise<{ status: string; message: string }> => {
-  const response = await axios.post(`${RAG_API_URL}/case-law/bookmark`, data, {
-    headers: getAuthHeaders(),
-  });
-  return response.data;
+  try {
+    const response = await axios.post(`${RAG_API_URL}/case-law/bookmark`, data, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const getBookmarks = async (caseId?: string): Promise<CaseLawBookmark[]> => {
-  const url = caseId
-    ? `${RAG_API_URL}/case-law/bookmarks?caseId=${caseId}`
-    : `${RAG_API_URL}/case-law/bookmarks`;
-  const response = await axios.get(url, { headers: getAuthHeaders() });
-  return response.data;
+  try {
+    const url = caseId
+      ? `${RAG_API_URL}/case-law/bookmarks?caseId=${caseId}`
+      : `${RAG_API_URL}/case-law/bookmarks`;
+    const response = await axios.get(url, { headers: getAuthHeaders() });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const removeBookmark = async (
   docId: number,
 ): Promise<{ status: string; message: string }> => {
-  const response = await axios.delete(
-    `${RAG_API_URL}/case-law/bookmark/${docId}`,
-    { headers: getAuthHeaders() },
-  );
-  return response.data;
+  try {
+    const response = await axios.delete(
+      `${RAG_API_URL}/case-law/bookmark/${docId}`,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const updateBookmark = async (
   docId: number,
   data: { tags?: string[]; notes?: string; practiceArea?: string },
 ): Promise<{ status: string; message: string }> => {
-  const response = await axios.patch(
-    `${RAG_API_URL}/case-law/bookmark/${docId}`,
-    data,
-    { headers: getAuthHeaders() },
-  );
-  return response.data;
+  try {
+    const response = await axios.patch(
+      `${RAG_API_URL}/case-law/bookmark/${docId}`,
+      data,
+      { headers: getAuthHeaders() },
+    );
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const findPrecedents = async (
   caseId: string,
   forceRefresh: boolean = false,
 ): Promise<PrecedentFinderResult> => {
-  const url = forceRefresh
-    ? `${RAG_API_URL}/case-law/find-precedents/${caseId}?force=true`
-    : `${RAG_API_URL}/case-law/find-precedents/${caseId}`;
-  const response = await axios.post(url, {}, { headers: getAuthHeaders() });
-  return response.data;
+  try {
+    const url = forceRefresh
+      ? `${RAG_API_URL}/case-law/find-precedents/${caseId}?force=true`
+      : `${RAG_API_URL}/case-law/find-precedents/${caseId}`;
+    const response = await axios.post(url, {}, { headers: getAuthHeaders() });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      handleRateLimitError(error.config?.url || "/case-law");
+    }
+    throw error;
+  }
 };
 
 const caseLawService = {

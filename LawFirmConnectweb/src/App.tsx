@@ -9,6 +9,7 @@ import {
 import { Toaster } from "react-hot-toast";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
+import { SocketProvider } from "./contexts/SocketContext";
 import AboutUs from "./pages/AboutUs";
 import PlatformOverview from "./pages/PlatformOverview";
 import ContactUs from "./pages/ContactUs";
@@ -40,9 +41,10 @@ import SubscriptionGuard from "./components/SubscriptionGuard";
 
 // Firm Management Imports
 import FirmConnect from "./pages/FirmConnect";
-import OrganizationPage from "./pages/Organization";
+import OrganizationPage from "./pages/organization/Organization";
 import InviteAccept from "./pages/InviteAccept";
 import InviteSetup from "./pages/InviteSetup";
+
 
 // ScrollToTop component to handle scroll position on route change
 const ScrollToTop = () => {
@@ -207,9 +209,11 @@ const App: React.FC = () => {
 const AppWrapper: React.FC = () => {
   return (
     <BrowserRouter>
-      <ScrollToTop />
-      <Toaster position="top-right" />
-      <App />
+      <SocketProvider>
+        <ScrollToTop />
+        <Toaster position="top-right" />
+        <App />
+      </SocketProvider>
     </BrowserRouter>
   );
 };

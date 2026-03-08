@@ -127,7 +127,7 @@ const AboutUs: React.FC = () => {
             </section>
 
             {/* Founder Section */}
-            <section className="section-alt py-24">
+            {/* <section className="section-alt py-24">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
                     <div className="mb-16 space-y-3">
                         <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--color-accent)' }}>
@@ -174,7 +174,7 @@ const AboutUs: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section> */}
 
             {/* Bottom CTA Section */}
             <section className="py-24 px-4 sm:px-6 lg:px-8">

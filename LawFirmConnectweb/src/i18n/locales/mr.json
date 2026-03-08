@@ -481,7 +481,6 @@
     "accept": "स्वीकारा",
     "reject": "नाकारा",
     "available": "उपलब्ध",
-    "shared": "शेअर केलेले",
     "selectChat": "एक चॅट निवडा",
     "typePlaceholder": "येथे तुमचा संदेश टाइप करा...",
     "searchByEmail": "विनंती पाठवण्यासाठी ईमेलद्वारे वापरकर्ते शोधा.",
@@ -490,7 +489,11 @@
     "close": "बंद करा",
     "friendRequestSent": "मित्र विनंती पाठवली गेली!",
     "userNotFound": "वापरकर्ता सापडला नाही",
-    "searchError": "वापरकर्ता शोधताना त्रुटी"
+    "searchError": "वापरकर्ता शोधताना त्रुटी",
+    "typing": "टाइप करत आहे...",
+    "searchPlaceholder": "संभाषणे शोधा...",
+    "noConversations": "अद्याप कोणतेही संभाषण नाही",
+    "selectConversation": "संदेश पाठवण्यासाठी एक संभाषण निवडा"
   },
   "contactUs": {
     "heroTitle": "संपर्क साधा",
@@ -558,6 +561,12 @@
     "eventSaveFailed": "इव्हेंट जतन करण्यात अयशस्वी",
     "eventDeleteFailed": "इव्हेंट हटवण्यात अयशस्वी",
     "noTitle": "(शीर्षक नाही)",
+    "monthView": "महिना",
+    "agendaView": "अजेंडा",
+    "joinMeeting": "बैठकीत सामील व्हा",
+    "noUpcoming": "कोणतेही आगामी इव्हेंट नाहीत",
+    "meetingLinkGenerated": "एक Jitsi Meet लिंक स्वयंचलितपणे तयार केला जाईल",
+    "addAttendees": "उपस्थित जोडा...",
     "categories": {
       "Meeting": "बैठक",
       "Court": "न्यायालय",
@@ -576,7 +585,9 @@
     "viewCases": "केसेस पहा",
     "messagesBtn": "संदेश",
     "activeCases": "सक्रिय केसेस",
+    "pendingCases": "प्रलंबित केसेस",
     "unreadMessages": "न वाचलेले संदेश",
+    "upcomingEvents": "आगामी कार्यक्रम",
     "nextHearing": "पुढील सुनावणी",
     "dueAmount": "देय रक्कम",
     "activeMatters": "सक्रिय प्रकरणे",
@@ -593,7 +604,14 @@
     "loading": "तुमचा डॅशबोर्ड लोड होत आहे...",
     "error": "काहीतरी चूक झाली",
     "active": "सक्रिय",
-    "new": "नवीन"
+    "new": "नवीन",
+    "needsAttention": "तुमच्या लक्ष देण्याची गरज आहे",
+    "allCaughtUp": "सर्व अपडेट आहे!",
+    "todaySchedule": "आजचे वेळापत्रक",
+    "noEventsToday": "आज कोणतेही कार्यक्रम नाहीत",
+    "overdueCase": "{{title}} मध्ये {{days}} दिवसांपासून कोणताही क्रियाकलाप नाही",
+    "upcomingDeadline": "{{title}} {{time}} मध्ये सुरू होईल",
+    "startNewCase": "नवीन केस सुरू करा"
   },
   "billing": {
     "title": "बिलिंग आणि पावत्या",

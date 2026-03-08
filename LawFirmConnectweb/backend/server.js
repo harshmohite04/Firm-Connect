@@ -43,17 +43,49 @@ const io = new Server(server, {
 // Store io instance to be used in controllers
 app.set('socketio', io);
 
+// Online tracking: userId -> Set<socketId>
+const onlineUsersMap = new Map();
+
 io.on('connection', (socket) => {
-    console.log(`Socket connected: ${socket.id}`);
+    let currentUserId = null;
 
     // Join user to their own room
     socket.on('join', (userId) => {
+        currentUserId = userId;
         socket.join(userId);
-        console.log(`User ${userId} joined room ${userId}`);
+
+        // Track online status
+        if (!onlineUsersMap.has(userId)) {
+            onlineUsersMap.set(userId, new Set());
+        }
+        onlineUsersMap.get(userId).add(socket.id);
+
+        // Broadcast that this user is online
+        socket.broadcast.emit('userOnline', userId);
+
+        // Send full online users list to newly connected client
+        const onlineUserIds = Array.from(onlineUsersMap.keys());
+        socket.emit('onlineUsers', onlineUserIds);
+    });
+
+    // Typing indicators
+    socket.on('typing', ({ senderId, recipientId }) => {
+        io.to(recipientId).emit('typing', { senderId });
+    });
+
+    socket.on('stopTyping', ({ senderId, recipientId }) => {
+        io.to(recipientId).emit('stopTyping', { senderId });
     });
 
     socket.on('disconnect', () => {
-        console.log('Socket disconnected');
+        if (currentUserId && onlineUsersMap.has(currentUserId)) {
+            const sockets = onlineUsersMap.get(currentUserId);
+            sockets.delete(socket.id);
+            if (sockets.size === 0) {
+                onlineUsersMap.delete(currentUserId);
+                io.emit('userOffline', currentUserId);
+            }
+        }
     });
 });
 

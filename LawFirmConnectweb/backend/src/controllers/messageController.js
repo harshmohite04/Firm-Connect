@@ -21,21 +21,34 @@ exports.getMessages = async (req, res) => {
     }
 };
 
-// Send a message
+// Send a message (supports file attachment via multipart/form-data)
 exports.sendMessage = async (req, res) => {
     try {
         const { contactId, content } = req.body;
         const userId = req.user._id;
 
-        if (!contactId || !content) {
-            return res.status(400).json({ message: 'Recipient and content are required' });
+        if (!contactId || (!content && !req.file)) {
+            return res.status(400).json({ message: 'Recipient and content or attachment are required' });
         }
 
-        const newMessage = await Message.create({
+        const messageData = {
             sender: userId,
             recipient: contactId,
-            content
-        });
+            content: content || ''
+        };
+
+        // If file was uploaded, add attachment metadata
+        if (req.file) {
+            messageData.attachment = {
+                filename: req.file.filename,
+                originalName: req.file.originalname,
+                mimeType: req.file.mimetype,
+                size: req.file.size,
+                url: req.file.location || `/uploads/${req.file.filename}`
+            };
+        }
+
+        const newMessage = await Message.create(messageData);
 
         await newMessage.populate('sender', 'firstName lastName _id');
         await newMessage.populate('recipient', 'firstName lastName _id');
@@ -44,7 +57,7 @@ exports.sendMessage = async (req, res) => {
         const io = req.app.get('socketio');
         if (io) {
             io.to(contactId).emit('newMessage', newMessage);
-            io.to(userId.toString()).emit('newMessage', newMessage); // Also emit to sender (for other devices/tabs)
+            io.to(userId.toString()).emit('newMessage', newMessage);
         }
 
         // Create notification for the recipient
@@ -70,18 +83,16 @@ exports.markMessagesRead = async (req, res) => {
         const { contactId } = req.params;
         const userId = req.user._id;
 
-        // Update all unread messages from contact to me
         const result = await Message.updateMany(
             { sender: contactId, recipient: userId, read: false },
             { $set: { read: true } }
         );
 
-        // Emit real-time event to sender that messages were read
         const io = req.app.get('socketio');
         if (io && result.modifiedCount > 0) {
-            io.to(contactId).emit('messagesRead', { 
+            io.to(contactId).emit('messagesRead', {
                 recipientId: userId.toString(),
-                contactId: contactId // The sender of the messages (who needs to know they are read)
+                contactId: contactId
             });
         }
 
@@ -110,7 +121,6 @@ exports.getConversations = async (req, res) => {
         const userId = req.user._id;
         const User = require('../models/User');
 
-        // Get current user with their contacts populated
         const user = await User.findById(userId).populate('contacts', 'firstName lastName _id');
         if (!user || !user.contacts) {
             return res.json([]);
@@ -119,7 +129,6 @@ exports.getConversations = async (req, res) => {
         const conversationsData = await Promise.all(user.contacts.map(async (contact) => {
             const contactUserId = contact._id;
 
-            // Get last message between the two users
             const lastMessage = await Message.findOne({
                 $or: [
                     { sender: userId, recipient: contactUserId },
@@ -127,7 +136,6 @@ exports.getConversations = async (req, res) => {
                 ]
             }).sort({ createdAt: -1 }).limit(1);
 
-            // Get unread count (messages FROM this contact TO me that are unread)
             const unreadCount = await Message.countDocuments({
                 sender: contactUserId,
                 recipient: userId,
@@ -140,13 +148,13 @@ exports.getConversations = async (req, res) => {
                 lastMessage: lastMessage ? {
                     content: lastMessage.content,
                     timestamp: lastMessage.createdAt,
-                    senderId: lastMessage.sender.toString()
+                    senderId: lastMessage.sender.toString(),
+                    attachment: lastMessage.attachment || null
                 } : null,
                 unreadCount
             };
         }));
 
-        // Sort by last message timestamp (most recent first)
         const sortedConversations = conversationsData
             .sort((a, b) => {
                 if (!a.lastMessage && !b.lastMessage) return 0;
@@ -158,6 +166,85 @@ exports.getConversations = async (req, res) => {
         res.json(sortedConversations);
     } catch (error) {
         console.error('Get conversations error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Search conversations by contact name/email
+exports.searchConversations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { q } = req.query;
+        const User = require('../models/User');
+
+        if (!q || !q.trim()) {
+            return res.json([]);
+        }
+
+        const searchRegex = new RegExp(q.trim(), 'i');
+
+        const user = await User.findById(userId).populate('contacts', 'firstName lastName email _id');
+        if (!user || !user.contacts) {
+            return res.json([]);
+        }
+
+        const matchingContacts = user.contacts.filter(c =>
+            searchRegex.test(c.firstName) ||
+            searchRegex.test(c.lastName) ||
+            searchRegex.test(c.email) ||
+            searchRegex.test(`${c.firstName} ${c.lastName}`)
+        );
+
+        const results = await Promise.all(matchingContacts.map(async (contact) => {
+            const lastMessage = await Message.findOne({
+                $or: [
+                    { sender: userId, recipient: contact._id },
+                    { sender: contact._id, recipient: userId }
+                ]
+            }).sort({ createdAt: -1 }).limit(1);
+
+            return {
+                contactId: contact._id.toString(),
+                name: `${contact.firstName} ${contact.lastName || ''}`.trim(),
+                email: contact.email,
+                lastMessage: lastMessage ? {
+                    content: lastMessage.content,
+                    timestamp: lastMessage.createdAt,
+                    senderId: lastMessage.sender.toString()
+                } : null
+            };
+        }));
+
+        res.json(results);
+    } catch (error) {
+        console.error('Search conversations error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Search messages within a conversation
+exports.searchMessages = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { userId: contactId, q } = req.query;
+
+        if (!contactId || !q || !q.trim()) {
+            return res.json([]);
+        }
+
+        const searchRegex = new RegExp(q.trim(), 'i');
+
+        const messages = await Message.find({
+            $or: [
+                { sender: userId, recipient: contactId },
+                { sender: contactId, recipient: userId }
+            ],
+            content: searchRegex
+        }).sort({ createdAt: -1 }).limit(50);
+
+        res.json(messages);
+    } catch (error) {
+        console.error('Search messages error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };

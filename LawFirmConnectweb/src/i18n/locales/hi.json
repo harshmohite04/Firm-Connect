@@ -481,7 +481,6 @@
     "accept": "स्वीकार करें",
     "reject": "अस्वीकार करें",
     "available": "उपलब्ध",
-    "shared": "साझा",
     "selectChat": "एक चैट चुनें",
     "typePlaceholder": "यहाँ अपना संदेश टाइप करें...",
     "searchByEmail": "अनुरोध भेजने के लिए ईमेल से उपयोगकर्ताओं की खोज करें।",
@@ -490,7 +489,11 @@
     "close": "बंद करें",
     "friendRequestSent": "मित्र अनुरोध भेजा गया!",
     "userNotFound": "उपयोगकर्ता नहीं मिला",
-    "searchError": "उपयोगकर्ता खोजने में त्रुटि"
+    "searchError": "उपयोगकर्ता खोजने में त्रुटि",
+    "typing": "टाइप कर रहा है...",
+    "searchPlaceholder": "बातचीत खोजें...",
+    "noConversations": "अभी तक कोई बातचीत नहीं",
+    "selectConversation": "संदेश भेजने के लिए एक बातचीत चुनें"
   },
   "contactUs": {
     "heroTitle": "संपर्क करें",
@@ -558,6 +561,12 @@
     "eventSaveFailed": "इवेंट सहेजने में विफल",
     "eventDeleteFailed": "इवेंट हटाने में विफल",
     "noTitle": "(कोई शीर्षक नहीं)",
+    "monthView": "माह",
+    "agendaView": "एजेंडा",
+    "joinMeeting": "बैठक में शामिल हों",
+    "noUpcoming": "कोई आगामी इवेंट नहीं",
+    "meetingLinkGenerated": "एक Jitsi Meet लिंक स्वचालित रूप से बनाया जाएगा",
+    "addAttendees": "प्रतिभागी जोड़ें...",
     "categories": {
       "Meeting": "बैठक",
       "Court": "अदालत",
@@ -576,7 +585,9 @@
     "viewCases": "केस देखें",
     "messagesBtn": "संदेश",
     "activeCases": "सक्रिय केस",
+    "pendingCases": "लंबित केस",
     "unreadMessages": "अपठित संदेश",
+    "upcomingEvents": "आगामी कार्यक्रम",
     "nextHearing": "अगली सुनवाई",
     "dueAmount": "देय राशि",
     "activeMatters": "सक्रिय मामले",
@@ -593,7 +604,14 @@
     "loading": "आपका डैशबोर्ड लोड हो रहा है...",
     "error": "कुछ गलत हो गया",
     "active": "सक्रिय",
-    "new": "नया"
+    "new": "नया",
+    "needsAttention": "आपके ध्यान की आवश्यकता है",
+    "allCaughtUp": "सब कुछ अपडेट है!",
+    "todaySchedule": "आज का कार्यक्रम",
+    "noEventsToday": "आज कोई कार्यक्रम नहीं",
+    "overdueCase": "{{title}} में {{days}} दिनों से कोई गतिविधि नहीं",
+    "upcomingDeadline": "{{title}} {{time}} में शुरू होगा",
+    "startNewCase": "नया केस शुरू करें"
   },
   "billing": {
     "title": "बिलिंग और चालान",
