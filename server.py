@@ -12,6 +12,13 @@ load_dotenv(env_file, override=True)
 
 print(f"Loaded environment: {app_env} from {env_file}")
 
+# --- Thread Pool for OCR/blocking tasks ---
+import asyncio
+import concurrent.futures
+asyncio.get_event_loop().set_default_executor(
+    concurrent.futures.ThreadPoolExecutor(max_workers=8)
+)
+
 # --- App Setup ---
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware

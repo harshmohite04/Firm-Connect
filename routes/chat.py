@@ -179,7 +179,8 @@ async def chat(
         history = session_doc["messages"] if session_doc else []
         recent_history = history[-10:]
 
-        result = ask(
+        result = await asyncio.to_thread(
+            ask,
             query=body.message,
             case_id=body.caseId,
             history=recent_history,

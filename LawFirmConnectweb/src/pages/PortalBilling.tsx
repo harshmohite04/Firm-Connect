@@ -197,7 +197,10 @@ const PortalBilling: React.FC = () => {
                 return;
             }
 
-            const { data: subRes } = await axios.post(`${apiUrl}/payments/create-seat`, { seatPlan: selectedSeatPlan }, authHeader);
+            const { data: subRes } = await axios.post(`${apiUrl}/payments/create-seat`, {
+                seatPlan: selectedSeatPlan,
+                inviteEmail: inviteEmail.trim() || undefined
+            }, authHeader);
             if (!subRes.success) { toast.error('Failed to create seat'); return; }
 
             const seatPrice = selectedSeatPlan === 'PROFESSIONAL' ? '8,999' : '4,999';
@@ -205,25 +208,12 @@ const PortalBilling: React.FC = () => {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 subscription_id: subRes.subscriptionId,
                 name: "LawFirmAI",
+                image: "/logo.svg",
                 description: `${selectedSeatPlan} Seat – ₹${seatPrice}/mo`,
-                handler: async function (response: any) {
-                    try {
-                        const verifyRes = await axios.post(`${apiUrl}/payments/verify-seat`, {
-                            razorpay_subscription_id: response.razorpay_subscription_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            seatPlan: selectedSeatPlan,
-                            inviteEmail: inviteEmail.trim() || undefined
-                        }, authHeader);
-                        if (verifyRes.data.success) {
-                            setSeats(verifyRes.data.seats || []);
-                            toast.success(inviteEmail.trim() ? 'Seat purchased & invitation sent' : 'Seat purchased successfully');
-                            setInviteEmail('');
-                        }
-                    } catch { toast.error('Seat verification failed'); }
-                },
+                redirect: true,
+                callback_url: `${apiUrl}/payments/verify-seat-redirect`,
+                prefill: { name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), email: user?.email },
                 theme: { color: "#4F46E5" },
-                modal: { ondismiss: () => setSeatLoading(false) }
             };
             const rzp = new window.Razorpay(options);
             rzp.open();

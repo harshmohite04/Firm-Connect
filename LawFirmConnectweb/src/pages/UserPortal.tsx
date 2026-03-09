@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import PortalLayout from '../components/PortalLayout';
 import portalService from '../services/portalService';
 import type { DashboardData, AttentionItem, DashboardEvent } from '../services/portalService';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import axios from 'axios';
 import {
     Sparkles, Briefcase, Mail, Calendar, AlertCircle, Clock,
     ArrowRight, FileText, Activity, Video, CheckCircle, Users
@@ -15,6 +17,45 @@ const UserPortal: React.FC = () => {
     const [error, setError] = useState('');
     const [userName, setUserName] = useState('');
     const { t } = useTranslation();
+
+    // Handle Razorpay redirect return URL params
+    const [searchParams] = useSearchParams();
+    useEffect(() => {
+        const subscription = searchParams.get('subscription');
+        const seat = searchParams.get('seat');
+
+        if (subscription === 'success') {
+            // Refresh user data from backend
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const userStr = localStorage.getItem('user');
+            const token = userStr ? JSON.parse(userStr).token : null;
+            if (token) {
+                axios.get(`${apiUrl}/auth/me`, { headers: { Authorization: `Bearer ${token}` } })
+                    .then(({ data }) => {
+                        if (data.success) {
+                            const updated = { ...data.user, token };
+                            localStorage.setItem('user', JSON.stringify(updated));
+                            setUserName(updated.firstName || 'User');
+                        }
+                    })
+                    .catch(() => {});
+            }
+            toast.success('Subscription activated successfully!');
+        } else if (subscription === 'failed') {
+            toast.error('Subscription payment failed. Please try again.');
+        }
+
+        if (seat === 'success') {
+            toast.success('Seat purchased successfully! Invite email sent.');
+        } else if (seat === 'failed') {
+            toast.error('Seat purchase failed. Please try again.');
+        }
+
+        // Clean URL params
+        if (subscription || seat) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const userStr = localStorage.getItem('user');

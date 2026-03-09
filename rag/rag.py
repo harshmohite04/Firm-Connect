@@ -151,7 +151,7 @@ def ask(query: str, case_id: str, history: list = [], top_k=5, user_id=None):
             query_vector = self.embedder.embed_query(query_text)
 
             # 2. Search Qdrant with 3x top_k for re-ranking headroom
-            fetch_k = top_k * 3
+            fetch_k = min(top_k * 3, 80)
             result = self.client.query_points(
                 collection_name=self.collection,
                 query=query_vector,
@@ -300,7 +300,7 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=No
             from rag.reranker import rerank
 
             query_vector = self.embedder.embed_query(query_text)
-            fetch_k = top_k * 3
+            fetch_k = min(top_k * 3, 80)
             result = self.client.query_points(
                 collection_name=self.collection,
                 query=query_vector,
