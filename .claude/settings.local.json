@@ -25,7 +25,12 @@
       "Bash(test:*)",
       "Bash(\"D:\\\\harsh\\\\Code_Playground\\\\Law Firm Connect\\\\CheckOne\\\\Firm-Connect\\\\utils\\\\system_settings.py\":*)",
       "Bash(xargs grep:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:razorpay.com)",
+      "WebFetch(domain:jsfiddle.net)",
+      "WebFetch(domain:docs.fintechprimitives.com)",
+      "WebFetch(domain:abhishek-gupta.medium.com)",
+      "Bash(sort -k2)"
     ]
   }
 }

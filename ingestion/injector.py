@@ -136,12 +136,13 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
         chunk_overlap=CHUNK_OVERLAP,
     )
 
-    vectors: list[list[float]] = []
     payloads: list[dict] = []
+
+    # Collect all chunks + metadata first, then batch-embed
+    all_texts: list[str] = []
 
     if page_metadata:
         # Page-aware chunking: chunk each page separately to preserve page numbers
-        chunk_idx = 0
         for page_info in page_metadata:
             page_text = page_info.get("text", "")
             if not page_text.strip():
@@ -149,11 +150,8 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
             page_chunks = splitter.split_text(page_text)
             for chunk_text in page_chunks:
                 chunk_id = str(uuid.uuid4())
-                chunk_idx += 1
-                print(f"[EMBED] Chunk {chunk_idx}...")
-                embedding = embedder.embed_query(chunk_text)
+                all_texts.append(chunk_text)
 
-                vectors.append(embedding)
                 payload = {
                     "chunk_id": chunk_id,
                     "text": chunk_text,
@@ -169,18 +167,16 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
                 create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
                 create_entity_relations(driver, chunk_id, chunk_text)
 
-        print(f"[INFO] Total chunks (page-aware): {chunk_idx}")
+        print(f"[INFO] Total chunks (page-aware): {len(all_texts)}")
     else:
         # Legacy path: no page metadata
         chunks = splitter.split_text(text)
         print(f"[INFO] Total chunks: {len(chunks)}")
 
-        for idx, chunk_text in enumerate(chunks):
+        for chunk_text in chunks:
             chunk_id = str(uuid.uuid4())
-            print(f"[EMBED] Chunk {idx + 1}/{len(chunks)}...")
-            embedding = embedder.embed_query(chunk_text)
+            all_texts.append(chunk_text)
 
-            vectors.append(embedding)
             payloads.append(
                 {
                     "chunk_id": chunk_id,
@@ -192,6 +188,10 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
 
             create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
             create_entity_relations(driver, chunk_id, chunk_text)
+
+    # Batch-embed all chunks at once (3-10x faster than per-chunk)
+    print(f"[EMBED] Batch encoding {len(all_texts)} chunks...")
+    vectors = embedder.embed_documents(all_texts)
 
     # Upsert into Qdrant
     qdrant_upsert(qdrant, QDRANT_COLLECTION, vectors, payloads)

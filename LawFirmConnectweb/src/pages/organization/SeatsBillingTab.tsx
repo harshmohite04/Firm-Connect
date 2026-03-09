@@ -86,38 +86,15 @@ const SeatsBillingTab: React.FC<SeatsBillingTabProps> = ({ org, totalSeats: _tot
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 subscription_id: subRes.subscriptionId,
                 name: 'LawFirmAI',
+                image: '/logo.svg',
                 description: `${selectedSeatPlan} Seat - ${seatPrice}/mo`,
-                handler: async function (response: any) {
-                    try {
-                        const verifyRes = await axios.post(`${apiUrl}/payments/verify-seat`, {
-                            razorpay_subscription_id: response.razorpay_subscription_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            seatPlan: selectedSeatPlan,
-                        }, authHeader);
-                        if (verifyRes.data.success) {
-                            toast.success('Seat purchased successfully');
-                            setShowSeatUpgrade(false);
-                            onRefresh();
-                        } else {
-                            toast.error('Seat verification failed');
-                        }
-                    } catch (err: any) {
-                        toast.error(err?.response?.data?.message || 'Seat upgrade failed after payment');
-                    } finally {
-                        setUpdatingSeats(false);
-                    }
-                },
+                redirect: true,
+                callback_url: `${apiUrl}/payments/verify-seat-redirect`,
                 prefill: {
                     name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
                     email: user?.email,
                 },
                 theme: { color: '#4F46E5' },
-                modal: {
-                    ondismiss: function () {
-                        setUpdatingSeats(false);
-                    },
-                },
             };
             const rzp = new window.Razorpay(options);
             rzp.open();

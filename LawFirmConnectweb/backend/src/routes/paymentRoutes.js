@@ -35,13 +35,15 @@ router.post('/create-subscription', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: `Invalid plan: ${planId}` });
         }
 
+        const { firmName } = req.body;
         const subscription = await razorpay.subscriptions.create({
             plan_id: razorpayPlanId,
             total_count: 12,
             customer_notify: 1,
             notes: {
                 userId: req.user._id.toString(),
-                planId
+                planId,
+                firmName: firmName || ''
             }
         });
 
@@ -153,6 +155,7 @@ router.post('/create-seat', protect, admin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'You must have an organization to buy seats' });
         }
 
+        const { inviteEmail } = req.body;
         const subscription = await razorpay.subscriptions.create({
             plan_id: razorpaySeatPlanId,
             total_count: 12,
@@ -161,7 +164,8 @@ router.post('/create-seat', protect, admin, async (req, res) => {
                 userId: req.user._id.toString(),
                 organizationId: user.organizationId.toString(),
                 type: 'seat',
-                seatPlan
+                seatPlan,
+                inviteEmail: inviteEmail || ''
             }
         });
 
@@ -283,6 +287,211 @@ router.post('/verify-seat', protect, admin, async (req, res) => {
     } catch (error) {
         console.error('Verify Seat Error:', error);
         res.status(500).json({ success: false, message: 'Seat verification failed' });
+    }
+});
+
+// =====================================================
+// POST /payments/verify-subscription-redirect
+// Razorpay redirects here after subscription payment (no JWT)
+// =====================================================
+router.post('/verify-subscription-redirect', async (req, res) => {
+    const FRONTEND_URL = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
+    try {
+        const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+
+        // Verify HMAC signature
+        const body = razorpay_payment_id + '|' + razorpay_subscription_id;
+        const expectedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(body)
+            .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+            return res.redirect(`${FRONTEND_URL}/pricing?subscription=failed`);
+        }
+
+        // Fetch subscription from Razorpay to get notes
+        const subscription = await razorpay.subscriptions.fetch(razorpay_subscription_id);
+        const notes = subscription.notes || {};
+        const { userId, planId, firmName } = notes;
+
+        if (!userId || !planId) {
+            return res.redirect(`${FRONTEND_URL}/pricing?subscription=failed`);
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.redirect(`${FRONTEND_URL}/pricing?subscription=failed`);
+        }
+
+        user.subscriptionStatus = 'ACTIVE';
+        user.subscriptionPlan = planId;
+        user.subscriptionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        user.razorpaySubscriptionId = razorpay_subscription_id;
+
+        if (planId === 'FIRM') {
+            user.role = 'ADMIN';
+
+            if (!user.organizationId) {
+                const org = await Organization.create({
+                    name: firmName || `${user.firstName}'s Law Firm`,
+                    ownerId: user._id,
+                    plan: 'FIRM',
+                    razorpaySubscriptionId: razorpay_subscription_id,
+                    members: [{
+                        userId: user._id,
+                        role: 'ADMIN',
+                        status: 'ACTIVE',
+                        joinedAt: new Date()
+                    }],
+                    subscriptionStatus: 'ACTIVE',
+                    subscriptionExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                });
+                user.organizationId = org._id;
+            } else {
+                const org = await Organization.findById(user.organizationId);
+                if (org) {
+                    org.plan = 'FIRM';
+                    org.razorpaySubscriptionId = razorpay_subscription_id;
+                    org.subscriptionStatus = 'ACTIVE';
+                    org.subscriptionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                    await org.save();
+                }
+            }
+        } else {
+            user.role = 'ADVOCATE';
+        }
+
+        await user.save();
+
+        res.redirect(`${FRONTEND_URL}/portal?subscription=success`);
+    } catch (error) {
+        console.error('Verify Subscription Redirect Error:', error);
+        res.redirect(`${FRONTEND_URL}/pricing?subscription=failed`);
+    }
+});
+
+// =====================================================
+// POST /payments/verify-seat-redirect
+// Razorpay redirects here after seat payment (no JWT)
+// =====================================================
+router.post('/verify-seat-redirect', async (req, res) => {
+    const FRONTEND_URL = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
+    try {
+        const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+
+        // Verify HMAC signature
+        const body = razorpay_payment_id + '|' + razorpay_subscription_id;
+        const expectedSignature = crypto
+            .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+            .update(body)
+            .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+            return res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
+        }
+
+        // Fetch subscription from Razorpay to get notes
+        const subscription = await razorpay.subscriptions.fetch(razorpay_subscription_id);
+        const notes = subscription.notes || {};
+        const { userId, seatPlan, inviteEmail } = notes;
+
+        if (!userId) {
+            return res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
+        }
+
+        const user = await User.findById(userId);
+        if (!user || !user.organizationId) {
+            return res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
+        }
+
+        // Verify user is admin of their org
+        if (user.role !== 'ADMIN') {
+            return res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
+        }
+
+        const org = await Organization.findById(user.organizationId);
+        if (!org) {
+            return res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
+        }
+
+        org.seats.push({
+            razorpaySubscriptionId: razorpay_subscription_id,
+            plan: seatPlan || 'STARTER',
+            status: 'ACTIVE',
+            assignedTo: null,
+            createdAt: new Date()
+        });
+        await org.save();
+
+        const newSeat = org.seats[org.seats.length - 1];
+
+        // Send invitation email if inviteEmail provided
+        if (inviteEmail) {
+            const invitedEmail = inviteEmail.toLowerCase().trim();
+            const adminName = `${user.firstName} ${user.lastName}`;
+            let invitedUser = await User.findOne({ email: invitedEmail });
+            let generatedPassword = null;
+            let isNewUser = false;
+
+            if (!invitedUser) {
+                isNewUser = true;
+                generatedPassword = crypto.randomBytes(12).toString('hex');
+                invitedUser = await User.create({
+                    firstName: invitedEmail.split('@')[0],
+                    lastName: 'Member',
+                    email: invitedEmail,
+                    password: generatedPassword,
+                    role: 'ADVOCATE',
+                    status: 'VERIFIED'
+                });
+            }
+
+            const invitation = await TeamInvitation.create({
+                organizationId: org._id,
+                invitedBy: user._id,
+                invitedEmail,
+                invitedUserId: invitedUser._id,
+                seatId: newSeat._id,
+                seatPlan: seatPlan || 'STARTER'
+            });
+
+            const frontendUrl = FRONTEND_URL;
+            const acceptLink = `${frontendUrl}/invite/${invitation.token}/accept`;
+            const rejectLink = `${frontendUrl}/invite/${invitation.token}/reject`;
+
+            try {
+                const htmlContent = isNewUser
+                    ? orgSeatInvitationNewUserTemplate(org.name, adminName, seatPlan || 'STARTER', acceptLink, rejectLink, generatedPassword)
+                    : orgSeatInvitationTemplate(org.name, adminName, seatPlan || 'STARTER', acceptLink, rejectLink);
+
+                await sendEmail({
+                    email: invitedEmail,
+                    subject: `You're invited to join ${org.name}`,
+                    html: htmlContent,
+                    message: `You have been invited to join ${org.name} on LawFirmAI.`
+                });
+            } catch (emailError) {
+                console.error('Failed to send seat invitation email:', emailError);
+            }
+        }
+
+        // Log activity
+        try {
+            await OrgActivityLog.create({
+                organizationId: org._id,
+                action: 'SEAT_ADDED',
+                actorId: user._id,
+                metadata: { seatPlan: seatPlan || 'STARTER', seatId: newSeat._id.toString() }
+            });
+        } catch (logErr) {
+            console.error('Failed to log seat activity:', logErr);
+        }
+
+        res.redirect(`${FRONTEND_URL}/portal?seat=success`);
+    } catch (error) {
+        console.error('Verify Seat Redirect Error:', error);
+        res.redirect(`${FRONTEND_URL}/portal?seat=failed`);
     }
 });
 
