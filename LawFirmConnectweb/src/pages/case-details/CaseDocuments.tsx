@@ -82,6 +82,7 @@ const CaseDocuments: React.FC = () => {
     // Multi-Upload Modal State
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<{ file: File; category: string; id: string }[]>([]);
+    const uploadFileInputRef = React.useRef<HTMLInputElement>(null);
     
     // Viewer State
     const [selectedDocument, setSelectedDocument] = useState<any>(null);
@@ -180,6 +181,15 @@ const CaseDocuments: React.FC = () => {
         setIsUploadModalOpen(true);
         setPendingFiles([]);
     };
+
+    // Auto-open file selector when upload modal opens
+    useEffect(() => {
+        if (isUploadModalOpen) {
+            setTimeout(() => {
+                uploadFileInputRef.current?.click();
+            }, 100);
+        }
+    }, [isUploadModalOpen]);
 
     const handleFileSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
@@ -521,7 +531,11 @@ const CaseDocuments: React.FC = () => {
                                             
                                             if (status === 'Processing') {
                                                 return (
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                        </svg>
                                                         AI Inference Pending
                                                     </span>
                                                 );
@@ -532,7 +546,7 @@ const CaseDocuments: React.FC = () => {
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
                                                             AI Failed
                                                         </span>
-                                                        <button 
+                                                        <button
                                                             onClick={(e) => { e.stopPropagation(); handleRetryIngest(doc); }}
                                                             className="text-xs text-blue-600 hover:text-blue-800 underline"
                                                         >
@@ -614,7 +628,11 @@ const CaseDocuments: React.FC = () => {
                                                             
                                                             if (status === 'Processing') {
                                                                 return (
-                                                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-100 text-yellow-700">
+                                                                        <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                                        </svg>
                                                                         AI Inference Pending
                                                                     </span>
                                                                 );
@@ -720,9 +738,10 @@ const CaseDocuments: React.FC = () => {
                         <div className="p-6 overflow-y-auto flex-1">
                             {/* File Drop / Select Area */}
                             <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group relative">
-                                <input 
-                                    type="file" 
-                                    multiple 
+                                <input
+                                    ref={uploadFileInputRef}
+                                    type="file"
+                                    multiple
                                     onChange={handleFileSelection}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />

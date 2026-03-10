@@ -25,6 +25,10 @@ const messageSchema = new mongoose.Schema({
         mimeType: String,
         size: Number,
         url: String
+    },
+    deleted: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

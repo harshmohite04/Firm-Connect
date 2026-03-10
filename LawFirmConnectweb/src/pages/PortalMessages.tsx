@@ -9,7 +9,8 @@ import {
     FileText,
     Download,
     X as XIcon,
-    MessageSquare
+    MessageSquare,
+    Trash2 as TrashIcon
 } from 'lucide-react';
 import { contactService } from '../services/contactService';
 import { messageService } from '../services/messageService';
@@ -25,6 +26,7 @@ interface Message {
     timestamp: string;
     read?: boolean;
     attachment?: Attachment | null;
+    deleted?: boolean;
 }
 
 interface Conversation {
@@ -145,12 +147,22 @@ const PortalMessages: React.FC = () => {
             }
         };
 
+        const deleteListener = ({ messageId }: { messageId: string }) => {
+            setActiveMessages(prev => prev.map(msg =>
+                msg._id === messageId
+                    ? { ...msg, deleted: true, content: 'This message was deleted', attachment: null }
+                    : msg
+            ));
+        };
+
         socket.on('newMessage', listener);
         socket.on('messagesRead', readListener);
+        socket.on('messageDeleted', deleteListener);
 
         return () => {
             socket.off('newMessage', listener);
             socket.off('messagesRead', readListener);
+            socket.off('messageDeleted', deleteListener);
         };
     }, [socket, userId]);
 
@@ -267,6 +279,19 @@ const PortalMessages: React.FC = () => {
             }));
             setActiveMessages(formatted);
         } catch {}
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        try {
+            await messageService.deleteMessage(messageId);
+            setActiveMessages(prev => prev.map(msg =>
+                msg._id === messageId
+                    ? { ...msg, deleted: true, content: 'This message was deleted', attachment: null }
+                    : msg
+            ));
+        } catch {
+            // Error handled silently
+        }
     };
 
     const handleSendMessage = async (e: React.FormEvent) => {
@@ -761,45 +786,65 @@ const PortalMessages: React.FC = () => {
                                              }>
                                             {avatarText.toUpperCase()}
                                         </div>
-                                        <div className={`${isMe ? 'items-end' : ''} flex flex-col`}>
+                                        <div className={`${isMe ? 'items-end' : ''} flex flex-col group/msg`}>
                                             <div className="flex items-baseline gap-2 mb-1">
                                                 <span className="text-[10px]" style={{ color: 'var(--color-text-tertiary)' }}>{msg.timestamp}</span>
                                             </div>
-                                            <div className="p-4 rounded-2xl shadow-sm text-sm leading-relaxed"
-                                                 style={isMe
-                                                     ? { background: 'var(--gradient-accent)', color: '#fff', borderTopRightRadius: 0 }
-                                                     : { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)', color: 'var(--color-text-primary)', borderTopLeftRadius: 0 }
-                                                 }>
-                                                {msg.content && <p>{msg.content}</p>}
+                                            {msg.deleted ? (
+                                                <div className="p-4 rounded-2xl shadow-sm text-sm leading-relaxed italic"
+                                                     style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)', border: '1px solid var(--color-surface-border)', borderTopRightRadius: isMe ? 0 : undefined, borderTopLeftRadius: !isMe ? 0 : undefined }}>
+                                                    <p>{msg.content}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="relative">
+                                                    <div className="p-4 rounded-2xl shadow-sm text-sm leading-relaxed"
+                                                         style={isMe
+                                                             ? { background: 'var(--gradient-accent)', color: '#fff', borderTopRightRadius: 0 }
+                                                             : { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-surface-border)', color: 'var(--color-text-primary)', borderTopLeftRadius: 0 }
+                                                         }>
+                                                        {msg.content && <p>{msg.content}</p>}
 
-                                                {/* Attachment render */}
-                                                {msg.attachment && msg.attachment.url && (
-                                                    <div className="mt-2">
-                                                        {isImageMime(msg.attachment.mimeType) ? (
-                                                            <img
-                                                                src={msg.attachment.url.startsWith('http') ? msg.attachment.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment.url}`}
-                                                                alt={msg.attachment.originalName}
-                                                                className="max-w-[240px] rounded-lg cursor-pointer"
-                                                                onClick={() => window.open(msg.attachment!.url.startsWith('http') ? msg.attachment!.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment!.url}`, '_blank')}
-                                                            />
-                                                        ) : (
-                                                            <a
-                                                                href={msg.attachment.url.startsWith('http') ? msg.attachment.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment.url}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="flex items-center gap-2 p-2 rounded-lg"
-                                                                style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : 'var(--color-bg-tertiary)' }}
-                                                            >
-                                                                <FileText className="w-5 h-5 flex-shrink-0" />
-                                                                <span className="text-xs truncate max-w-[180px]">{msg.attachment.originalName}</span>
-                                                                <Download className="w-4 h-4 flex-shrink-0 ml-auto" />
-                                                            </a>
+                                                        {/* Attachment render */}
+                                                        {msg.attachment && msg.attachment.url && (
+                                                            <div className="mt-2">
+                                                                {isImageMime(msg.attachment.mimeType) ? (
+                                                                    <img
+                                                                        src={msg.attachment.url.startsWith('http') ? msg.attachment.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment.url}`}
+                                                                        alt={msg.attachment.originalName}
+                                                                        className="max-w-[240px] rounded-lg cursor-pointer"
+                                                                        onClick={() => window.open(msg.attachment!.url.startsWith('http') ? msg.attachment!.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment!.url}`, '_blank')}
+                                                                    />
+                                                                ) : (
+                                                                    <a
+                                                                        href={msg.attachment.url.startsWith('http') ? msg.attachment.url : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${msg.attachment.url}`}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="flex items-center gap-2 p-2 rounded-lg"
+                                                                        style={{ backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : 'var(--color-bg-tertiary)' }}
+                                                                    >
+                                                                        <FileText className="w-5 h-5 flex-shrink-0" />
+                                                                        <span className="text-xs truncate max-w-[180px]">{msg.attachment.originalName}</span>
+                                                                        <Download className="w-4 h-4 flex-shrink-0 ml-auto" />
+                                                                    </a>
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                )}
-                                            </div>
+                                                    {/* Delete button (own messages only) */}
+                                                    {isMe && (
+                                                        <button
+                                                            onClick={() => handleDeleteMessage(msg._id)}
+                                                            className="absolute -left-8 top-1/2 -translate-y-1/2 p-1.5 rounded-full opacity-0 group-hover/msg:opacity-100 transition-opacity"
+                                                            style={{ backgroundColor: 'var(--color-bg-tertiary)', color: 'var(--color-text-tertiary)' }}
+                                                            title="Delete message"
+                                                        >
+                                                            <TrashIcon className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
                                             <div className={`flex items-center gap-1 mt-1 ${isMe ? 'flex-row-reverse' : ''} px-1`}>
-                                                {isMe && (
+                                                {isMe && !msg.deleted && (
                                                     <span className="text-[10px]" style={{ color: msg.read ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}>
                                                         {msg.read ? '✓✓' : '✓'}
                                                     </span>

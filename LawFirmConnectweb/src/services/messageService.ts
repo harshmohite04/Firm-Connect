@@ -51,6 +51,11 @@ export const messageService = {
     return response.data;
   },
 
+  deleteMessage: async (messageId: string) => {
+    const response = await api.delete(`/messages/${messageId}`);
+    return response.data;
+  },
+
   searchMessages: async (userId: string, query: string) => {
     const response = await api.get(
       `/messages/search?userId=${encodeURIComponent(userId)}&q=${encodeURIComponent(query)}`

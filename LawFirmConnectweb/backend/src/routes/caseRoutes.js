@@ -10,11 +10,13 @@ const {
 const {
     validateTeamMember,
     addTeamMember,
-    removeTeamMember
+    removeTeamMember,
+    getPendingTeamRequests
 } = require('../controllers/teamController');
 const { protect } = require('../middlewares/authMiddleware');
 const verifyCaseAccess = require('../middlewares/verifyCaseAccess');
 const fileUpload = require('../middlewares/fileUpload');
+const { scanFiles } = require('../middlewares/fileScan');
 
 // Main Case Routes
 router.route('/')
@@ -22,7 +24,7 @@ router.route('/')
     .post((req, res, next) => {
         console.log('Request HIT /cases POST route');
         next();
-    }, protect, fileUpload.array('files'), (req, res, next) => {
+    }, protect, fileUpload.array('files'), scanFiles, (req, res, next) => {
         console.log('Passed middleware, entering controller');
         createCase(req, res, next);
     });
@@ -34,7 +36,7 @@ router.route('/:id')
 // Tab: Active Documents
 router.route('/:id/documents')
     .get(protect, verifyCaseAccess, getCaseDocuments)
-    .post(protect, verifyCaseAccess, fileUpload.array('files'), uploadDocument);
+    .post(protect, verifyCaseAccess, fileUpload.array('files'), scanFiles, uploadDocument);
 
 router.delete('/:id/documents/:documentId', protect, verifyCaseAccess, deleteDocument);
 
@@ -56,5 +58,6 @@ router.route('/:id/settings')
 router.route('/:id/team/validate').post(protect, verifyCaseAccess, validateTeamMember);
 router.route('/:id/team/members').post(protect, verifyCaseAccess, addTeamMember);
 router.route('/:id/team/members/:userId').delete(protect, verifyCaseAccess, removeTeamMember);
+router.route('/:id/team/pending-requests').get(protect, verifyCaseAccess, getPendingTeamRequests);
 
 module.exports = router;
