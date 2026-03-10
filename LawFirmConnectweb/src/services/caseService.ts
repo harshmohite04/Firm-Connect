@@ -30,6 +30,8 @@ export interface Case {
     role: string;
     joinedAt: string;
   }[];
+  invitationsSent?: number;
+  invitationWarning?: string;
 }
 
 export interface ActivityLog {

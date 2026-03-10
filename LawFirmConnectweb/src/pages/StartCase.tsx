@@ -178,7 +178,7 @@ const StartCase: React.FC = () => {
 
             const result = await caseService.createCase(data);
 
-            if (result?.invitationsSent > 0) {
+            if ((result?.invitationsSent ?? 0) > 0) {
                 toast.success(`Case created! Invitations sent to ${result.invitationsSent} team member(s)`);
             } else {
                 toast.success('Case created successfully!');
