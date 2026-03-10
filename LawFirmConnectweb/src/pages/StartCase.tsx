@@ -122,24 +122,33 @@ const StartCase: React.FC = () => {
             return;
         }
 
-         const alreadyInvited = formData.teamMembers.some(m => m.email === emailInput);
+         const alreadyInvited = formData.teamMembers.some(m => m.email === emailInput.toLowerCase());
          if (alreadyInvited) {
              setEmailError('This user has already been invited');
              setValidatingEmail(false);
              return;
          }
 
-        setFormData({
-            ...formData,
-            teamMembers: [...formData.teamMembers, {
-                email: emailInput,
-                firstName: 'Guest',
-                lastName: 'User',
-                status: 'pending'
-            }]
-        });
-        setEmailInput('');
-        setValidatingEmail(false);
+        try {
+            const res = await api.post('/team/validate-email', { email: emailInput });
+            const user = res.data.user;
+            setFormData({
+                ...formData,
+                teamMembers: [...formData.teamMembers, {
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    userId: user.id,
+                    status: 'pending'
+                }]
+            });
+            setEmailInput('');
+        } catch (error: any) {
+            const msg = error?.response?.data?.message || 'Failed to validate email';
+            setEmailError(msg);
+        } finally {
+            setValidatingEmail(false);
+        }
     };
 
     const removeTeamMember = (email: string) => {
@@ -155,19 +164,29 @@ const StartCase: React.FC = () => {
             const data = new FormData();
             data.append('title', formData.title);
             data.append('category', formData.category);
-            data.append('legalMatter', formData.category); 
+            data.append('legalMatter', formData.category);
             data.append('description', formData.description);
-            
+
             formData.files.forEach(file => {
                 data.append('files', file);
             });
-            
-            for (const pair of data.entries()) {
-                console.log('FormData:', pair[0], pair[1]);
+
+            // Append team member emails
+            if (formData.teamMembers.length > 0) {
+                data.append('teamMembers', JSON.stringify(formData.teamMembers.map(m => m.email)));
             }
 
-            await caseService.createCase(data);
-            
+            const result = await caseService.createCase(data);
+
+            if (result?.invitationsSent > 0) {
+                toast.success(`Case created! Invitations sent to ${result.invitationsSent} team member(s)`);
+            } else {
+                toast.success('Case created successfully!');
+            }
+            if (result?.invitationWarning) {
+                toast(result.invitationWarning, { icon: '⚠️' });
+            }
+
             navigate('/portal/cases');
         } catch (error: any) {
             console.error("Failed to create case", error);

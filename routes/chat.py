@@ -72,7 +72,8 @@ async def get_sessions(
         user_id = get_user_id(current_user)
         cursor = chat_collection.find({
             "case_id": caseId,
-            "user_id": user_id
+            "user_id": user_id,
+            "$or": [{"deleted": {"$exists": False}}, {"deleted": False}]
         }).sort("created_at", -1)
 
         sessions = []
@@ -90,6 +91,43 @@ async def get_sessions(
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+
+@router.delete("/chat/session/{sessionId}")
+@limiter.limit("30/minute")
+async def delete_session(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    try:
+        validate_session_id(sessionId)
+        user_id = get_user_id(current_user)
+
+        session_doc = chat_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        if session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_SESSION_DELETE", {
+                "user_id": user_id,
+                "session_id": sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        chat_collection.update_one(
+            {"session_id": sessionId, "user_id": user_id},
+            {"$set": {"deleted": True}}
+        )
+
+        logger.info(f"Session deleted: {sessionId} by user {user_id}")
+        return {"message": "Session deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete session")
 
 
 @router.get("/chat/history/{sessionId}", response_model=ChatHistoryResponse)

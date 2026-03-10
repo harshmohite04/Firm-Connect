@@ -233,6 +233,25 @@ const getInvitationHistory = async (): Promise<InvitationHistoryEntry[]> => {
   return response.data.invitations;
 };
 
+const getCaseTeamRequestById = async (
+  requestId: string,
+): Promise<{ success: boolean; request: any }> => {
+  const response = await api.get(`/organization/case-team-requests/${requestId}`);
+  return response.data;
+};
+
+const reviewCaseTeamRequest = async (
+  requestId: string,
+  action: string,
+  reason?: string,
+): Promise<{ success: boolean; message: string }> => {
+  const response = await api.patch(`/organization/case-team-requests/${requestId}`, {
+    action,
+    reason,
+  });
+  return response.data;
+};
+
 const organizationService = {
   getOrganization,
   getMembers,
@@ -253,6 +272,8 @@ const organizationService = {
   deleteOrganization,
   getActivityLog,
   getInvitationHistory,
+  getCaseTeamRequestById,
+  reviewCaseTeamRequest,
 };
 
 export default organizationService;

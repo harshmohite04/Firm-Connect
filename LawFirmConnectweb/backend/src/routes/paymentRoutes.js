@@ -560,6 +560,61 @@ router.post('/cancel-seat', protect, admin, async (req, res) => {
 });
 
 // =====================================================
+// POST /payments/change-plan
+// Switches user between STARTER and PROFESSIONAL plans
+// =====================================================
+router.post('/change-plan', protect, async (req, res) => {
+    try {
+        const { newPlanId } = req.body;
+
+        if (!newPlanId || !['STARTER', 'PROFESSIONAL'].includes(newPlanId)) {
+            return res.status(400).json({ success: false, message: 'newPlanId must be STARTER or PROFESSIONAL' });
+        }
+
+        const user = await User.findById(req.user._id);
+
+        if (user.subscriptionPlan === newPlanId) {
+            return res.status(400).json({ success: false, message: 'You are already on this plan' });
+        }
+
+        // Cancel existing Razorpay subscription if present
+        if (user.razorpaySubscriptionId) {
+            try {
+                await razorpay.subscriptions.cancel(user.razorpaySubscriptionId);
+            } catch (rzpErr) {
+                console.error('Failed to cancel old subscription:', rzpErr);
+            }
+        }
+
+        // Create new Razorpay subscription
+        const razorpayPlanId = PLAN_MAP[newPlanId];
+        if (!razorpayPlanId) {
+            return res.status(400).json({ success: false, message: `No Razorpay plan configured for ${newPlanId}` });
+        }
+
+        const subscription = await razorpay.subscriptions.create({
+            plan_id: razorpayPlanId,
+            total_count: 12,
+            customer_notify: 1,
+            notes: {
+                userId: req.user._id.toString(),
+                planId: newPlanId,
+                changePlan: true,
+                previousPlan: user.subscriptionPlan || 'NONE'
+            }
+        });
+
+        res.json({
+            success: true,
+            subscriptionId: subscription.id
+        });
+    } catch (error) {
+        console.error('Change Plan Error:', error);
+        res.status(500).json({ success: false, message: 'Failed to change plan' });
+    }
+});
+
+// =====================================================
 // POST /payments/cancel-subscription
 // Cancels the user's Razorpay subscription
 // =====================================================

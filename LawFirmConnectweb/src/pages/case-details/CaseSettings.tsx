@@ -26,13 +26,17 @@ const CaseSettings: React.FC = () => {
     });
 
     const [saving, setSaving] = useState(false);
-    const [teamMembers, setTeamMembers] = useState<any[]>([]); 
-    
+    const [teamMembers, setTeamMembers] = useState<any[]>([]);
+    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+
     // Add Member Modal State
     const [showAddMember, setShowAddMember] = useState(false);
     const [newMemberEmail, setNewMemberEmail] = useState("");
     const [newMemberRole, setNewMemberRole] = useState("Member");
     const [addingMember, setAddingMember] = useState(false);
+
+    // Plan limit info
+    const [teamLimit, setTeamLimit] = useState<number | null>(null); // null = unlimited
 
     // Confirmation Modal State
     const [confirmation, setConfirmation] = useState<{
@@ -63,24 +67,44 @@ const CaseSettings: React.FC = () => {
             if (caseData.settings?.notifications) {
                 setNotifications(caseData.settings.notifications);
             }
-            
+
             // Map real team members
             if (caseData.teamMembers && caseData.teamMembers.length > 0) {
                  const mappedMembers = caseData.teamMembers.map((tm: any) => ({
-                     id: tm.userId?._id || tm._id, // Handle populated vs unpopulated
+                     id: tm.userId?._id || tm._id,
                      userId: tm.userId?._id,
                      name: tm.userId ? `${tm.userId.firstName} ${tm.userId.lastName}` : "Unknown User",
                      role: tm.role || "Member",
                      email: tm.userId?.email,
-                     // Use a placeholder if no image available (backend doesn't store user images yet)
                      img: "https://ui-avatars.com/api/?name=" + (tm.userId ? `${tm.userId.firstName}+${tm.userId.lastName}` : "User") + "&background=random"
                  }));
                  setTeamMembers(mappedMembers);
             } else {
                  setTeamMembers([]);
             }
+
+            // Compute plan limit for non-firm users
+            const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+            if (storedUser) {
+                try {
+                    const user = JSON.parse(storedUser);
+                    if (!user.organizationId) {
+                        const plan = user.subscriptionPlan;
+                        setTeamLimit(plan === 'PROFESSIONAL' ? 5 : 2);
+                    } else {
+                        setTeamLimit(null); // unlimited for firm users
+                    }
+                } catch { /* ignore */ }
+            }
+
+            // Load pending requests if lead attorney
+            if (id) {
+                caseService.getPendingTeamRequests(id)
+                    .then((data: any) => setPendingRequests(data.requests || []))
+                    .catch(() => setPendingRequests([]));
+            }
         }
-    }, [caseData]);
+    }, [caseData, id]);
 
     const handleGeneralSave = async () => {
         if (!id) return;
@@ -123,17 +147,27 @@ const CaseSettings: React.FC = () => {
         if (!id || !newMemberEmail) return;
         setAddingMember(true);
         try {
-            // First validate/check existence (optional, addTeamMember does it too)
-            // Call add directly
-            await caseService.addTeamMember(id, newMemberEmail, newMemberRole);
-            
-            // Refresh case data to show new member
-            const updatedCase = await caseService.getCaseById(id);
-            setCaseData(updatedCase);
-            
+            const result = await caseService.addTeamMember(id, newMemberEmail, newMemberRole);
+
             setNewMemberEmail("");
             setShowAddMember(false);
-            toast.success("Team member added successfully!");
+
+            if (result.action === 'pending_approval') {
+                toast.success("Request sent to firm admin for approval");
+                // Refresh pending requests
+                caseService.getPendingTeamRequests(id)
+                    .then((data: any) => setPendingRequests(data.requests || []))
+                    .catch(() => {});
+            } else if (result.action === 'invitation_sent') {
+                toast.success("Invitation sent! They'll need to accept before joining.");
+                setNewMemberEmail("");
+                setShowAddMember(false);
+            } else {
+                // action === 'added' (legacy/admin-approved)
+                const updatedCase = await caseService.getCaseById(id);
+                setCaseData(updatedCase);
+                toast.success("Team member added successfully!");
+            }
         } catch (error: any) {
             console.error(error);
             if (error.response && error.response.status === 404) {
@@ -307,10 +341,27 @@ const CaseSettings: React.FC = () => {
         {/* Team Management */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-            <h3 className="font-bold text-slate-900">Team Management</h3>
+            <div className="flex items-center gap-3">
+              <h3 className="font-bold text-slate-900">Team Management</h3>
+              {teamLimit !== null && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                  {teamMembers.length + 1}/{teamLimit} teammates
+                </span>
+              )}
+            </div>
             <button
-              className="text-sm text-blue-600 font-bold hover:text-blue-800 transition-colors"
-              onClick={() => setShowAddMember(!showAddMember)}
+              className={`text-sm font-bold transition-colors ${
+                teamLimit !== null && teamMembers.length + 1 >= teamLimit && !showAddMember
+                  ? "text-slate-400 cursor-not-allowed"
+                  : "text-blue-600 hover:text-blue-800"
+              }`}
+              onClick={() => {
+                if (teamLimit !== null && teamMembers.length + 1 >= teamLimit && !showAddMember) {
+                  toast.error(`Maximum ${teamLimit} teammates reached for your plan. Upgrade to add more.`);
+                  return;
+                }
+                setShowAddMember(!showAddMember);
+              }}
             >
               {showAddMember ? "Cancel" : "+ Add Member"}
             </button>
@@ -395,6 +446,42 @@ const CaseSettings: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Pending Approval Requests */}
+        {pendingRequests.length > 0 && (
+          <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-amber-100 bg-amber-50">
+              <h3 className="font-bold text-amber-900">Pending Approval Requests</h3>
+              <p className="text-xs text-amber-700 mt-1">These requests are awaiting your firm admin's approval</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {pendingRequests.map((req: any) => (
+                <div key={req._id} className="px-6 py-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${req.requestedUser?.firstName}+${req.requestedUser?.lastName}&background=random`}
+                      alt={`${req.requestedUser?.firstName} ${req.requestedUser?.lastName}`}
+                      className="w-10 h-10 rounded-full object-cover bg-slate-200"
+                    />
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        {req.requestedUser?.firstName} {req.requestedUser?.lastName}
+                      </p>
+                      <div className="flex items-center mt-0.5">
+                        <span className="text-xs text-slate-500">{req.role}</span>
+                        <span className="text-xs text-slate-400 mx-2">·</span>
+                        <span className="text-xs text-slate-400">{req.requestedUser?.email}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                    Pending
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Danger Zone */}
         <div className="bg-red-50 rounded-xl border border-red-100 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
