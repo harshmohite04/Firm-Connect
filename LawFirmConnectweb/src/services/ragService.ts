@@ -176,6 +176,23 @@ const ragService = {
     }
   },
 
+  renameSession: async (sessionId: string, title: string) => {
+    try {
+      const response = await axios.patch(
+        `${RAG_API_URL}/chat/session/${sessionId}`,
+        { title },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat");
+      }
+      console.error("Rename session failed:", error);
+      throw error;
+    }
+  },
+
   deleteSession: async (sessionId: string) => {
     try {
       const response = await axios.delete(

@@ -80,6 +80,10 @@ const CaseChat: React.FC = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFiles, setUploadingFiles] = useState<{name: string, status: 'uploading' | 'processing' | 'ready' | 'failed'}[]>([]);
 
+    // Inline rename state
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editingTitle, setEditingTitle] = useState('');
+
     // Selection & Sources State
     const [selectionCoords, setSelectionCoords] = useState<{ x: number; y: number } | null>(null);
     const [selectedContexts, setSelectedContexts] = useState<ContextItem[] | null>(null);
@@ -138,6 +142,21 @@ const CaseChat: React.FC = () => {
         } catch (error) {
             console.error('Failed to delete session', error);
         }
+    };
+
+    const handleRenameSession = async (sessionId: string, newTitle: string) => {
+        const trimmed = newTitle.trim();
+        if (!trimmed) {
+            setEditingSessionId(null);
+            return;
+        }
+        try {
+            await ragService.renameSession(sessionId, trimmed);
+            setSessions(prev => prev.map(s => s.session_id === sessionId ? { ...s, title: trimmed } : s));
+        } catch (error) {
+            console.error('Failed to rename session', error);
+        }
+        setEditingSessionId(null);
     };
 
     // ---- Sessions ----
@@ -733,7 +752,34 @@ const CaseChat: React.FC = () => {
                                 onClick={() => setCurrentSessionId(session.session_id)}
                             >
                                 <svg className={`w-4 h-4 flex-shrink-0 ${currentSessionId === session.session_id ? 'text-blue-500' : 'text-slate-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                                <span className="truncate flex-1">{session.title}</span>
+                                {editingSessionId === session.session_id ? (
+                                    <input
+                                        className="flex-1 min-w-0 text-sm bg-white border border-blue-300 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                                        value={editingTitle}
+                                        onChange={(e) => setEditingTitle(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                handleRenameSession(session.session_id, editingTitle);
+                                            } else if (e.key === 'Escape') {
+                                                setEditingSessionId(null);
+                                            }
+                                        }}
+                                        onBlur={() => handleRenameSession(session.session_id, editingTitle)}
+                                        autoFocus
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                ) : (
+                                    <span
+                                        className="truncate flex-1"
+                                        onDoubleClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingSessionId(session.session_id);
+                                            setEditingTitle(session.title);
+                                        }}
+                                    >
+                                        {session.title}
+                                    </span>
+                                )}
                                 {sessions.length > 1 && (
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleDeleteSession(session.session_id); }}
