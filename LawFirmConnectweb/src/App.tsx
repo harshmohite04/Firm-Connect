@@ -25,6 +25,7 @@ import PortalProfile from "./pages/PortalProfile";
 import ProfileInfo from "./pages/profile/ProfileInfo";
 import ProfileSecurity from "./pages/profile/ProfileSecurity";
 import ProfileNotifications from "./pages/profile/ProfileNotifications";
+import ProfileSubscription from "./pages/profile/ProfileSubscription";
 import CaseActivity from "./pages/case-details/CaseActivity";
 import CaseDocuments from "./pages/case-details/CaseDocuments";
 import CaseChat from "./pages/case-details/CaseChat";
@@ -44,6 +45,7 @@ import FirmConnect from "./pages/FirmConnect";
 import OrganizationPage from "./pages/organization/Organization";
 import InviteAccept from "./pages/InviteAccept";
 import InviteSetup from "./pages/InviteSetup";
+import CaseTeamInviteResponse from "./pages/CaseTeamInviteResponse";
 
 
 // ScrollToTop component to handle scroll position on route change
@@ -65,7 +67,8 @@ const App: React.FC = () => {
     pathname === "/signup" ||
     pathname.startsWith("/portal") ||
     pathname === "/pricing" ||
-    pathname.startsWith("/invite");
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/team/case-invite");
 
   return (
     <div
@@ -173,6 +176,7 @@ const App: React.FC = () => {
             <Route path="info" element={<ProfileInfo />} />
             <Route path="security" element={<ProfileSecurity />} />
             <Route path="notifications" element={<ProfileNotifications />} />
+            <Route path="subscription" element={<ProfileSubscription />} />
           </Route>
 
           {/* Firm Management Routes */}
@@ -192,11 +196,15 @@ const App: React.FC = () => {
               </SubscriptionGuard>
             }
           />
-
           {/* Invitation Routes (semi-public) */}
           <Route path="/invite/:token/setup" element={<InviteSetup />} />
           <Route path="/invite/:token/accept" element={<InviteAccept />} />
           <Route path="/invite/:token/reject" element={<InviteAccept />} />
+
+          {/* Case Team Invitation Routes */}
+          <Route path="/team/case-invite/:token" element={<CaseTeamInviteResponse />} />
+          <Route path="/team/case-invite/:token/accept" element={<CaseTeamInviteResponse />} />
+          <Route path="/team/case-invite/:token/reject" element={<CaseTeamInviteResponse />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

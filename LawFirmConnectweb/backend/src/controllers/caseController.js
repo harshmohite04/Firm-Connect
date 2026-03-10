@@ -1,6 +1,10 @@
 const Case = require('../models/Case');
 const Event = require('../models/Event');
+const User = require('../models/User');
+const CaseTeamInvitation = require('../models/CaseTeamInvitation');
 const createNotification = require('../utils/createNotification');
+const sendEmail = require('../utils/emailService');
+const teamInvitationTemplate = require('../utils/teamInvitationTemplate');
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -155,7 +159,103 @@ const createCase = async (req, res, next) => {
             }
         }
 
-        res.status(201).json(newCase);
+        // --- Team member invitations ---
+        let invitationsSent = 0;
+        let invitationWarning = null;
+        const { teamMembers: teamMembersRaw } = req.body;
+        console.log('[createCase] teamMembersRaw:', teamMembersRaw);
+
+        if (teamMembersRaw) {
+            let teamEmails = [];
+            try {
+                teamEmails = typeof teamMembersRaw === 'string' ? JSON.parse(teamMembersRaw) : teamMembersRaw;
+            } catch (e) {
+                teamEmails = [];
+            }
+
+            if (Array.isArray(teamEmails) && teamEmails.length > 0) {
+                // Apply plan limits (same logic as addTeamMember)
+                let maxInvitations = teamEmails.length;
+                if (!req.user.organizationId) {
+                    const plan = req.user.subscriptionPlan;
+                    const limit = plan === 'PROFESSIONAL' ? 5 : 2;
+                    // Current count = 1 (lead attorney), available slots = limit - 1
+                    const availableSlots = limit - 1;
+                    if (teamEmails.length > availableSlots) {
+                        maxInvitations = availableSlots;
+                        invitationWarning = `Your ${plan || 'STARTER'} plan allows ${limit} team members (including you). Only ${availableSlots} invitation(s) sent.`;
+                    }
+                }
+
+                const frontendUrl = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
+
+                for (let i = 0; i < Math.min(teamEmails.length, maxInvitations); i++) {
+                    const email = teamEmails[i].toLowerCase();
+                    try {
+                        const userToInvite = await User.findOne({ email });
+                        if (!userToInvite) continue;
+                        if (userToInvite._id.toString() === req.user._id.toString()) continue;
+
+                        // Check for duplicate invitation
+                        const existing = await CaseTeamInvitation.findOne({
+                            caseId: newCase._id,
+                            invitedEmail: email,
+                            status: 'pending'
+                        });
+                        if (existing) continue;
+
+                        // Create invitation
+                        const invitation = await CaseTeamInvitation.create({
+                            caseId: newCase._id,
+                            invitedBy: req.user._id,
+                            invitedEmail: email,
+                            invitedUserId: userToInvite._id
+                        });
+
+                        // Send email
+                        const acceptLink = `${frontendUrl}/team/case-invite/${invitation.token}/accept`;
+                        const rejectLink = `${frontendUrl}/team/case-invite/${invitation.token}/reject`;
+
+                        const emailHtml = teamInvitationTemplate(
+                            creatorName,
+                            newCase.title,
+                            newCase.legalMatter,
+                            acceptLink,
+                            rejectLink
+                        );
+
+                        sendEmail({
+                            email: userToInvite.email,
+                            subject: `Team Invitation: "${newCase.title}" - LawFirmAI`,
+                            html: emailHtml
+                        }).catch(err => console.error('Failed to send team invitation email:', err));
+
+                        // In-app notification
+                        await createNotification(io, {
+                            recipient: userToInvite._id,
+                            type: 'system',
+                            title: 'Case Team Invitation',
+                            description: `${creatorName} invited you to join the team for "${newCase.title}"`,
+                            link: `/team/case-invite/${invitation.token}`,
+                            metadata: {
+                                type: 'case_team_invitation',
+                                caseId: newCase._id,
+                                token: invitation.token
+                            }
+                        });
+
+                        invitationsSent++;
+                    } catch (invErr) {
+                        console.error(`Failed to send invitation to ${email}:`, invErr);
+                    }
+                }
+            }
+        }
+
+        const response = { ...newCase.toObject(), invitationsSent };
+        if (invitationWarning) response.invitationWarning = invitationWarning;
+
+        res.status(201).json(response);
     } catch (error) {
         next(error);
     }

@@ -3,12 +3,15 @@ const razorpay = require('../utils/razorpayConfig');
 const User = require('../models/User');
 const Case = require('../models/Case');
 const TeamInvitation = require('../models/TeamInvitation');
+const CaseTeamRequest = require('../models/CaseTeamRequest');
 const sendEmail = require('../utils/emailService');
 const teamInvitationTemplate = require('../utils/teamInvitationTemplate');
+const caseTeamAddedTemplate = require('../utils/caseTeamAddedTemplate');
 const { organizationInvitationTemplate, organizationExistingUserTemplate, organizationInvitationSetupTemplate } = require('../utils/organizationInvitationTemplate');
 const crypto = require('crypto');
 const generateToken = require('../utils/generateToken');
 const OrgActivityLog = require('../models/OrgActivityLog');
+const createNotification = require('../utils/createNotification');
 
 const logOrgActivity = async (organizationId, action, actorId, targetId = null, metadata = {}) => {
     try {
@@ -1139,6 +1142,193 @@ const getInvitationHistory = async (req, res, next) => {
     }
 };
 
+// @desc    Get a single case team request by ID
+// @route   GET /organization/case-team-requests/:requestId
+// @access  Private (Org Admin)
+const getCaseTeamRequestById = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can view case team requests');
+        }
+
+        const request = await CaseTeamRequest.findById(req.params.requestId)
+            .populate('caseId', 'title legalMatter status')
+            .populate('requestedUserId', 'firstName lastName email')
+            .populate('requestedByUserId', 'firstName lastName email');
+
+        if (!request) {
+            res.status(404);
+            throw new Error('Case team request not found');
+        }
+
+        // Verify request belongs to admin's org
+        if (request.organizationId.toString() !== admin.organizationId.toString()) {
+            res.status(403);
+            throw new Error('This request does not belong to your organization');
+        }
+
+        res.json({
+            success: true,
+            request: {
+                _id: request._id,
+                status: request.status,
+                role: request.role,
+                reason: request.reason,
+                createdAt: request.createdAt,
+                case: request.caseId ? {
+                    _id: request.caseId._id,
+                    title: request.caseId.title,
+                    legalMatter: request.caseId.legalMatter,
+                    status: request.caseId.status
+                } : null,
+                requestedUser: request.requestedUserId ? {
+                    _id: request.requestedUserId._id,
+                    firstName: request.requestedUserId.firstName,
+                    lastName: request.requestedUserId.lastName,
+                    email: request.requestedUserId.email
+                } : null,
+                requestedBy: request.requestedByUserId ? {
+                    _id: request.requestedByUserId._id,
+                    firstName: request.requestedByUserId.firstName,
+                    lastName: request.requestedByUserId.lastName,
+                    email: request.requestedByUserId.email
+                } : null
+            }
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Approve or reject a case team request
+// @route   PATCH /organization/case-team-requests/:requestId
+// @access  Private (Org Admin)
+const reviewCaseTeamRequest = async (req, res, next) => {
+    try {
+        const admin = await User.findById(req.user._id);
+        if (admin.role !== 'ADMIN') {
+            res.status(403);
+            throw new Error('Only admins can review case team requests');
+        }
+
+        const { action, reason } = req.body;
+        if (!['approve', 'reject'].includes(action)) {
+            res.status(400);
+            throw new Error('Action must be "approve" or "reject"');
+        }
+
+        const request = await CaseTeamRequest.findById(req.params.requestId);
+        if (!request) {
+            res.status(404);
+            throw new Error('Case team request not found');
+        }
+
+        if (request.organizationId.toString() !== admin.organizationId.toString()) {
+            res.status(403);
+            throw new Error('This request does not belong to your organization');
+        }
+
+        if (request.status !== 'pending') {
+            res.status(400);
+            throw new Error('This request has already been reviewed');
+        }
+
+        const io = req.app.get('socketio');
+
+        if (action === 'approve') {
+            // Update request
+            request.status = 'approved';
+            request.reviewedBy = admin._id;
+            request.reviewedAt = new Date();
+            await request.save();
+
+            // Add user to case
+            const caseDoc = await Case.findById(request.caseId);
+            const userToAdd = await User.findById(request.requestedUserId);
+
+            if (caseDoc && userToAdd) {
+                caseDoc.teamMembers.push({
+                    userId: userToAdd._id,
+                    role: request.role || 'Member',
+                    joinedAt: new Date()
+                });
+                if (!caseDoc.assignedLawyers.some(id => id.toString() === userToAdd._id.toString())) {
+                    caseDoc.assignedLawyers.push(userToAdd._id);
+                }
+                await caseDoc.save();
+
+                // Send email to advocate
+                const frontendUrl = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',')[0].trim();
+                const viewCaseLink = `${frontendUrl}/portal/cases/${caseDoc._id}`;
+                const requester = await User.findById(request.requestedByUserId);
+                const adderName = requester ? `${requester.firstName} ${requester.lastName || ''}`.trim() : 'A team member';
+
+                const emailHtml = caseTeamAddedTemplate(
+                    adderName,
+                    caseDoc.title,
+                    caseDoc.legalMatter,
+                    viewCaseLink
+                );
+                sendEmail({
+                    email: userToAdd.email,
+                    subject: `You've been added to case "${caseDoc.title}" - LawFirmAI`,
+                    html: emailHtml
+                }).catch(err => console.error('Failed to send case team email:', err));
+
+                // Notify advocate
+                await createNotification(io, {
+                    recipient: userToAdd._id,
+                    type: 'case',
+                    title: 'Added to Case Team',
+                    description: `You've been added to the team for "${caseDoc.title}"`,
+                    link: `/portal/cases/${caseDoc._id}`,
+                    metadata: { caseId: caseDoc._id }
+                });
+
+                // Notify lead attorney
+                await createNotification(io, {
+                    recipient: request.requestedByUserId,
+                    type: 'case',
+                    title: 'Team Request Approved',
+                    description: `Your request to add ${userToAdd.firstName} ${userToAdd.lastName} to "${caseDoc.title}" was approved`,
+                    link: `/portal/cases/${caseDoc._id}`,
+                    metadata: { caseId: caseDoc._id }
+                });
+            }
+
+            res.json({ success: true, message: 'Request approved. Advocate has been added to the case.' });
+        } else {
+            // Reject
+            request.status = 'rejected';
+            request.reviewedBy = admin._id;
+            request.reviewedAt = new Date();
+            request.reason = reason || '';
+            await request.save();
+
+            // Notify lead attorney
+            const caseDoc = await Case.findById(request.caseId);
+            const userToAdd = await User.findById(request.requestedUserId);
+            const caseName = caseDoc ? caseDoc.title : 'a case';
+            const userName = userToAdd ? `${userToAdd.firstName} ${userToAdd.lastName}` : 'the advocate';
+
+            await createNotification(io, {
+                recipient: request.requestedByUserId,
+                type: 'case',
+                title: 'Team Request Rejected',
+                description: `Your request to add ${userName} to "${caseName}" was rejected${reason ? ': ' + reason : ''}`,
+                link: caseDoc ? `/portal/cases/${caseDoc._id}` : null,
+                metadata: { caseId: request.caseId }
+            });
+
+            res.json({ success: true, message: 'Request rejected.' });
+        }
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getOrganization,
     getMembers,
@@ -1158,5 +1348,7 @@ module.exports = {
     updateOrganization,
     deleteOrganization,
     getActivityLog,
-    getInvitationHistory
+    getInvitationHistory,
+    getCaseTeamRequestById,
+    reviewCaseTeamRequest
 };

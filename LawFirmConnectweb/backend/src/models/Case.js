@@ -39,7 +39,7 @@ const caseSchema = new mongoose.Schema({
         filePath: { type: String, required: true },
         category: {
             type: String,
-            enum: ['Court Filings', 'Evidence', 'Correspondence', 'General'],
+            enum: ['Case Filing', 'Court Filings', 'Evidence', 'Correspondence', 'General'],
             default: 'General'
         },
         uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },

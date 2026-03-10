@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { PanelRightOpen, PanelRightClose } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { messageService } from '../services/messageService';
 import { notificationService } from '../services/notificationService';
@@ -119,6 +120,23 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     const notificationRef = useRef<HTMLDivElement>(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [, setTimeTick] = useState(0);
+
+    // Case Team Request Approval Modal State
+    const [caseTeamRequestModal, setCaseTeamRequestModal] = useState<{
+        open: boolean;
+        requestId: string | null;
+        loading: boolean;
+        requestData: any;
+        rejectionReason: string;
+        submitting: boolean;
+    }>({
+        open: false,
+        requestId: null,
+        loading: false,
+        requestData: null,
+        rejectionReason: '',
+        submitting: false
+    });
 
     // Fetch notifications from API on mount
     useEffect(() => {
@@ -400,8 +418,69 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
             markAsRead(notification._id);
         }
         setShowNotifications(false);
+
+        // Case team invitation — navigate to the decision page (accept/reject)
+        if (notification.metadata?.type === 'case_team_invitation' && notification.metadata?.token) {
+            navigate(`/team/case-invite/${notification.metadata.token}`);
+            return;
+        }
+
+        // Case team request approval — open modal instead of navigating
+        if (notification.metadata?.type === 'case_team_request' && notification.metadata?.requestId) {
+            const requestId = notification.metadata.requestId;
+            setCaseTeamRequestModal({
+                open: true,
+                requestId,
+                loading: true,
+                requestData: null,
+                rejectionReason: '',
+                submitting: false
+            });
+            organizationService.getCaseTeamRequestById(requestId)
+                .then((data: any) => {
+                    setCaseTeamRequestModal(prev => ({
+                        ...prev,
+                        loading: false,
+                        requestData: data.request
+                    }));
+                })
+                .catch(() => {
+                    setCaseTeamRequestModal(prev => ({
+                        ...prev,
+                        loading: false,
+                        requestData: null
+                    }));
+                    toast.error('Failed to load request details');
+                });
+            return;
+        }
+
         if (notification.link) {
             navigate(notification.link);
+        }
+    };
+
+    const handleReviewCaseTeamRequest = async (action: 'approve' | 'reject') => {
+        if (!caseTeamRequestModal.requestId) return;
+        setCaseTeamRequestModal(prev => ({ ...prev, submitting: true }));
+        try {
+            const result = await organizationService.reviewCaseTeamRequest(
+                caseTeamRequestModal.requestId,
+                action,
+                action === 'reject' ? caseTeamRequestModal.rejectionReason : undefined
+            );
+            toast.success(result.message || (action === 'approve' ? 'Request approved' : 'Request rejected'));
+            setCaseTeamRequestModal({
+                open: false,
+                requestId: null,
+                loading: false,
+                requestData: null,
+                rejectionReason: '',
+                submitting: false
+            });
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to process request');
+            setCaseTeamRequestModal(prev => ({ ...prev, submitting: false }));
         }
     };
 
@@ -471,9 +550,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                         title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
                         aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
                     >
-                        <svg className={`w-4 h-4 transition-transform duration-300 ease-in-out ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
+                        {sidebarOpen ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
                     </button>
                 )}
 
@@ -553,7 +630,7 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                 {trialDaysLeft !== null && (
                     <div className={`shrink-0 px-4 py-2 flex items-center justify-center gap-3 text-sm font-medium text-white ${trialDaysLeft <= 2 ? 'bg-red-500' : 'bg-blue-500'}`}>
                         <span>Free Trial — {trialDaysLeft} day{trialDaysLeft !== 1 ? 's' : ''} remaining</span>
-                        <Link to="/portal/billing" className="underline underline-offset-2 hover:opacity-80">Upgrade now</Link>
+                        <Link to="/pricing" className="underline underline-offset-2 hover:opacity-80">Upgrade now</Link>
                     </div>
                 )}
 
@@ -924,6 +1001,88 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                     {children}
                 </div>
             </main>
+
+            {/* Case Team Request Approval Modal */}
+            {caseTeamRequestModal.open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <h3 className="font-bold text-slate-900 text-lg">Case Team Request</h3>
+                            <button
+                                onClick={() => setCaseTeamRequestModal(prev => ({ ...prev, open: false }))}
+                                className="text-slate-400 hover:text-slate-600 text-xl leading-none"
+                            >&times;</button>
+                        </div>
+                        <div className="p-6">
+                            {caseTeamRequestModal.loading ? (
+                                <div className="text-center py-8 text-slate-500">Loading...</div>
+                            ) : !caseTeamRequestModal.requestData ? (
+                                <div className="text-center py-8 text-slate-500">Request not found or already reviewed.</div>
+                            ) : caseTeamRequestModal.requestData.status !== 'pending' ? (
+                                <div className="text-center py-8 text-slate-500">
+                                    This request has already been {caseTeamRequestModal.requestData.status}.
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="space-y-3 mb-6">
+                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                            <p className="text-xs text-slate-500 mb-1">Case</p>
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {caseTeamRequestModal.requestData.case?.title || 'Unknown Case'}
+                                            </p>
+                                            {caseTeamRequestModal.requestData.case?.legalMatter && (
+                                                <p className="text-xs text-slate-500 mt-0.5">{caseTeamRequestModal.requestData.case.legalMatter}</p>
+                                            )}
+                                        </div>
+                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                            <p className="text-xs text-slate-500 mb-1">Advocate to Add</p>
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {caseTeamRequestModal.requestData.requestedUser?.firstName} {caseTeamRequestModal.requestData.requestedUser?.lastName}
+                                            </p>
+                                            <p className="text-xs text-slate-500">{caseTeamRequestModal.requestData.requestedUser?.email}</p>
+                                        </div>
+                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                                            <p className="text-xs text-slate-500 mb-1">Requested By</p>
+                                            <p className="text-sm font-bold text-slate-900">
+                                                {caseTeamRequestModal.requestData.requestedBy?.firstName} {caseTeamRequestModal.requestData.requestedBy?.lastName}
+                                            </p>
+                                            <p className="text-xs text-slate-500">{caseTeamRequestModal.requestData.requestedBy?.email}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-4">
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">Rejection Reason (optional)</label>
+                                        <textarea
+                                            rows={2}
+                                            value={caseTeamRequestModal.rejectionReason}
+                                            onChange={(e) => setCaseTeamRequestModal(prev => ({ ...prev, rejectionReason: e.target.value }))}
+                                            placeholder="Only needed if rejecting..."
+                                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-blue-500 outline-none resize-none"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => handleReviewCaseTeamRequest('approve')}
+                                            disabled={caseTeamRequestModal.submitting}
+                                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-lg text-sm disabled:opacity-50 transition-colors"
+                                        >
+                                            {caseTeamRequestModal.submitting ? 'Processing...' : 'Approve'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleReviewCaseTeamRequest('reject')}
+                                            disabled={caseTeamRequestModal.submitting}
+                                            className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2.5 px-4 rounded-lg text-sm border border-red-200 disabled:opacity-50 transition-colors"
+                                        >
+                                            {caseTeamRequestModal.submitting ? 'Processing...' : 'Reject'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

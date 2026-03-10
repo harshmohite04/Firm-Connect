@@ -540,6 +540,11 @@ const caseService = {
     return response.data;
   },
 
+  getPendingTeamRequests: async (id: string) => {
+    const response = await api.get(`/cases/${id}/team/pending-requests`);
+    return response.data;
+  },
+
   // -- Conversational Draft --
   createDraftSession: async (
     caseId: string,

@@ -14,7 +14,18 @@ exports.getMessages = async (req, res) => {
             ]
         }).sort({ createdAt: 1 });
 
-        res.json(messages);
+        // Replace content of deleted messages with placeholder
+        const sanitized = messages.map(m => {
+            if (m.deleted) {
+                const obj = m.toObject();
+                obj.content = 'This message was deleted';
+                obj.attachment = null;
+                return obj;
+            }
+            return m;
+        });
+
+        res.json(sanitized);
     } catch (error) {
         console.error('Get messages error:', error);
         res.status(500).json({ message: 'Server error' });
@@ -73,6 +84,44 @@ exports.sendMessage = async (req, res) => {
         res.status(201).json(newMessage);
     } catch (error) {
         console.error('Send message error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Delete a message (soft delete - sender only)
+exports.deleteMessage = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const userId = req.user._id;
+
+        const message = await Message.findById(messageId);
+        if (!message) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        if (message.sender.toString() !== userId.toString()) {
+            return res.status(403).json({ message: 'You can only delete your own messages' });
+        }
+
+        message.deleted = true;
+        await message.save();
+
+        // Emit real-time event to both users
+        const io = req.app.get('socketio');
+        if (io) {
+            io.to(message.recipient.toString()).emit('messageDeleted', {
+                messageId: message._id.toString(),
+                conversationContactId: userId.toString()
+            });
+            io.to(userId.toString()).emit('messageDeleted', {
+                messageId: message._id.toString(),
+                conversationContactId: message.recipient.toString()
+            });
+        }
+
+        res.json({ message: 'Message deleted' });
+    } catch (error) {
+        console.error('Delete message error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
@@ -146,10 +195,10 @@ exports.getConversations = async (req, res) => {
                 contactId: contactUserId.toString(),
                 name: `${contact.firstName} ${contact.lastName || ''}`.trim(),
                 lastMessage: lastMessage ? {
-                    content: lastMessage.content,
+                    content: lastMessage.deleted ? 'This message was deleted' : lastMessage.content,
                     timestamp: lastMessage.createdAt,
                     senderId: lastMessage.sender.toString(),
-                    attachment: lastMessage.attachment || null
+                    attachment: lastMessage.deleted ? null : (lastMessage.attachment || null)
                 } : null,
                 unreadCount
             };

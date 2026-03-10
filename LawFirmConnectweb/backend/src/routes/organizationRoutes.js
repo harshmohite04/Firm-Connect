@@ -20,7 +20,9 @@ const {
     updateOrganization,
     deleteOrganization,
     getActivityLog,
-    getInvitationHistory
+    getInvitationHistory,
+    getCaseTeamRequestById,
+    reviewCaseTeamRequest
 } = require('../controllers/organizationController');
 const { protect } = require('../middlewares/authMiddleware');
 
@@ -75,5 +77,9 @@ router.post('/reassign-cases', protect, reassignCases);
 
 // Seat management
 router.patch('/seats', protect, updateSeats);
+
+// Case team requests (admin approval workflow)
+router.get('/case-team-requests/:requestId', protect, getCaseTeamRequestById);
+router.patch('/case-team-requests/:requestId', protect, reviewCaseTeamRequest);
 
 module.exports = router;

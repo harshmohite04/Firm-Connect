@@ -13,7 +13,7 @@ from database import chat_collection
 from schemas.chat import (
     ChatRequest, CreateSessionRequest, SessionResponse,
     ContextItem, ChatResponse, CheckSourcesRequest,
-    Message, ChatHistoryResponse,
+    Message, ChatHistoryResponse, RenameSessionRequest,
 )
 from rag.rag import ask, ask_stream
 from utils.auth import get_current_user, get_user_id
@@ -72,7 +72,8 @@ async def get_sessions(
         user_id = get_user_id(current_user)
         cursor = chat_collection.find({
             "case_id": caseId,
-            "user_id": user_id
+            "user_id": user_id,
+            "$or": [{"deleted": {"$exists": False}}, {"deleted": False}]
         }).sort("created_at", -1)
 
         sessions = []
@@ -90,6 +91,88 @@ async def get_sessions(
     except Exception as e:
         logger.error(f"Error fetching sessions: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to fetch sessions")
+
+
+@router.patch("/chat/session/{sessionId}", response_model=SessionResponse)
+@limiter.limit("30/minute")
+async def rename_session(
+    request: Request,
+    sessionId: str,
+    body: RenameSessionRequest,
+    current_user: Dict = Depends(get_current_user)
+):
+    try:
+        validate_session_id(sessionId)
+        validate_string_length(body.title, "Title", min_length=1, max_length=100)
+
+        user_id = get_user_id(current_user)
+        session_doc = chat_collection.find_one({"session_id": sessionId})
+
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        if session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_SESSION_RENAME", {
+                "user_id": user_id,
+                "session_id": sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        chat_collection.update_one(
+            {"session_id": sessionId, "user_id": user_id},
+            {"$set": {"title": body.title}}
+        )
+
+        logger.info(f"Session renamed: {sessionId} to '{body.title}' by user {user_id}")
+
+        return SessionResponse(
+            session_id=session_doc["session_id"],
+            title=body.title,
+            created_at=session_doc["created_at"]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error renaming session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to rename session")
+
+
+@router.delete("/chat/session/{sessionId}")
+@limiter.limit("30/minute")
+async def delete_session(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    try:
+        validate_session_id(sessionId)
+        user_id = get_user_id(current_user)
+
+        session_doc = chat_collection.find_one({"session_id": sessionId})
+        if not session_doc:
+            raise HTTPException(status_code=404, detail="Session not found")
+
+        if session_doc.get("user_id") != user_id:
+            log_security_event("UNAUTHORIZED_SESSION_DELETE", {
+                "user_id": user_id,
+                "session_id": sessionId
+            })
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        chat_collection.update_one(
+            {"session_id": sessionId, "user_id": user_id},
+            {"$set": {"deleted": True}}
+        )
+
+        logger.info(f"Session deleted: {sessionId} by user {user_id}")
+        return {"message": "Session deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting session: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete session")
 
 
 @router.get("/chat/history/{sessionId}", response_model=ChatHistoryResponse)

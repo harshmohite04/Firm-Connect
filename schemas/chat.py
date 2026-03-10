@@ -44,5 +44,9 @@ class Message(BaseModel):
     contexts: Optional[List[ContextItem]] = None
 
 
+class RenameSessionRequest(BaseModel):
+    title: str
+
+
 class ChatHistoryResponse(BaseModel):
     history: List[Message]
