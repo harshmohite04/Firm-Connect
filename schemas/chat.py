@@ -19,6 +19,7 @@ class SessionResponse(BaseModel):
     session_id: str
     title: str
     created_at: datetime
+    pinned: bool = False
 
 
 class ContextItem(BaseModel):
@@ -50,3 +51,51 @@ class RenameSessionRequest(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     history: List[Message]
+
+
+class ChatFeedbackRequest(BaseModel):
+    session_id: str
+    message_id: int
+    feedback: str  # "up" or "down"
+    message_content: Optional[str] = None
+
+
+class ChatFeedbackResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class TruncateSessionRequest(BaseModel):
+    after_index: int
+
+
+class PinSessionRequest(BaseModel):
+    pinned: bool
+
+
+class TokenUsage(BaseModel):
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+
+
+class CustomInstructionsRequest(BaseModel):
+    instructions: str
+
+
+class CustomInstructionsResponse(BaseModel):
+    instructions: str
+    updated_at: Optional[datetime] = None
+
+
+class SearchRequest(BaseModel):
+    caseId: str
+    q: str
+
+
+class ModelOverrideChatRequest(BaseModel):
+    message: str
+    caseId: str
+    sessionId: Optional[str] = None
+    top_k: int = 15
+    model_override: Optional[str] = None
