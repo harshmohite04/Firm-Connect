@@ -301,7 +301,22 @@
       "placeholder": "Type your message...",
       "sources": "Sources",
       "references": "References",
-      "thinking": "Thinking..."
+      "thinking": "Thinking...",
+      "copied": "Copied!",
+      "copyMessage": "Copy message",
+      "regenerate": "Regenerate response",
+      "editMessage": "Edit message",
+      "goodResponse": "Good response",
+      "badResponse": "Bad response",
+      "stopGeneration": "Stop generation",
+      "dropFiles": "Drop files to upload",
+      "nearLimit": "Near context limit",
+      "exportChat": "Export conversation",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "suggestion1": "Summarize all uploaded documents",
+      "suggestion2": "What are the key legal issues in this case?",
+      "suggestion3": "List all important dates and deadlines",
+      "suggestion4": "Find relevant precedents and case law"
     },
     "documents": {
       "emptyTitle": "No documents yet",

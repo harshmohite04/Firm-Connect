@@ -255,8 +255,9 @@ const ragService = {
     sessionId: string | undefined,
     onToken: (token: string) => void,
     onContexts: (contexts: Array<{ content: string; source?: string; metadata?: any; score?: number }>) => void,
-    onDone: (fullAnswer: string) => void,
+    onDone: (fullAnswer: string, usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }) => void,
     onError: (error: string) => void,
+    modelOverride?: string,
   ): AbortController => {
     const controller = new AbortController();
     const headers = getAuthHeaders();
@@ -267,7 +268,7 @@ const ragService = {
         "Content-Type": "application/json",
         ...(headers || {}),
       } as HeadersInit,
-      body: JSON.stringify({ message, caseId, top_k, sessionId }),
+      body: JSON.stringify({ message, caseId, top_k, sessionId, model_override: modelOverride }),
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -309,7 +310,7 @@ const ragService = {
               } else if (event.type === "contexts") {
                 onContexts(event.contexts);
               } else if (event.type === "done") {
-                onDone(event.answer);
+                onDone(event.answer, event.usage);
               } else if (event.type === "error") {
                 onError(event.detail || "Unknown streaming error");
               }
@@ -326,6 +327,51 @@ const ragService = {
       });
 
     return controller;
+  },
+
+  /**
+   * Submit thumbs up/down feedback on an AI message.
+   */
+  submitFeedback: async (
+    sessionId: string,
+    messageId: number,
+    feedback: "up" | "down",
+    messageContent?: string,
+  ) => {
+    try {
+      const response = await axios.post(
+        `${RAG_API_URL}/chat/feedback`,
+        { session_id: sessionId, message_id: messageId, feedback, message_content: messageContent },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat/feedback");
+      }
+      console.error("Submit feedback failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Truncate session messages after a given index (for edit & resubmit).
+   */
+  truncateSession: async (sessionId: string, afterIndex: number) => {
+    try {
+      const response = await axios.patch(
+        `${RAG_API_URL}/chat/session/${sessionId}/truncate`,
+        { after_index: afterIndex },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat/session/truncate");
+      }
+      console.error("Truncate session failed:", error);
+      throw error;
+    }
   },
 
   /**
@@ -352,6 +398,99 @@ const ragService = {
         handleRateLimitError(error.config?.url || "/check-sources");
       }
       console.error("Check sources failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Pin or unpin a session.
+   */
+  pinSession: async (sessionId: string, pinned: boolean) => {
+    try {
+      const response = await axios.patch(
+        `${RAG_API_URL}/chat/session/${sessionId}/pin`,
+        { pinned },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat/session/pin");
+      }
+      console.error("Pin session failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Search messages across sessions for a case.
+   */
+  searchMessages: async (caseId: string, query: string) => {
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/chat/search`,
+        {
+          params: { caseId, q: query },
+          headers: getAuthHeaders(),
+        },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat/search");
+      }
+      console.error("Search messages failed:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get available LLM models.
+   */
+  getModels: async () => {
+    try {
+      const response = await axios.get(`${RAG_API_URL}/chat/models`, {
+        headers: getAuthHeaders(),
+      });
+      return response.data.models;
+    } catch (error: any) {
+      console.error("Get models failed:", error);
+      return [];
+    }
+  },
+
+  /**
+   * Get user's custom instructions.
+   */
+  getCustomInstructions: async () => {
+    try {
+      const response = await axios.get(
+        `${RAG_API_URL}/chat/custom-instructions`,
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Get custom instructions failed:", error);
+      return { instructions: "" };
+    }
+  },
+
+  /**
+   * Set user's custom instructions.
+   */
+  setCustomInstructions: async (instructions: string) => {
+    try {
+      const response = await axios.put(
+        `${RAG_API_URL}/chat/custom-instructions`,
+        { instructions },
+        { headers: getAuthHeaders() },
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error?.response?.status === 429) {
+        handleRateLimitError(error.config?.url || "/chat/custom-instructions");
+      }
+      console.error("Set custom instructions failed:", error);
       throw error;
     }
   },
