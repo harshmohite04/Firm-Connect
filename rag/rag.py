@@ -56,14 +56,34 @@ def _get_llm_provider(user_id=None):
             base_url="https://api.deepseek.com"
         )
 
-def _get_stream_client(user_id=None):
-    """Get streaming client based on current preset (dynamic), with optional per-user override"""
+def _get_stream_client(user_id=None, model_override=None):
+    """Get streaming client based on current preset (dynamic), with optional per-user or model override"""
+    if model_override:
+        # Model override: determine client from model name
+        if model_override.startswith("gpt-") or model_override.startswith("o1") or model_override.startswith("o3"):
+            return OpenAI(api_key=OPENAI_API_KEY), model_override
+        elif "deepseek" in model_override.lower():
+            return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), model_override
+        # Fallback to default provider with overridden model
+        provider = get_effective_preset(user_id)
+        if provider == "openai" and OPENAI_API_KEY:
+            return OpenAI(api_key=OPENAI_API_KEY), model_override
+        else:
+            return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), model_override
+
     provider = get_effective_preset(user_id)
 
     if provider == "openai" and OPENAI_API_KEY:
         return OpenAI(api_key=OPENAI_API_KEY), "gpt-4o"
     else:
         return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), DEEPSEEK_MODEL
+
+# Available models for the model picker
+AVAILABLE_MODELS = [
+    {"id": "gpt-4o", "name": "GPT-4o", "provider": "openai"},
+    {"id": "gpt-4o-mini", "name": "GPT-4o Mini", "provider": "openai"},
+    {"id": "deepseek-chat", "name": "DeepSeek Chat", "provider": "deepseek"},
+]
 
 # Initialize defaults (will be overridden at request time)
 llm = _get_llm_provider()
@@ -260,15 +280,18 @@ CONTEXT FORMAT: Each chunk is numbered [N] with its source filename. Use highest
 Answer format: Direct, factual, structured with inline [N] citations. No disclaimers."""
 
 
-def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=None):
+def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=None,
+               context_summary: str = None, custom_instructions: str = None,
+               model_override: str = None):
     """Generator that yields SSE-formatted events: contexts, token, done, or error."""
     import json as json_module
     import re as _re
+    import hashlib
 
     print(f"[STREAM] Generating answer for Case: {case_id}...\n")
 
     # Get fresh stream client based on current preset (with per-user override)
-    current_stream_client, current_stream_model = _get_stream_client(user_id)
+    current_stream_client, current_stream_model = _get_stream_client(user_id, model_override)
 
     # --- Retrieval (same logic as ask()) ---
     qdrant_filter = models.Filter(
@@ -378,32 +401,99 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=No
     contexts.sort(key=lambda c: c.get("score") or 0, reverse=True)
     yield f"data: {json_module.dumps({'type': 'contexts', 'contexts': contexts})}\n\n"
 
+    # Check response cache
+    import hashlib as _hashlib
+    query_normalized = query.strip().lower()
+    cache_key = _hashlib.sha256(f"{case_id}:{query_normalized}:{top_k}".encode()).hexdigest()
+
+    try:
+        from database import response_cache_collection
+        cached = response_cache_collection.find_one({"cache_key": cache_key})
+        if cached:
+            print(f"[STREAM] Cache hit for query: {query[:50]}...")
+            # Stream cached contexts
+            if cached.get("contexts"):
+                yield f"data: {json_module.dumps({'type': 'contexts', 'contexts': cached['contexts']})}\n\n"
+            # Stream cached answer token by token (fast)
+            cached_answer = cached.get("answer", "")
+            # Send in chunks for smooth UX
+            chunk_size = 20
+            for i in range(0, len(cached_answer), chunk_size):
+                yield f"data: {json_module.dumps({'type': 'token', 'content': cached_answer[i:i+chunk_size]})}\n\n"
+            yield f"data: {json_module.dumps({'type': 'done', 'answer': cached_answer, 'usage': cached.get('usage'), 'cached': True})}\n\n"
+            return
+    except Exception:
+        pass  # Cache miss or error, proceed normally
+
     # 3. Build LLM messages
     context_text = "\n\n".join(item.content for item in retriever_result.items)
     user_prompt = f"Context:\n{context_text}\n\nExamples:\n\n\nQuestion:\n{query}\n\nAnswer (include [N] citations):\n"
 
-    messages = [{"role": "system", "content": SYSTEM_INSTRUCTIONS}]
+    # Build system instructions with optional custom instructions
+    system_content = SYSTEM_INSTRUCTIONS
+    if custom_instructions:
+        system_content = f"{custom_instructions}\n\n{SYSTEM_INSTRUCTIONS}"
+
+    llm_messages = [{"role": "system", "content": system_content}]
+
+    # Add context summary for long conversations
+    if context_summary:
+        llm_messages.append({"role": "system", "content": f"Previous conversation summary:\n{context_summary}"})
+
     if history:
         for msg in history:
-            messages.append({"role": msg["role"], "content": msg["content"]})
-    messages.append({"role": "user", "content": user_prompt})
+            llm_messages.append({"role": msg["role"], "content": msg["content"]})
+    llm_messages.append({"role": "user", "content": user_prompt})
 
-    # 4. Stream from LLM
+    # 4. Stream from LLM with token tracking
     full_answer = ""
+    usage_data = None
     try:
-        stream = current_stream_client.chat.completions.create(
-            model=current_stream_model,
-            messages=messages,
-            temperature=0.1,
-            stream=True
-        )
+        stream_kwargs = {
+            "model": current_stream_model,
+            "messages": llm_messages,
+            "temperature": 0.1,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+        stream = current_stream_client.chat.completions.create(**stream_kwargs)
         for chunk in stream:
+            # Check for usage in the final chunk
+            if hasattr(chunk, 'usage') and chunk.usage:
+                usage_data = {
+                    "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                    "completion_tokens": chunk.usage.completion_tokens or 0,
+                    "total_tokens": chunk.usage.total_tokens or 0,
+                }
             if chunk.choices and chunk.choices[0].delta.content:
-                token = chunk.choices[0].delta.content
-                full_answer += token
-                yield f"data: {json_module.dumps({'type': 'token', 'content': token})}\n\n"
+                token_text = chunk.choices[0].delta.content
+                full_answer += token_text
+                yield f"data: {json_module.dumps({'type': 'token', 'content': token_text})}\n\n"
 
-        yield f"data: {json_module.dumps({'type': 'done', 'answer': full_answer})}\n\n"
+        done_event = {'type': 'done', 'answer': full_answer}
+        if usage_data:
+            done_event['usage'] = usage_data
+        yield f"data: {json_module.dumps(done_event)}\n\n"
+
+        # Store in response cache
+        try:
+            from database import response_cache_collection
+            from datetime import datetime
+            response_cache_collection.update_one(
+                {"cache_key": cache_key},
+                {"$set": {
+                    "cache_key": cache_key,
+                    "case_id": case_id,
+                    "answer": full_answer,
+                    "contexts": contexts,
+                    "usage": usage_data,
+                    "created_at": datetime.utcnow(),
+                }},
+                upsert=True
+            )
+        except Exception:
+            pass  # Non-critical
+
     except Exception as e:
         yield f"data: {json_module.dumps({'type': 'error', 'detail': str(e)})}\n\n"
 
