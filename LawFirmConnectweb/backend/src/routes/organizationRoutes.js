@@ -24,7 +24,7 @@ const {
     getCaseTeamRequestById,
     reviewCaseTeamRequest
 } = require('../controllers/organizationController');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, admin } = require('../middlewares/authMiddleware');
 
 // Public list of organizations
 router.get('/public', getPublicOrganizations);
@@ -37,7 +37,7 @@ router.get('/members', protect, getMembers);
 router.delete('/members/:userId', protect, removeMember);
 
 // Invitations
-router.post('/invite', protect, inviteMember);
+router.post('/invite', protect, admin, inviteMember);
 router.get('/invitations', protect, getInvitations);
 router.get('/my-invitations', protect, getMyInvitations);
 

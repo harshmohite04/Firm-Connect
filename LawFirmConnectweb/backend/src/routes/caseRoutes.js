@@ -11,10 +11,14 @@ const {
     validateTeamMember,
     addTeamMember,
     removeTeamMember,
-    getPendingTeamRequests
+    getPendingTeamRequests,
+    leaveTeam,
+    updateLeadAttorney,
+    getTeamInvitations
 } = require('../controllers/teamController');
 const { protect } = require('../middlewares/authMiddleware');
 const verifyCaseAccess = require('../middlewares/verifyCaseAccess');
+const { blockViewerWrites } = require('../middlewares/verifyCaseAccess');
 const fileUpload = require('../middlewares/fileUpload');
 const { scanFiles } = require('../middlewares/fileScan');
 
@@ -36,28 +40,31 @@ router.route('/:id')
 // Tab: Active Documents
 router.route('/:id/documents')
     .get(protect, verifyCaseAccess, getCaseDocuments)
-    .post(protect, verifyCaseAccess, fileUpload.array('files'), scanFiles, uploadDocument);
+    .post(protect, verifyCaseAccess, blockViewerWrites, fileUpload.array('files'), scanFiles, uploadDocument);
 
-router.delete('/:id/documents/:documentId', protect, verifyCaseAccess, deleteDocument);
+router.delete('/:id/documents/:documentId', protect, verifyCaseAccess, blockViewerWrites, deleteDocument);
 
 // Tab: Activity
 router.route('/:id/activity')
     .get(protect, verifyCaseAccess, getCaseActivity)
-    .post(protect, verifyCaseAccess, addCaseActivity);
+    .post(protect, verifyCaseAccess, blockViewerWrites, addCaseActivity);
 
 // Tab: Billing
 router.route('/:id/billing')
     .get(protect, verifyCaseAccess, getCaseBilling)
-    .post(protect, verifyCaseAccess, fileUpload.single('file'), addCaseBilling);
+    .post(protect, verifyCaseAccess, blockViewerWrites, fileUpload.single('file'), addCaseBilling);
 
 // Tab: Settings
 router.route('/:id/settings')
-    .patch(protect, verifyCaseAccess, updateCaseSettings);
+    .patch(protect, verifyCaseAccess, blockViewerWrites, updateCaseSettings);
 
 // Tab: Team
 router.route('/:id/team/validate').post(protect, verifyCaseAccess, validateTeamMember);
 router.route('/:id/team/members').post(protect, verifyCaseAccess, addTeamMember);
 router.route('/:id/team/members/:userId').delete(protect, verifyCaseAccess, removeTeamMember);
 router.route('/:id/team/pending-requests').get(protect, verifyCaseAccess, getPendingTeamRequests);
+router.route('/:id/team/leave').post(protect, verifyCaseAccess, leaveTeam);
+router.route('/:id/team/lead').patch(protect, verifyCaseAccess, updateLeadAttorney);
+router.route('/:id/team/invitations').get(protect, verifyCaseAccess, getTeamInvitations);
 
 module.exports = router;

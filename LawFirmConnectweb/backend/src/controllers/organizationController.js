@@ -1249,12 +1249,15 @@ const reviewCaseTeamRequest = async (req, res, next) => {
             const userToAdd = await User.findById(request.requestedUserId);
 
             if (caseDoc && userToAdd) {
+                const memberRole = request.role || 'MEMBER';
                 caseDoc.teamMembers.push({
                     userId: userToAdd._id,
-                    role: request.role || 'Member',
+                    role: memberRole,
                     joinedAt: new Date()
                 });
-                if (!caseDoc.assignedLawyers.some(id => id.toString() === userToAdd._id.toString())) {
+                // Skip assignedLawyers for VIEWER role
+                if (memberRole !== 'VIEWER' &&
+                    !caseDoc.assignedLawyers.some(id => id.toString() === userToAdd._id.toString())) {
                     caseDoc.assignedLawyers.push(userToAdd._id);
                 }
                 await caseDoc.save();

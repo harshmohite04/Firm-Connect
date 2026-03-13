@@ -54,7 +54,7 @@ const caseSchema = new mongoose.Schema({
     },
     teamMembers: [{
         userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        role: { type: String, default: 'Member' },
+        role: { type: String, enum: ['LEAD_ATTORNEY', 'MEMBER', 'VIEWER'], default: 'MEMBER' },
         joinedAt: { type: Date, default: Date.now }
     }],
     activityLog: [{

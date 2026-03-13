@@ -274,7 +274,31 @@ const getCaseById = async (req, res, next) => {
         if (!caseDoc) {
              res.status(404); throw new Error('Case not found');
         }
-        res.json(caseDoc);
+
+        // Attach userCaseRole so frontend can conditionally render actions
+        const userId = req.user._id.toString();
+        let userCaseRole = 'VIEWER';
+        if (req.user.role === 'ADMIN' && req.user.organizationId &&
+            caseDoc.organizationId &&
+            req.user.organizationId.toString() === caseDoc.organizationId.toString()) {
+            userCaseRole = 'ADMIN';
+        } else if (caseDoc.leadAttorneyId && caseDoc.leadAttorneyId._id &&
+            caseDoc.leadAttorneyId._id.toString() === userId) {
+            userCaseRole = 'LEAD_ATTORNEY';
+        } else if (caseDoc.createdBy && caseDoc.createdBy.toString() === userId) {
+            userCaseRole = 'LEAD_ATTORNEY';
+        } else {
+            const teamMember = caseDoc.teamMembers &&
+                caseDoc.teamMembers.find(m => m.userId && m.userId._id &&
+                    m.userId._id.toString() === userId);
+            if (teamMember) {
+                userCaseRole = teamMember.role || 'MEMBER';
+            } else if (caseDoc.assignedLawyers.some(l => l._id && l._id.toString() === userId)) {
+                userCaseRole = 'MEMBER';
+            }
+        }
+
+        res.json({ ...caseDoc.toObject(), userCaseRole });
     } catch (error) { next(error); }
 };
 

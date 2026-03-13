@@ -2,7 +2,7 @@ import os
 import re
 import asyncio
 from fastapi import APIRouter, Request, HTTPException, UploadFile, File, Form, Depends
-from typing import Dict
+from typing import Dict, Optional
 from datetime import datetime
 
 from dependencies import limiter, generator
@@ -23,6 +23,7 @@ async def ingest_file(
     request: Request,
     file: UploadFile = File(...),
     caseId: str = Form(...),
+    sessionId: Optional[str] = Form(None),
     current_user: Dict = Depends(get_current_user)
 ):
     try:
@@ -53,7 +54,7 @@ async def ingest_file(
 
         else:
             await file.seek(0)
-            await process_single_file(file_content, safe_filename, caseId, user_id)
+            await process_single_file(file_content, safe_filename, caseId, user_id, session_id=sessionId or None)
 
             return {
                 "status": "processing",
@@ -75,6 +76,25 @@ async def ingest_file(
         raise HTTPException(status_code=500, detail="File ingestion failed")
 
 
+@router.get("/documents/session/{sessionId}")
+@limiter.limit("60/minute")
+async def get_session_documents(
+    request: Request,
+    sessionId: str,
+    current_user: Dict = Depends(get_current_user)
+):
+    """Get document statuses for documents uploaded within a specific chat session."""
+    try:
+        docs = list(document_status_collection.find(
+            {"session_id": sessionId},
+            {"_id": 0, "extracted_pages": 0}
+        ))
+        return docs
+    except Exception as e:
+        logger.error(f"Error fetching session documents: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to fetch session documents")
+
+
 @router.get("/documents/{caseId}")
 @limiter.limit("60/minute")
 async def get_documents_status(
@@ -87,7 +107,7 @@ async def get_documents_status(
 
         docs = list(document_status_collection.find(
             {"case_id": caseId},
-            {"_id": 0}
+            {"_id": 0, "extracted_pages": 0}
         ))
         return docs
     except HTTPException:

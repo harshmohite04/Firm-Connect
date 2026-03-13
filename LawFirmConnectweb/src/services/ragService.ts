@@ -25,10 +25,13 @@ const ragService = {
    * @param caseId The ID of the case.
    * @param file The file object to upload.
    */
-  ingestDocument: async (caseId: string, file: File, retries = 3) => {
+  ingestDocument: async (caseId: string, file: File, retries = 3, sessionId?: string) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("caseId", caseId);
+    if (sessionId) {
+      formData.append("sessionId", sessionId);
+    }
 
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {

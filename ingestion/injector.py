@@ -26,15 +26,16 @@ qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_KEY)
 
 
 # ------------------ NEO4J HELPERS ------------------
-def create_chunk_node(driver, chunk_id: str, text: str, source: str, case_id: str):
+def create_chunk_node(driver, chunk_id: str, text: str, source: str, case_id: str, session_id: str = ""):
     query = """
     MERGE (c:Chunk {id: $id})
     SET c.text = $text,
         c.source = $source,
-        c.caseId = $case_id
+        c.caseId = $case_id,
+        c.sessionId = $session_id
     """
     with driver.session() as s:
-        s.run(query, id=chunk_id, text=text, source=source, case_id=case_id)
+        s.run(query, id=chunk_id, text=text, source=source, case_id=case_id, session_id=session_id)
 
 
 def create_entity_relations(driver, chunk_id: str, text: str):
@@ -118,7 +119,7 @@ CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1500"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "300"))
 
 # ------------------ INGEST DOCUMENT ------------------
-def ingest_document(text: str, source_name: str, case_id: str, page_metadata: list[dict] | None = None):
+def ingest_document(text: str, source_name: str, case_id: str, page_metadata: list[dict] | None = None, session_id: str | None = None):
     """
     Ingest document text into Qdrant + Neo4j.
 
@@ -128,8 +129,10 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
         case_id: Case ID for filtering.
         page_metadata: Optional list of dicts with keys: text, page_number, file_type.
                       When provided, chunks preserve page-level metadata.
+        session_id: Optional session ID. When set, doc is scoped to that chat session.
     """
-    print(f"\n=== Ingesting: {source_name} for Case: {case_id} ===")
+    effective_session_id = session_id or ""
+    print(f"\n=== Ingesting: {source_name} for Case: {case_id} (session: {effective_session_id or 'none'}) ===")
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
@@ -157,6 +160,7 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
                     "text": chunk_text,
                     "source": source_name,
                     "case_id": case_id,
+                    "session_id": effective_session_id,
                 }
                 if "page_number" in page_info:
                     payload["page_number"] = page_info["page_number"]
@@ -164,7 +168,7 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
                     payload["file_type"] = page_info["file_type"]
                 payloads.append(payload)
 
-                create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
+                create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id, effective_session_id)
                 create_entity_relations(driver, chunk_id, chunk_text)
 
         print(f"[INFO] Total chunks (page-aware): {len(all_texts)}")
@@ -183,10 +187,11 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
                     "text": chunk_text,
                     "source": source_name,
                     "case_id": case_id,
+                    "session_id": effective_session_id,
                 }
             )
 
-            create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id)
+            create_chunk_node(driver, chunk_id, chunk_text, source_name, case_id, effective_session_id)
             create_entity_relations(driver, chunk_id, chunk_text)
 
     # Batch-embed all chunks at once (3-10x faster than per-chunk)
@@ -258,3 +263,45 @@ def delete_document(case_id: str, filename: str):
         print(f"[ERROR] Failed to delete from Qdrant: {e}")
 
     print("[DONE] Deletion completed!")
+
+
+# ------------------ DELETE SESSION DOCUMENTS ------------------
+def delete_session_documents(session_id: str):
+    """
+    Deletes all documents scoped to a specific chat session from Qdrant and Neo4j.
+    """
+    print(f"\n=== Deleting session documents for session: {session_id} ===")
+
+    # 1. Delete from Neo4j
+    query = """
+    MATCH (c:Chunk {sessionId: $session_id})
+    DETACH DELETE c
+    """
+    try:
+        with driver.session() as s:
+            result = s.run(query, session_id=session_id)
+            summary = result.consume()
+            print(f"[INFO] Deleted {summary.counters.nodes_deleted} chunk nodes from Neo4j.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete session docs from Neo4j: {e}")
+
+    # 2. Delete from Qdrant
+    try:
+        qdrant.delete(
+            collection_name=QDRANT_COLLECTION,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="session_id",
+                            match=models.MatchValue(value=session_id),
+                        ),
+                    ]
+                )
+            ),
+        )
+        print("[INFO] Deleted session points from Qdrant.")
+    except Exception as e:
+        print(f"[ERROR] Failed to delete session docs from Qdrant: {e}")
+
+    print("[DONE] Session document deletion completed!")

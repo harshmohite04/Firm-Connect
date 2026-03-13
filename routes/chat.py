@@ -23,6 +23,7 @@ from schemas.chat import (
     ModelOverrideChatRequest,
 )
 from rag.rag import ask, ask_stream, AVAILABLE_MODELS
+from ingestion.injector import delete_session_documents
 from utils.auth import get_current_user, get_user_id
 from utils.validation import validate_case_id, validate_session_id, validate_string_length
 from utils.error_handler import log_security_event, logger
@@ -173,8 +174,21 @@ async def delete_session(
             {"$set": {"deleted": True}}
         )
 
+        # Clean up session-scoped documents from vector stores
+        try:
+            await asyncio.to_thread(delete_session_documents, sessionId)
+        except Exception as e:
+            logger.warning(f"Failed to delete session documents for {sessionId}: {e}")
+
+        # Archive session docs in MongoDB
+        from database import document_status_collection
+        document_status_collection.update_many(
+            {"session_id": sessionId},
+            {"$set": {"status": "Archived", "last_updated": datetime.utcnow()}}
+        )
+
         logger.info(f"Session deleted: {sessionId} by user {user_id}")
-        return {"message": "Session deleted"}
+        return {"message": "Session and associated documents deleted"}
 
     except HTTPException:
         raise
@@ -416,7 +430,8 @@ async def chat_stream(
                         user_id=user_id,
                         context_summary=context_summary,
                         custom_instructions=custom_instructions,
-                        model_override=body.model_override
+                        model_override=body.model_override,
+                        session_id=body.sessionId
                     ))
                 ):
                     try:

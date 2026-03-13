@@ -282,7 +282,7 @@ Answer format: Direct, factual, structured with inline [N] citations. No disclai
 
 def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=None,
                context_summary: str = None, custom_instructions: str = None,
-               model_override: str = None):
+               model_override: str = None, session_id: str = None):
     """Generator that yields SSE-formatted events: contexts, token, done, or error."""
     import json as json_module
     import re as _re
@@ -294,14 +294,36 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=No
     current_stream_client, current_stream_model = _get_stream_client(user_id, model_override)
 
     # --- Retrieval (same logic as ask()) ---
-    qdrant_filter = models.Filter(
-        must=[
-            models.FieldCondition(
-                key="case_id",
-                match=models.MatchValue(value=case_id),
-            )
-        ]
-    )
+    # Build Qdrant filter: always filter by case_id.
+    # If session_id is provided, also include session-scoped docs (OR: session_id=="" OR session_id==current)
+    if session_id:
+        qdrant_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="case_id",
+                    match=models.MatchValue(value=case_id),
+                )
+            ],
+            should=[
+                models.FieldCondition(
+                    key="session_id",
+                    match=models.MatchValue(value=""),
+                ),
+                models.FieldCondition(
+                    key="session_id",
+                    match=models.MatchValue(value=session_id),
+                ),
+            ]
+        )
+    else:
+        qdrant_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="case_id",
+                    match=models.MatchValue(value=case_id),
+                )
+            ]
+        )
 
     class CustomRetriever(QdrantNeo4jRetriever):
         def __init__(self, client, collection, embedder_inst, q_filter):
