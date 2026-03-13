@@ -179,8 +179,10 @@ exports.searchUsers = async (req, res) => {
             ]
         };
 
-        if (currentUser.organization) {
-            query.organization = currentUser.organization;
+        if (currentUser.organizationId) {
+            query.organizationId = currentUser.organizationId;
+        } else {
+            query._id = { $ne: req.user._id, $in: currentUser.contacts || [] };
         }
 
         const users = await User.find(query)

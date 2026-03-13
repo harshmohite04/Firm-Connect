@@ -64,6 +64,14 @@ interface Message {
     isPartial?: boolean;
     feedback?: 'up' | 'down' | null;
     usage?: TokenUsage | null;
+    attachments?: { name: string; type: string }[];
+}
+
+interface PendingFile {
+    file: File;
+    name: string;
+    status: 'uploading' | 'processing' | 'ready' | 'failed';
+    type: string; // extension: pdf, docx, txt, etc.
 }
 
 interface Session {
@@ -146,9 +154,9 @@ const CaseChat: React.FC = () => {
     // Streaming abort controller
     const streamControllerRef = useRef<AbortController | null>(null);
 
-    // File upload state
+    // File upload state (ChatGPT-style pending files)
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [uploadingFiles, setUploadingFiles] = useState<{name: string, status: 'uploading' | 'processing' | 'ready' | 'failed'}[]>([]);
+    const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
 
     // Inline rename state
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -196,6 +204,22 @@ const CaseChat: React.FC = () => {
             }
         });
         return maxNum + 1;
+    };
+
+    // File type icon helper for attachment chips & message cards
+    const getFileIcon = (ext: string): { color: string; label: string } => {
+        const e = ext.toLowerCase();
+        if (e === 'pdf') return { color: 'text-red-500', label: 'PDF' };
+        if (e === 'docx' || e === 'doc') return { color: 'text-blue-500', label: e.toUpperCase() };
+        if (e === 'txt' || e === 'md') return { color: 'text-slate-400', label: e.toUpperCase() };
+        if (['jpg', 'jpeg', 'png', 'bmp', 'tiff'].includes(e)) return { color: 'text-green-500', label: 'IMG' };
+        if (e === 'zip') return { color: 'text-yellow-500', label: 'ZIP' };
+        return { color: 'text-slate-400', label: ext.toUpperCase() };
+    };
+
+    // Remove a pending file (cancel upload or delete already-uploaded)
+    const removePendingFile = (fileName: string) => {
+        setPendingFiles(prev => prev.filter(f => f.name !== fileName));
     };
 
     // Load available models on mount
@@ -310,7 +334,7 @@ const CaseChat: React.FC = () => {
 
     const handleDeleteSession = async (sessionId: string) => {
         if (sessions.length <= 1) return; // Don't delete last session
-        if (!window.confirm('Delete this chat session?')) return;
+        if (!window.confirm('Delete this chat session? This will also delete documents uploaded in this session.')) return;
 
         try {
             await ragService.deleteSession(sessionId);
@@ -749,7 +773,12 @@ const CaseChat: React.FC = () => {
 
     const handleSendMessage = async (messageOverride?: string, skipUserMsg?: boolean) => {
         const msgContent = messageOverride || inputValue;
-        if (!msgContent.trim() || !currentSessionId) return;
+        const readyFiles = pendingFiles.filter(f => f.status === 'ready');
+        const hasContent = msgContent.trim() || readyFiles.length > 0;
+        if (!hasContent || !currentSessionId) return;
+
+        // Collect attachments from ready pending files
+        const attachments = readyFiles.map(f => ({ name: f.name, type: f.type }));
 
         let botMsgId = Date.now() + 1;
 
@@ -759,7 +788,8 @@ const CaseChat: React.FC = () => {
                 sender: 'You',
                 content: msgContent,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: true
+                isUser: true,
+                attachments: attachments.length > 0 ? attachments : undefined,
             };
 
             const botMsg: Message = {
@@ -786,6 +816,10 @@ const CaseChat: React.FC = () => {
         }
 
         if (!messageOverride) setInputValue('');
+        // Clear pending files after sending
+        if (readyFiles.length > 0) {
+            setPendingFiles(prev => prev.filter(f => f.status !== 'ready'));
+        }
         setIsLoading(true);
 
         // Abort any existing stream
@@ -974,83 +1008,64 @@ const CaseChat: React.FC = () => {
         }
     };
 
-    // ---- File Upload ----
+    // ---- File Upload (ChatGPT-style: files go to pending chips above input) ----
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (!files || files.length === 0 || !caseData?._id) return;
 
-        // Reset input so re-selecting the same file works
         const fileList = Array.from(files);
         e.target.value = '';
 
-        // Process files sequentially to avoid backend race conditions
         for (const file of fileList) {
             const fileName = file.name;
+            const ext = fileName.split('.').pop() || '';
 
             // Check file size (50MB limit)
             if (file.size > 50 * 1024 * 1024) {
-                const errorMsg: Message = {
-                    id: Date.now(),
-                    sender: 'System',
-                    content: `**${fileName}** exceeds the 50MB file size limit.`,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    isUser: false,
-                };
-                setMessages(prev => [...prev, errorMsg]);
+                setPendingFiles(prev => [...prev, { file, name: fileName, status: 'failed', type: ext }]);
                 continue;
             }
 
-            // Add to uploading tracker
-            setUploadingFiles(prev => [...prev, { name: fileName, status: 'uploading' }]);
-
-            // Post uploading system message
-            const uploadMsgId = Date.now();
-            setMessages(prev => [...prev, {
-                id: uploadMsgId,
-                sender: 'System',
-                content: `Uploading **${fileName}**...`,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                isUser: false,
-            }]);
+            // Add to pending files as uploading
+            setPendingFiles(prev => [...prev, { file, name: fileName, status: 'uploading', type: ext }]);
 
             try {
-                await ragService.ingestDocument(caseData._id, file);
+                const ingestResult = await ragService.ingestDocument(caseData._id, file, 3, currentSessionId || undefined);
+                const serverFilename: string = ingestResult?.filename || fileName;
 
                 // Update status to processing
-                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'processing' } : f));
-                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** uploaded. Processing for AI analysis...` } : m));
+                setPendingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'processing' } : f));
 
                 // Poll for ready status
                 const pollInterval = setInterval(async () => {
                     try {
                         const statuses = await ragService.getDocumentStatuses(caseData._id);
-                        const docStatus = Array.isArray(statuses) ? statuses.find((d: any) => d.filename === fileName) : null;
+                        const docStatus = Array.isArray(statuses) ? statuses.find((d: any) => d.filename === serverFilename) : null;
 
                         if (docStatus?.status === 'Ready') {
                             clearInterval(pollInterval);
-                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'ready' } : f));
-                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** is ready! You can now ask questions about it.` } : m));
-                            // Clean up ready files from tracker after a delay
-                            setTimeout(() => {
-                                setUploadingFiles(prev => prev.filter(f => f.name !== fileName));
-                            }, 3000);
+                            setPendingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'ready' } : f));
                         } else if (docStatus?.status === 'Failed') {
                             clearInterval(pollInterval);
-                            setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
-                            setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `**${fileName}** failed to process. Try uploading again from the Documents tab.` } : m));
+                            setPendingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
                         }
                     } catch {
                         // Polling error — keep trying
                     }
                 }, 3000);
 
-                // Safety: stop polling after 5 minutes
-                setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+                // Safety: stop polling after 5 minutes and mark as failed
+                setTimeout(() => {
+                    clearInterval(pollInterval);
+                    setPendingFiles(prev => prev.map(f =>
+                        f.name === fileName && (f.status === 'uploading' || f.status === 'processing')
+                            ? { ...f, status: 'failed' }
+                            : f
+                    ));
+                }, 5 * 60 * 1000);
 
             } catch (error: any) {
-                const errMsg = error?.response?.data?.detail || error?.response?.data?.error || 'Upload failed';
-                setUploadingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
-                setMessages(prev => prev.map(m => m.id === uploadMsgId ? { ...m, content: `Failed to upload **${fileName}**: ${errMsg}` } : m));
+                setPendingFiles(prev => prev.map(f => f.name === fileName ? { ...f, status: 'failed' } : f));
             }
         }
     };
@@ -1368,6 +1383,23 @@ const CaseChat: React.FC = () => {
                                             ${msg.isUser ? 'prose-invert' : 'prose-slate'}
                                         `}
                                     >
+                                        {/* Attachment file cards in user messages */}
+                                        {msg.isUser && msg.attachments && msg.attachments.length > 0 && (
+                                            <div className="mb-2 space-y-1.5">
+                                                {msg.attachments.map((att, idx) => {
+                                                    const icon = getFileIcon(att.type);
+                                                    return (
+                                                        <div key={idx} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20">
+                                                            <svg className={`w-5 h-5 flex-shrink-0 ${icon.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                            <span className="text-xs font-medium truncate max-w-[200px]">{att.name}</span>
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-bold">{icon.label}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                         {msg.isUser ? (
                                             <div className="whitespace-pre-wrap">{msg.content}</div>
                                         ) : (
@@ -1590,101 +1622,140 @@ const CaseChat: React.FC = () => {
                                     </div>
                                 </div>
                             )}
-                            {/* Upload status indicator */}
-                            {uploadingFiles.filter(f => f.status !== 'ready').length > 0 && (
-                                <div className="mb-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200/60 shadow-sm">
-                                    {uploadingFiles.filter(f => f.status !== 'ready').map(f => (
-                                        <div key={f.name} className="flex items-center gap-2 text-xs text-slate-500 py-0.5">
-                                            {(f.status === 'uploading' || f.status === 'processing') && (
-                                                <svg className="w-3.5 h-3.5 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                                            )}
-                                            {f.status === 'failed' && (
-                                                <svg className="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            )}
-                                            <span className="truncate">{f.name}</span>
-                                            <span className="text-slate-400">—</span>
-                                            <span className={f.status === 'failed' ? 'text-red-500' : 'text-blue-500'}>
-                                                {f.status === 'uploading' ? 'Uploading...' : f.status === 'processing' ? 'Processing...' : 'Failed'}
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            <div className="flex items-end gap-2 bg-white/80 backdrop-blur-md p-2 rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-200/40 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400">
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center"
-                                >
-                                    <PaperClipIcon />
-                                </button>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    multiple
-                                    accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.tiff,.zip"
-                                    className="hidden"
-                                    onChange={handleFileUpload}
-                                />
-                                <TransliterateInput
-                                    value={inputValue}
-                                    onChangeText={setInputValue}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder={t('portal.chat.placeholder')}
-                                    className="flex-1 bg-transparent max-h-32 min-h-[44px] py-3 resize-none outline-none text-sm text-slate-700 placeholder-slate-400 leading-relaxed"
-                                    type="textarea"
-                                    rows={1}
-                                    aria-label="Chat message input"
-                                />
-                                {/* Voice input (#19) */}
-                                {SpeechRecognition && (
+                            <div className="bg-white/80 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/50 hover:shadow-xl hover:shadow-slate-200/40 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400 overflow-hidden">
+                                {/* Attachment chips above textarea */}
+                                {pendingFiles.length > 0 && (
+                                    <div className="px-3 pt-3 pb-1 flex flex-wrap gap-2">
+                                        {pendingFiles.map(f => {
+                                            const icon = getFileIcon(f.type);
+                                            const isActive = f.status === 'uploading' || f.status === 'processing';
+                                            const isFailed = f.status === 'failed';
+                                            return (
+                                                <div
+                                                    key={f.name}
+                                                    className={`
+                                                        inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all
+                                                        ${isFailed
+                                                            ? 'bg-red-50 border border-red-300 text-red-700'
+                                                            : 'bg-slate-800 border border-slate-700 text-white'
+                                                        }
+                                                        ${isActive ? 'opacity-80' : ''}
+                                                    `}
+                                                >
+                                                    {/* File icon */}
+                                                    {isActive ? (
+                                                        <svg className="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                                                    ) : (
+                                                        <svg className={`w-4 h-4 flex-shrink-0 ${isFailed ? 'text-red-500' : icon.color}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                        </svg>
+                                                    )}
+                                                    {/* Filename (truncated) */}
+                                                    <span className="truncate max-w-[140px]">{f.name}</span>
+                                                    {/* Extension badge */}
+                                                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${isFailed ? 'bg-red-200 text-red-700' : 'bg-slate-700 text-slate-300'}`}>
+                                                        {icon.label}
+                                                    </span>
+                                                    {/* Remove / Retry button */}
+                                                    {isFailed ? (
+                                                        <button
+                                                            onClick={() => removePendingFile(f.name)}
+                                                            className="p-0.5 hover:bg-red-200 rounded transition-colors"
+                                                            title="Remove"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        </button>
+                                                    ) : !isActive ? (
+                                                        <button
+                                                            onClick={() => removePendingFile(f.name)}
+                                                            className="p-0.5 hover:bg-slate-600 rounded transition-colors text-slate-400 hover:text-white"
+                                                            title="Remove"
+                                                        >
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {/* Input row */}
+                                <div className="flex items-end gap-2 p-2">
                                     <button
-                                        onClick={toggleVoiceInput}
-                                        className={`p-3 rounded-full transition-all self-center ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
-                                        title={isListening ? 'Stop listening' : 'Voice input'}
-                                        aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors self-center"
                                     >
-                                        {isListening ? (
-                                            <span className="relative flex h-5 w-5 items-center justify-center">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                <svg className="relative w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" /></svg>
-                                            </span>
-                                        ) : (
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                        <PaperClipIcon />
+                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        multiple
+                                        accept=".pdf,.docx,.txt,.md,.jpg,.jpeg,.png,.bmp,.tiff,.zip"
+                                        className="hidden"
+                                        onChange={handleFileUpload}
+                                    />
+                                    <TransliterateInput
+                                        value={inputValue}
+                                        onChangeText={setInputValue}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder={t('portal.chat.placeholder')}
+                                        className="flex-1 bg-transparent max-h-32 min-h-[44px] py-3 resize-none outline-none text-sm text-slate-700 placeholder-slate-400 leading-relaxed"
+                                        type="textarea"
+                                        rows={1}
+                                        aria-label="Chat message input"
+                                    />
+                                    {/* Voice input (#19) */}
+                                    {SpeechRecognition && (
+                                        <button
+                                            onClick={toggleVoiceInput}
+                                            className={`p-3 rounded-full transition-all self-center ${isListening ? 'bg-red-100 text-red-500 animate-pulse' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'}`}
+                                            title={isListening ? 'Stop listening' : 'Voice input'}
+                                            aria-label={isListening ? 'Stop voice input' : 'Start voice input'}
+                                        >
+                                            {isListening ? (
+                                                <span className="relative flex h-5 w-5 items-center justify-center">
+                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                    <svg className="relative w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" /></svg>
+                                                </span>
+                                            ) : (
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                    )}
+                                    {isLoading ? (
+                                        <button
+                                            onClick={() => {
+                                                if (streamControllerRef.current) {
+                                                    streamControllerRef.current.abort();
+                                                    streamControllerRef.current = null;
+                                                    setIsLoading(false);
+                                                }
+                                            }}
+                                            className="p-3 rounded-full shadow-sm transition-all flex items-center justify-center self-center mb-0.5 bg-red-500 hover:bg-red-600 text-white transform hover:scale-105 active:scale-95"
+                                            title="Stop generation (Esc)"
+                                            aria-label="Stop generation"
+                                        >
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleSendMessage()}
+                                            disabled={(!inputValue.trim() && pendingFiles.filter(f => f.status === 'ready').length === 0) || pendingFiles.some(f => f.status === 'uploading' || f.status === 'processing')}
+                                            className={`p-3 rounded-full shadow-sm transition-all flex items-center justify-center self-center mb-0.5 ${
+                                                (!inputValue.trim() && pendingFiles.filter(f => f.status === 'ready').length === 0) || pendingFiles.some(f => f.status === 'uploading' || f.status === 'processing')
+                                                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                                    : 'bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-200 hover:shadow-blue-300 transform hover:scale-105 active:scale-95'
+                                            }`}
+                                        >
+                                            <svg className="w-5 h-5 translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                             </svg>
-                                        )}
-                                    </button>
-                                )}
-                                {isLoading ? (
-                                    <button
-                                        onClick={() => {
-                                            if (streamControllerRef.current) {
-                                                streamControllerRef.current.abort();
-                                                streamControllerRef.current = null;
-                                                setIsLoading(false);
-                                            }
-                                        }}
-                                        className="p-3 rounded-full shadow-sm transition-all flex items-center justify-center self-center mb-0.5 bg-red-500 hover:bg-red-600 text-white transform hover:scale-105 active:scale-95"
-                                        title="Stop generation (Esc)"
-                                        aria-label="Stop generation"
-                                    >
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => handleSendMessage()}
-                                        disabled={!inputValue.trim()}
-                                        className={`p-3 rounded-full shadow-sm transition-all flex items-center justify-center self-center mb-0.5 ${
-                                            !inputValue.trim()
-                                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                                : 'bg-gradient-to-br from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-200 hover:shadow-blue-300 transform hover:scale-105 active:scale-95'
-                                        }`}
-                                    >
-                                        <svg className="w-5 h-5 translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                        </svg>
-                                    </button>
-                                )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
 
                         </div>

@@ -27,6 +27,7 @@ custom_instructions_collection = db["custom_instructions"]
 chat_collection.create_index("session_id")
 chat_collection.create_index([("case_id", 1), ("user_id", 1)])
 document_status_collection.create_index([("case_id", 1), ("filename", 1)], unique=True)
+document_status_collection.create_index("session_id")
 investigation_jobs_collection.create_index([("case_id", 1), ("status", 1)])
 investigation_reports_collection.create_index([("case_id", 1), ("created_at", -1)])
 draft_sessions_collection.create_index([("case_id", 1), ("user_id", 1)])

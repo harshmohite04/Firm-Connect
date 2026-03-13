@@ -112,19 +112,21 @@ def process_zip_file(file_content, safe_filename, caseId, user_id):
     return ingested_files, failed_files
 
 
-async def process_single_file(file_content, safe_filename, caseId, user_id):
+async def process_single_file(file_content, safe_filename, caseId, user_id, session_id=None):
     """Process a single uploaded file: save, parse, and start background ingestion."""
+    doc_record = {
+        "status": "Processing",
+        "filename": safe_filename,
+        "case_id": caseId,
+        "user_id": user_id,
+        "last_updated": datetime.utcnow()
+    }
+    if session_id:
+        doc_record["session_id"] = session_id
+
     document_status_collection.update_one(
         {"case_id": caseId, "filename": safe_filename},
-        {
-            "$set": {
-                "status": "Processing",
-                "filename": safe_filename,
-                "case_id": caseId,
-                "user_id": user_id,
-                "last_updated": datetime.utcnow()
-            }
-        },
+        {"$set": doc_record},
         upsert=True
     )
 
@@ -154,7 +156,8 @@ async def process_single_file(file_content, safe_filename, caseId, user_id):
         text=text,
         source_name=safe_filename,
         case_id=caseId,
-        page_metadata=page_data
+        page_metadata=page_data,
+        session_id=session_id
     ))
 
-    logger.info(f"Started background ingestion: {safe_filename} for case {caseId}")
+    logger.info(f"Started background ingestion: {safe_filename} for case {caseId} (session: {session_id or 'none'})")

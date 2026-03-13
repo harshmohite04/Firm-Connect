@@ -25,7 +25,8 @@ const caseTeamInvitationSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        default: 'Member'
+        enum: ['MEMBER', 'VIEWER'],
+        default: 'MEMBER'
     },
     status: {
         type: String,

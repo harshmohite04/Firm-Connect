@@ -106,19 +106,21 @@ const acceptCaseTeamInvitation = async (req, res, next) => {
 
         // Add user to case team
         const caseDoc = invitation.caseId;
+        const memberRole = invitation.role || 'MEMBER';
         const alreadyMember = caseDoc.teamMembers.some(
             m => m.userId.toString() === req.user._id.toString()
         );
         if (!alreadyMember) {
             caseDoc.teamMembers.push({
                 userId: invitation.invitedUserId,
-                role: invitation.role || 'Member',
+                role: memberRole,
                 joinedAt: new Date()
             });
         }
 
-        // Add to assignedLawyers if not already there
-        if (!caseDoc.assignedLawyers.some(id => id.toString() === req.user._id.toString())) {
+        // Add to assignedLawyers only if not a VIEWER
+        if (memberRole !== 'VIEWER' &&
+            !caseDoc.assignedLawyers.some(id => id.toString() === req.user._id.toString())) {
             caseDoc.assignedLawyers.push(req.user._id);
         }
 
@@ -258,10 +260,22 @@ const removeTeamMember = async (req, res, next) => {
             throw new Error('Case not found');
         }
 
-        // Check if user is lead attorney
-        if (caseDoc.leadAttorneyId.toString() !== req.user._id.toString()) {
+        // Check if user is lead attorney or firm ADMIN in same org
+        const isLead = caseDoc.leadAttorneyId && caseDoc.leadAttorneyId.toString() === req.user._id.toString();
+        const isFirmAdmin = req.user.role === 'ADMIN' &&
+            req.user.organizationId &&
+            caseDoc.organizationId &&
+            req.user.organizationId.toString() === caseDoc.organizationId.toString();
+
+        if (!isLead && !isFirmAdmin) {
             res.status(403);
-            throw new Error('Only the lead attorney can remove team members');
+            throw new Error('Only the lead attorney or firm admin can remove team members');
+        }
+
+        // Block removal of lead attorney (must transfer first)
+        if (caseDoc.leadAttorneyId && caseDoc.leadAttorneyId.toString() === userId) {
+            res.status(400);
+            throw new Error('Cannot remove the lead attorney. Transfer leadership first.');
         }
 
         // Remove member
@@ -290,9 +304,9 @@ const removeTeamMember = async (req, res, next) => {
 // @access  Private
 const leaveTeam = async (req, res, next) => {
     try {
-        const { caseId } = req.params;
+        const caseId = req.params.id || req.params.caseId;
 
-        const caseDoc = await Case.findById(caseId);
+        const caseDoc = req.caseDoc || await Case.findById(caseId);
 
         if (!caseDoc) {
             res.status(404);
@@ -341,10 +355,10 @@ const leaveTeam = async (req, res, next) => {
 // @access  Private (Lead Attorney only)
 const updateLeadAttorney = async (req, res, next) => {
     try {
-        const { caseId } = req.params;
+        const caseId = req.params.id || req.params.caseId;
         const { newLeadId } = req.body;
 
-        const caseDoc = await Case.findById(caseId);
+        const caseDoc = req.caseDoc || await Case.findById(caseId);
 
         if (!caseDoc) {
             res.status(404);
@@ -367,7 +381,28 @@ const updateLeadAttorney = async (req, res, next) => {
             throw new Error('New lead attorney must be a team member');
         }
 
+        // Sync teamMembers roles: old lead → MEMBER, new lead → LEAD_ATTORNEY
+        const oldLeadId = caseDoc.leadAttorneyId ? caseDoc.leadAttorneyId.toString() : null;
+        caseDoc.teamMembers.forEach(member => {
+            if (member.userId.toString() === newLeadId) {
+                member.role = 'LEAD_ATTORNEY';
+            } else if (oldLeadId && member.userId.toString() === oldLeadId) {
+                member.role = 'MEMBER';
+            }
+        });
+
         caseDoc.leadAttorneyId = newLeadId;
+
+        // Add activity log entry for transfer
+        const newLead = await require('../models/User').findById(newLeadId).select('firstName lastName');
+        const newLeadName = newLead ? `${newLead.firstName} ${newLead.lastName || ''}`.trim() : 'Unknown';
+        caseDoc.activityLog.push({
+            type: 'lead_transferred',
+            description: `Lead attorney transferred to ${newLeadName}`,
+            performedBy: req.user._id,
+            createdAt: new Date()
+        });
+
         await caseDoc.save();
 
         res.json({
@@ -385,7 +420,7 @@ const updateLeadAttorney = async (req, res, next) => {
 // @access  Private
 const getTeamInvitations = async (req, res, next) => {
     try {
-        const { caseId } = req.params;
+        const caseId = req.params.id || req.params.caseId;
 
         const invitations = await CaseTeamInvitation.find({
             caseId,
@@ -414,13 +449,16 @@ const getTeamInvitations = async (req, res, next) => {
 
 // Helper: directly add user to case team, send email + notification
 const directAddToCase = async (caseDoc, userToAdd, role, requester, io) => {
+    const memberRole = role || 'MEMBER';
     caseDoc.teamMembers.push({
         userId: userToAdd._id,
-        role: role || 'Member',
+        role: memberRole,
         joinedAt: new Date()
     });
 
-    if (!caseDoc.assignedLawyers.some(id => id.toString() === userToAdd._id.toString())) {
+    // Skip assignedLawyers for VIEWER role
+    if (memberRole !== 'VIEWER' &&
+        !caseDoc.assignedLawyers.some(id => id.toString() === userToAdd._id.toString())) {
         caseDoc.assignedLawyers.push(userToAdd._id);
     }
 
@@ -469,10 +507,20 @@ const addTeamMember = async (req, res, next) => {
             throw new Error('Case not found');
         }
 
-        // Check if user is lead attorney
-        if (caseDoc.leadAttorneyId.toString() !== req.user._id.toString()) {
+        // Validate role — only MEMBER or VIEWER allowed for invites
+        const validatedRole = ['MEMBER', 'VIEWER'].includes(role) ? role : 'MEMBER';
+
+        // Check if user is lead attorney OR firm ADMIN in same org
+        const isLead = caseDoc.leadAttorneyId &&
+            caseDoc.leadAttorneyId.toString() === req.user._id.toString();
+        const isFirmAdmin = req.user.role === 'ADMIN' &&
+            req.user.organizationId &&
+            caseDoc.organizationId &&
+            req.user.organizationId.toString() === caseDoc.organizationId.toString();
+
+        if (!isLead && !isFirmAdmin) {
             res.status(403);
-            throw new Error('Only the lead attorney can add team members');
+            throw new Error('Only the lead attorney or firm admin can add team members');
         }
 
         const userToAdd = await User.findOne({ email: email.toLowerCase() });
@@ -535,7 +583,7 @@ const addTeamMember = async (req, res, next) => {
                 invitedBy: requester._id,
                 invitedEmail: userToAdd.email.toLowerCase(),
                 invitedUserId: userToAdd._id,
-                role: role || 'Member'
+                role: validatedRole
             });
 
             // Send email
@@ -601,7 +649,7 @@ const addTeamMember = async (req, res, next) => {
                 invitedBy: requester._id,
                 invitedEmail: userToAdd.email.toLowerCase(),
                 invitedUserId: userToAdd._id,
-                role: role || 'Member'
+                role: validatedRole
             });
 
             // Send email
@@ -662,7 +710,7 @@ const addTeamMember = async (req, res, next) => {
             requestedUserId: userToAdd._id,
             requestedByUserId: requester._id,
             organizationId: requester.organizationId,
-            role: role || 'Member'
+            role: validatedRole
         });
 
         // Find org admins
@@ -713,9 +761,16 @@ const getPendingTeamRequests = async (req, res, next) => {
             throw new Error('Case not found');
         }
 
-        if (caseDoc.leadAttorneyId.toString() !== req.user._id.toString()) {
+        const isLeadForRequests = caseDoc.leadAttorneyId &&
+            caseDoc.leadAttorneyId.toString() === req.user._id.toString();
+        const isFirmAdminForRequests = req.user.role === 'ADMIN' &&
+            req.user.organizationId &&
+            caseDoc.organizationId &&
+            req.user.organizationId.toString() === caseDoc.organizationId.toString();
+
+        if (!isLeadForRequests && !isFirmAdminForRequests) {
             res.status(403);
-            throw new Error('Only the lead attorney can view pending requests');
+            throw new Error('Only the lead attorney or firm admin can view pending requests');
         }
 
         const requests = await CaseTeamRequest.find({

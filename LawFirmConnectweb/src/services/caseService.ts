@@ -32,6 +32,7 @@ export interface Case {
   }[];
   invitationsSent?: number;
   invitationWarning?: string;
+  userCaseRole?: 'ADMIN' | 'LEAD_ATTORNEY' | 'MEMBER' | 'VIEWER';
 }
 
 export interface ActivityLog {
@@ -544,6 +545,21 @@ const caseService = {
 
   getPendingTeamRequests: async (id: string) => {
     const response = await api.get(`/cases/${id}/team/pending-requests`);
+    return response.data;
+  },
+
+  transferLead: async (id: string, newLeadId: string) => {
+    const response = await api.patch(`/cases/${id}/team/lead`, { newLeadId });
+    return response.data;
+  },
+
+  leaveTeam: async (id: string) => {
+    const response = await api.post(`/cases/${id}/team/leave`);
+    return response.data;
+  },
+
+  getTeamInvitations: async (id: string) => {
+    const response = await api.get(`/cases/${id}/team/invitations`);
     return response.data;
   },
 
