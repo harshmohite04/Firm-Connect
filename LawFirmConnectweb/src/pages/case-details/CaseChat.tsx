@@ -397,30 +397,68 @@ const CaseChat: React.FC = () => {
     }, [caseData._id]);
 
     useEffect(() => {
+        let pollTimer: ReturnType<typeof setTimeout> | null = null;
+        let cancelled = false;
+
+        const parseHistory = (data: { history?: { role: string; content: string; contexts?: ContextItem[] }[] }): Message[] => {
+            if (!data.history || !Array.isArray(data.history)) return [];
+            return data.history.map((msg, index) => ({
+                id: index,
+                sender: msg.role === 'user' ? 'You' : 'AI Assistant',
+                avatar: msg.role === 'assistant' ? 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff' : undefined,
+                content: msg.content,
+                time: '',
+                isUser: msg.role === 'user',
+                // @ts-ignore
+                contexts: msg.contexts || []
+            }));
+        };
+
         const fetchHistory = async () => {
             if (!caseData?._id || !currentSessionId) return;
             try {
                 const data = await ragService.getHistory(currentSessionId);
-                if (data.history && Array.isArray(data.history)) {
-                    const historyMessages: Message[] = data.history.map((msg: { role: string; content: string }, index: number) => ({
-                        id: index,
-                        sender: msg.role === 'user' ? 'You' : 'AI Assistant',
-                        avatar: msg.role === 'assistant' ? 'https://ui-avatars.com/api/?name=AI&background=0D8ABC&color=fff' : undefined,
-                        content: msg.content,
-                        time: '',
-                        isUser: msg.role === 'user',
-                        // @ts-ignore
-                        contexts: msg.contexts || []
-                    }));
-                    setMessages(historyMessages);
+                if (cancelled) return;
+                const historyMessages = parseHistory(data);
+                setMessages(historyMessages);
+
+                // If last message is from user, AI is still generating — poll until response arrives
+                const lastMsg = historyMessages[historyMessages.length - 1];
+                if (lastMsg && lastMsg.isUser) {
+                    setIsLoading(true);
+                    const poll = async () => {
+                        if (cancelled) return;
+                        try {
+                            const freshData = await ragService.getHistory(currentSessionId);
+                            if (cancelled) return;
+                            const freshMessages = parseHistory(freshData);
+                            setMessages(freshMessages);
+                            const freshLast = freshMessages[freshMessages.length - 1];
+                            if (freshLast && !freshLast.isUser) {
+                                // AI response arrived
+                                setIsLoading(false);
+                            } else {
+                                // Still waiting — poll again
+                                pollTimer = setTimeout(poll, 2000);
+                            }
+                        } catch {
+                            if (!cancelled) setIsLoading(false);
+                        }
+                    };
+                    pollTimer = setTimeout(poll, 2000);
                 } else {
-                    setMessages([]);
+                    setIsLoading(false);
                 }
             } catch (err) {
                 console.error("Failed to load history", err);
             }
         };
         fetchHistory();
+
+        return () => {
+            cancelled = true;
+            if (pollTimer) clearTimeout(pollTimer);
+        };
     }, [currentSessionId, caseData._id]);
 
     const handleCreateSession = async () => {
@@ -770,6 +808,7 @@ const CaseChat: React.FC = () => {
     };
 
     useEffect(() => { scrollToBottom(); }, [messages]);
+
 
     const handleSendMessage = async (messageOverride?: string, skipUserMsg?: boolean) => {
         const msgContent = messageOverride || inputValue;
@@ -1336,7 +1375,7 @@ const CaseChat: React.FC = () => {
                             </div>
                         )}
 
-                        {messages.map((msg) => (
+                        {messages.filter(msg => !(isLoading && !msg.isUser && msg.content === '')).map((msg) => (
                             <div
                                 key={msg.id}
                                 id={`msg-${msg.id}`}
@@ -1556,13 +1595,16 @@ const CaseChat: React.FC = () => {
                         ))}
 
                         {isLoading && (
-                            <div className="flex gap-4 animate-pulse" role="status" aria-label="AI is thinking">
-                                <div className="w-8 h-8 rounded-full bg-slate-200 flex-shrink-0"></div>
-                                <div className="bg-white border border-slate-100 text-slate-800 rounded-tl-sm p-4 rounded-2xl shadow-sm">
-                                    <div className="flex space-x-1.5">
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
-                                        <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                            <div className="flex gap-3 items-start" role="status" aria-label="AI is generating a response">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 flex-shrink-0 flex items-center justify-center shadow-md">
+                                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+                                    </svg>
+                                </div>
+                                <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm min-w-[180px]">
+                                    <p className="text-xs font-medium text-slate-500 mb-2">Generating response...</p>
+                                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full w-2/3 bg-gradient-to-r from-indigo-500 via-blue-500 to-indigo-500 rounded-full animate-shimmer-slide" />
                                     </div>
                                 </div>
                             </div>

@@ -405,57 +405,95 @@ const UserPortal: React.FC = () => {
                                 </h3>
                             </div>
                             <div className="px-5 py-3 space-y-3">
-                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                                    <div className="flex items-start gap-2">
-                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-warning)' }} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                                Potential Conflict Detected
-                                            </p>
-                                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                                Two of your cases may have overlapping parties. Review recommended.
-                                            </p>
-                                            <button className="text-xs font-semibold mt-2 transition-colors"
-                                                style={{ color: 'var(--color-accent)' }}>
-                                                Review Cases
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                                    <div className="flex items-start gap-2">
-                                        <FileText className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-info)' }} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                                Drafting Assistant Ready
-                                            </p>
-                                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                                3 documents are pending review. AI can help draft responses.
-                                            </p>
-                                            <button className="text-xs font-semibold mt-2 transition-colors"
-                                                style={{ color: 'var(--color-accent)' }}>
-                                                Open Assistant
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
-                                    <div className="flex items-start gap-2">
-                                        <Calendar className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-success)' }} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-                                                Calendar Optimization
-                                            </p>
-                                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                                                You have 2 back-to-back meetings tomorrow. Consider adding buffer time.
-                                            </p>
-                                            <button className="text-xs font-semibold mt-2 transition-colors"
-                                                style={{ color: 'var(--color-accent)' }}>
-                                                View Calendar
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                                {(() => {
+                                    const overdueCases = data?.needsAttention?.filter(i => i.type === 'overdue_case') ?? [];
+                                    const upcomingCount = data?.stats?.upcomingEvents ?? 0;
+                                    const unreadCount = data?.stats?.unreadMessages ?? 0;
+                                    const nextEvent = data?.upcomingEvents?.[0];
+                                    const hasInsights = overdueCases.length > 0 || upcomingCount > 0 || unreadCount > 0;
+
+                                    if (!hasInsights) {
+                                        return (
+                                            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                                                <div className="flex items-start gap-2">
+                                                    <CheckCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-success)' }} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                                            You're all caught up
+                                                        </p>
+                                                        <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                                            No pending actions or urgent items right now.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <>
+                                            {overdueCases.length > 0 && (
+                                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                                                    <div className="flex items-start gap-2">
+                                                        <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-warning)' }} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                                                {overdueCases.length} Overdue {overdueCases.length === 1 ? 'Case' : 'Cases'}
+                                                            </p>
+                                                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                {overdueCases[0].title} — requires attention.
+                                                            </p>
+                                                            <Link to="/portal/cases" className="text-xs font-semibold mt-2 inline-block transition-colors"
+                                                                style={{ color: 'var(--color-accent)' }}>
+                                                                Review Cases
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {upcomingCount > 0 && (
+                                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                                                    <div className="flex items-start gap-2">
+                                                        <Calendar className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-success)' }} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                                                {upcomingCount} Upcoming {upcomingCount === 1 ? 'Hearing' : 'Hearings'}
+                                                            </p>
+                                                            {nextEvent && (
+                                                                <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                    Next: {nextEvent.title}
+                                                                </p>
+                                                            )}
+                                                            <Link to="/portal/calendar" className="text-xs font-semibold mt-2 inline-block transition-colors"
+                                                                style={{ color: 'var(--color-accent)' }}>
+                                                                View Calendar
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {unreadCount > 0 && (
+                                                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--color-bg-secondary)' }}>
+                                                    <div className="flex items-start gap-2">
+                                                        <Mail className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--color-info)' }} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+                                                                {unreadCount} Unread {unreadCount === 1 ? 'Message' : 'Messages'}
+                                                            </p>
+                                                            <p className="text-xs mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+                                                                You have unread messages in your inbox.
+                                                            </p>
+                                                            <Link to="/portal/messages" className="text-xs font-semibold mt-2 inline-block transition-colors"
+                                                                style={{ color: 'var(--color-accent)' }}>
+                                                                Open Messages
+                                                            </Link>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>

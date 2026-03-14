@@ -46,6 +46,7 @@ import OrganizationPage from "./pages/organization/Organization";
 import InviteAccept from "./pages/InviteAccept";
 import InviteSetup from "./pages/InviteSetup";
 import CaseTeamInviteResponse from "./pages/CaseTeamInviteResponse";
+import PortalAdvocateProfile from "./pages/PortalAdvocateProfile";
 
 
 // ScrollToTop component to handle scroll position on route change
@@ -178,6 +179,15 @@ const App: React.FC = () => {
             <Route path="notifications" element={<ProfileNotifications />} />
             <Route path="subscription" element={<ProfileSubscription />} />
           </Route>
+
+          <Route
+            path="/portal/advocate-profile"
+            element={
+              <SubscriptionGuard>
+                <PortalAdvocateProfile />
+              </SubscriptionGuard>
+            }
+          />
 
           {/* Firm Management Routes */}
           <Route

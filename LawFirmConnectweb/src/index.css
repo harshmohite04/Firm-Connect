@@ -381,6 +381,15 @@ select {
 }
 
 
+@keyframes shimmer-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-shimmer-slide {
+  animation: shimmer-slide 1.5s ease-in-out infinite;
+}
+
 @keyframes fade-in-up {
   from {
     opacity: 0;

@@ -78,6 +78,42 @@ def _get_stream_client(user_id=None, model_override=None):
     else:
         return OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com"), DEEPSEEK_MODEL
 
+def _classify_intent(query: str, history: list, client, model: str) -> str:
+    """Classify whether the query needs RAG retrieval or is conversational."""
+    classify_messages = [
+        {
+            "role": "system",
+            "content": (
+                "Classify this message. Reply ONLY with RETRIEVE if user asks about "
+                "case/legal/document content, or CONVERSATIONAL if it's a greeting, "
+                "acknowledgment, follow-up opinion, or casual reply."
+            ),
+        }
+    ]
+    # Add last 2 history messages for context
+    for msg in history[-2:]:
+        classify_messages.append({"role": msg["role"], "content": msg["content"]})
+    classify_messages.append({"role": "user", "content": query})
+
+    try:
+        resp = client.chat.completions.create(
+            model=model,
+            messages=classify_messages,
+            max_tokens=5,
+            temperature=0,
+        )
+        label = (resp.choices[0].message.content or "").strip().upper()
+        return "conversational" if "CONVERSATIONAL" in label else "retrieve"
+    except Exception:
+        return "retrieve"  # Default to RAG on failure
+
+
+CONVERSATIONAL_SYSTEM_PROMPT = (
+    "You are a helpful legal assistant. Respond naturally and conversationally "
+    "based on the conversation history. Be concise and friendly. If the user "
+    "references something from earlier, use the conversation history to respond."
+)
+
 # Available models for the model picker
 AVAILABLE_MODELS = [
     {"id": "gpt-4o", "name": "GPT-4o", "provider": "openai"},
@@ -292,6 +328,54 @@ def ask_stream(query: str, case_id: str, history: list = [], top_k=5, user_id=No
 
     # Get fresh stream client based on current preset (with per-user override)
     current_stream_client, current_stream_model = _get_stream_client(user_id, model_override)
+
+    # --- Intent classification ---
+    intent = _classify_intent(query, history[-4:] if history else [], current_stream_client, current_stream_model)
+    print(f"[STREAM] Intent: {intent}")
+
+    if intent == "conversational":
+        # Skip retrieval entirely — yield empty contexts
+        yield f"data: {json_module.dumps({'type': 'contexts', 'contexts': []})}\n\n"
+
+        # Build conversational LLM messages
+        llm_messages = [{"role": "system", "content": CONVERSATIONAL_SYSTEM_PROMPT}]
+        if context_summary:
+            llm_messages.append({"role": "system", "content": f"Previous conversation summary:\n{context_summary}"})
+        if history:
+            for msg in history:
+                llm_messages.append({"role": msg["role"], "content": msg["content"]})
+        llm_messages.append({"role": "user", "content": query})
+
+        # Stream LLM response
+        full_answer = ""
+        usage_data = None
+        try:
+            stream = current_stream_client.chat.completions.create(
+                model=current_stream_model,
+                messages=llm_messages,
+                temperature=0.3,
+                stream=True,
+                stream_options={"include_usage": True},
+            )
+            for chunk in stream:
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    usage_data = {
+                        "prompt_tokens": chunk.usage.prompt_tokens or 0,
+                        "completion_tokens": chunk.usage.completion_tokens or 0,
+                        "total_tokens": chunk.usage.total_tokens or 0,
+                    }
+                if chunk.choices and chunk.choices[0].delta.content:
+                    token_text = chunk.choices[0].delta.content
+                    full_answer += token_text
+                    yield f"data: {json_module.dumps({'type': 'token', 'content': token_text})}\n\n"
+
+            done_event = {'type': 'done', 'answer': full_answer}
+            if usage_data:
+                done_event['usage'] = usage_data
+            yield f"data: {json_module.dumps(done_event)}\n\n"
+        except Exception as e:
+            yield f"data: {json_module.dumps({'type': 'error', 'detail': str(e)})}\n\n"
+        return
 
     # --- Retrieval (same logic as ask()) ---
     # Build Qdrant filter: always filter by case_id.
