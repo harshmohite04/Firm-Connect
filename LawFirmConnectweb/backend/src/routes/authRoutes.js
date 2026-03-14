@@ -4,6 +4,8 @@ const {
     registerUser,
     loginUser,
     getCurrentUser,
+    updateProfile,
+    updateNotificationPreferences,
     sendVerificationOTP,
     verifyOTP,
     resendOTP,
@@ -103,5 +105,7 @@ router.post('/reset-password', otpLimiter, [
 router.post('/register', registerValidation, registerUser);
 router.post('/login', loginValidation, loginUser);
 router.get('/me', protect, getCurrentUser);
+router.patch('/profile', protect, updateProfile);
+router.patch('/notification-preferences', protect, updateNotificationPreferences);
 
 module.exports = router;

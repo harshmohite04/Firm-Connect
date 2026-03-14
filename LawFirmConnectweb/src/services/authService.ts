@@ -10,6 +10,8 @@ export interface User {
   phone?: string;
   token?: string;
   organizationId?: string;
+  notificationPreferences?: { email: boolean; sms: boolean };
+  barNumber?: string;
 }
 
 export interface LoginResponse {
@@ -72,6 +74,18 @@ const getCurrentUser = async (): Promise<User> => {
   return response.data;
 };
 
+const updateProfile = async (data: { firstName: string; lastName: string; phone: string; barNumber?: string }): Promise<void> => {
+  const response = await api.patch("/auth/profile", data);
+  const stored = localStorage.getItem("user");
+  if (stored) {
+    localStorage.setItem("user", JSON.stringify({ ...JSON.parse(stored), ...response.data }));
+  }
+};
+
+const updateNotificationPreferences = async (prefs: { email: boolean; sms: boolean }): Promise<void> => {
+  await api.patch("/auth/notification-preferences", prefs);
+};
+
 const sendOTP = async (email: string): Promise<{ message: string }> => {
   const response = await api.post("/auth/send-otp", { email });
   return response.data;
@@ -124,6 +138,8 @@ const authService = {
   register,
   logout,
   getCurrentUser,
+  updateProfile,
+  updateNotificationPreferences,
   getOrganizations,
   sendOTP,
   verifyOTP,

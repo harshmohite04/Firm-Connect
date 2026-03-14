@@ -55,6 +55,15 @@ const userSchema = new mongoose.Schema(
 
     // Per-user AI model override (null = use global system default)
     aiPreset: { type: String, enum: ['deepseek', 'openai'], default: null },
+
+    // Bar registration number (advocates)
+    barNumber: { type: String, default: null },
+
+    // Notification preferences
+    notificationPreferences: {
+        email: { type: Boolean, default: true },
+        sms: { type: Boolean, default: false }
+    },
   },
   {
     timestamps: true,
@@ -105,6 +114,8 @@ userSchema.pre("save", async function (next) {
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
+
+userSchema.index({ barNumber: 1 }, { unique: true, sparse: true });
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

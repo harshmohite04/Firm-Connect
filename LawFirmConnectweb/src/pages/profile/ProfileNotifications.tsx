@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import toast from 'react-hot-toast';
+import authService from '../../services/authService';
 
 const languages = [
     { code: 'en', label: 'English' },
@@ -13,6 +15,28 @@ const ProfileNotifications: React.FC = () => {
         email: true,
         sms: false
     });
+
+    useEffect(() => {
+        authService.getCurrentUser().then(user => {
+            if (user.notificationPreferences) {
+                setNotifications({
+                    email: user.notificationPreferences.email,
+                    sms: user.notificationPreferences.sms
+                });
+            }
+        }).catch(() => {});
+    }, []);
+
+    const handleToggle = async (key: 'email' | 'sms') => {
+        const updated = { ...notifications, [key]: !notifications[key] };
+        setNotifications(updated);
+        try {
+            await authService.updateNotificationPreferences(updated);
+        } catch {
+            toast.error('Failed to save notification preference.');
+            setNotifications(notifications);
+        }
+    };
 
     const handleLanguageChange = (code: string) => {
         i18n.changeLanguage(code);
@@ -72,22 +96,7 @@ const ProfileNotifications: React.FC = () => {
                             <input
                                 type="checkbox"
                                 checked={notifications.email}
-                                onChange={() => setNotifications({ ...notifications, email: !notifications.email })}
-                                className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        </label>
-                    </div>
-                    <div className="flex items-center justify-between p-3 border border-slate-100 rounded-lg hover:border-blue-100 transition-colors">
-                        <div>
-                            <h4 className="font-bold text-slate-900 text-sm">{t('profile.smsNotifications')}</h4>
-                            <p className="text-xs text-slate-500">{t('profile.smsNotificationsDesc')}</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={notifications.sms}
-                                onChange={() => setNotifications({ ...notifications, sms: !notifications.sms })}
+                                onChange={() => handleToggle('email')}
                                 className="sr-only peer"
                             />
                             <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>

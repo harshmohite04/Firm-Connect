@@ -529,6 +529,57 @@ const loginUser = async (req, res, next) => {
     }
 };
 
+// @desc    Update profile info
+// @route   PATCH /auth/profile
+// @access  Private
+const updateProfile = async (req, res, next) => {
+    try {
+        const { firstName, lastName, phone, barNumber } = req.body;
+        if (!firstName || firstName.trim().length < 2) {
+            return res.status(400).json({ message: 'First name must be at least 2 characters.' });
+        }
+        const updateFields = {
+            firstName: firstName.trim(),
+            lastName: lastName?.trim() || '',
+            phone: phone?.trim() || ''
+        };
+        if (barNumber !== undefined) {
+            updateFields.barNumber = barNumber?.trim() || null;
+        }
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            updateFields,
+            { new: true, runValidators: true }
+        ).select('-password');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ firstName: user.firstName, lastName: user.lastName, phone: user.phone, barNumber: user.barNumber });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Update notification preferences
+// @route   PATCH /auth/notification-preferences
+// @access  Private
+const updateNotificationPreferences = async (req, res, next) => {
+    try {
+        const { email, sms } = req.body;
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { notificationPreferences: { email: !!email, sms: !!sms } },
+            { new: true }
+        ).select('notificationPreferences');
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ notificationPreferences: user.notificationPreferences });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // @desc    Get current user info
 // @route   GET /auth/me
 // @access  Private
@@ -559,6 +610,8 @@ const getCurrentUser = async (req, res, next) => {
             previousLoginAt: user.previousLoginAt,
             previousLoginDevice: user.previousLoginDevice,
             previousLoginLocation: user.previousLoginLocation,
+            notificationPreferences: user.notificationPreferences,
+            barNumber: user.barNumber,
         });
     } catch (error) {
         next(error);
@@ -569,6 +622,8 @@ module.exports = {
     registerUser,
     loginUser,
     getCurrentUser,
+    updateProfile,
+    updateNotificationPreferences,
     sendVerificationOTP,
     verifyOTP,
     resendOTP,

@@ -586,6 +586,12 @@ const PortalLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => 
                             )
                         )}
                     </Link>
+                    <Link to="/portal/advocate-profile" className={`flex items-center ${isMobile || sidebarOpen ? 'gap-3 px-3' : 'justify-center px-0'} py-2.5 rounded-lg font-medium text-sm transition-colors ${isActive('/portal/advocate-profile') ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`} title={(!isMobile && !sidebarOpen) ? 'My Profile' : undefined}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c0 1.306.835 2.417 2 2.83M17 16a2 2 0 00-2-2.83" />
+                        </svg>
+                        {sidebarOpen && <span>My Profile</span>}
+                    </Link>
 
                     {/* Firm Management Section */}
                     <div className="pt-4 mt-4" style={{ borderTop: '1px solid var(--color-surface-border)' }}>

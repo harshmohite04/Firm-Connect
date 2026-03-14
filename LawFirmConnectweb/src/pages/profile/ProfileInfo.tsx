@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import authService from '../../services/authService';
 
 const ProfileInfo: React.FC = () => {
     const [user, setUser] = useState<any>({
@@ -6,7 +7,8 @@ const ProfileInfo: React.FC = () => {
         lastName: '',
         email: '',
         phone: '',
-        role: ''
+        role: '',
+        barNumber: ''
     });
     const [isLoading, setIsLoading] = useState(false);
     const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
@@ -22,25 +24,26 @@ const ProfileInfo: React.FC = () => {
         setUser({ ...user, [e.target.name]: e.target.value });
     };
 
-    const handleSaveProfile = (e: React.FormEvent) => {
+    const handleSaveProfile = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setMessage(null);
 
-        // Simulate API call
-        setTimeout(() => {
-            localStorage.setItem('user', JSON.stringify(user));
+        try {
+            await authService.updateProfile({
+                firstName: user.firstName,
+                lastName: user.lastName || '',
+                phone: user.phone || '',
+                barNumber: user.barNumber || ''
+            });
             setMessage({ type: 'success', text: 'Profile updated successfully.' });
-            setIsLoading(false);
-            
-            // Clear message after 3 seconds
-            setTimeout(() => setMessage(null), 3000);
-            
-            // Dispatch storage event or custom event to update sidebar immediately if needed
-            // But since sidebar reads once on load or we might need context, we'll leave simple for now.
-            // A reload might be needed to see name change in sidebar if we don't use context.
             window.dispatchEvent(new Event('storage'));
-        }, 800);
+            setTimeout(() => setMessage(null), 3000);
+        } catch (err: any) {
+            setMessage({ type: 'error', text: err?.response?.data?.message || 'Failed to save profile.' });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -95,13 +98,25 @@ const ProfileInfo: React.FC = () => {
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Phone Number</label>
-                    <input 
+                    <input
                         name="phone"
-                        type="tel" 
+                        type="tel"
                         value={user.phone || ''}
                         onChange={handleInputChange}
                         placeholder="+1 (555) 555-5555"
                         className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Bar Registration Number</label>
+                    <input
+                        name="barNumber"
+                        type="text"
+                        value={user.barNumber || ''}
+                        onChange={handleInputChange}
+                        placeholder="e.g. MH/1234/2020"
+                        className="w-full px-3 py-2 rounded-lg outline-none transition-all text-sm border focus:ring-2"
+                        style={{ borderColor: 'var(--color-surface-border)', color: 'var(--color-text-primary)', backgroundColor: 'var(--color-surface)', '--tw-ring-color': 'var(--color-accent-glow)' } as React.CSSProperties}
                     />
                 </div>
 
