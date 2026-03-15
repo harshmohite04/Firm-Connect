@@ -24,6 +24,7 @@ async def ingest_file(
     file: UploadFile = File(...),
     caseId: str = Form(...),
     sessionId: Optional[str] = Form(None),
+    isScanned: Optional[str] = Form("false"),
     current_user: Dict = Depends(get_current_user)
 ):
     try:
@@ -39,10 +40,11 @@ async def ingest_file(
             )
 
         user_id = get_user_id(current_user)
+        is_scanned = (isScanned or "false").lower() == "true"
 
         if safe_filename.lower().endswith('.zip'):
             logger.info(f"Processing zip file: {safe_filename}")
-            ingested_files, failed_files = process_zip_file(file_content, safe_filename, caseId, user_id)
+            ingested_files, failed_files = process_zip_file(file_content, safe_filename, caseId, user_id, is_scanned=is_scanned)
 
             return {
                 "status": "processing",
@@ -54,7 +56,7 @@ async def ingest_file(
 
         else:
             await file.seek(0)
-            await process_single_file(file_content, safe_filename, caseId, user_id, session_id=sessionId or None)
+            await process_single_file(file_content, safe_filename, caseId, user_id, session_id=sessionId or None, is_scanned=is_scanned)
 
             return {
                 "status": "processing",

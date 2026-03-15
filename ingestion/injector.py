@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 from dotenv import load_dotenv
 
@@ -105,12 +106,12 @@ def qdrant_upsert(client: QdrantClient, collection: str, vectors: list[list[floa
             )
         )
 
-    print(f"[INFO] Upserting {len(points)} points into Qdrant collection '{collection}'...")
-    client.upsert(
-        collection_name=collection,
-        points=points,
-        wait=True,
-    )
+    QDRANT_BATCH_SIZE = 100
+    print(f"[INFO] Upserting {len(points)} points into Qdrant collection '{collection}' (batch size: {QDRANT_BATCH_SIZE})...")
+    for i in range(0, len(points), QDRANT_BATCH_SIZE):
+        batch = points[i:i + QDRANT_BATCH_SIZE]
+        client.upsert(collection_name=collection, points=batch, wait=True)
+        print(f"[INFO] Upserted batch {i // QDRANT_BATCH_SIZE + 1} ({len(batch)} points)")
     print("[OK] Qdrant upsert completed.")
 
 
@@ -196,7 +197,9 @@ def ingest_document(text: str, source_name: str, case_id: str, page_metadata: li
 
     # Batch-embed all chunks at once (3-10x faster than per-chunk)
     print(f"[EMBED] Batch encoding {len(all_texts)} chunks...")
+    t0 = time.time()
     vectors = embedder.embed_documents(all_texts)
+    print(f"[EMBED] Encoded {len(all_texts)} chunks in {time.time() - t0:.1f}s")
 
     # Upsert into Qdrant
     qdrant_upsert(qdrant, QDRANT_COLLECTION, vectors, payloads)

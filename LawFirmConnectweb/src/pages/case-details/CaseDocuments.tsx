@@ -82,6 +82,7 @@ const CaseDocuments: React.FC = () => {
     // Multi-Upload Modal State
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [pendingFiles, setPendingFiles] = useState<{ file: File; category: string; id: string }[]>([]);
+    const [documentType, setDocumentType] = useState<'digital' | 'scanned'>('digital');
     const uploadFileInputRef = React.useRef<HTMLInputElement>(null);
     
     // Viewer State
@@ -221,6 +222,7 @@ const CaseDocuments: React.FC = () => {
                 const formData = new FormData();
                 formData.append('files', pf.file);
                 formData.append('category', pf.category);
+                formData.append('isScanned', documentType === 'scanned' ? 'true' : 'false');
                 
                 // 1. Upload to Node.js Backend (Storage + Automatic Ingestion Trigger)
             await caseService.uploadDocument(id, formData);
@@ -237,6 +239,7 @@ const CaseDocuments: React.FC = () => {
             fetchAIStatuses();
             setIsUploadModalOpen(false);
             setPendingFiles([]);
+            setDocumentType('digital');
         } catch (error) {
             console.error("Upload failed", error);
             toast.error("Some uploads failed. Please check the list and try again.");
@@ -750,6 +753,22 @@ const CaseDocuments: React.FC = () => {
                                 </div>
                                 <p className="text-slate-900 font-bold mb-1">{t('portal.documents.dropzone')}</p>
                                 <p className="text-xs text-slate-500">Support for PDF, DOCX, JPG, PNG</p>
+                            </div>
+
+                            {/* Document Type Selector */}
+                            <div className="mt-4 flex items-center gap-3">
+                                <label className="text-sm font-bold text-slate-700">Document Type:</label>
+                                <select
+                                    value={documentType}
+                                    onChange={(e) => setDocumentType(e.target.value as 'digital' | 'scanned')}
+                                    className="text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="digital">Digital PDF</option>
+                                    <option value="scanned">Scanned PDF (uses OCR)</option>
+                                </select>
+                                {documentType === 'scanned' && (
+                                    <span className="text-xs text-amber-600 font-medium">OCR will be used for PDF files</span>
+                                )}
                             </div>
 
                             {/* Pending Files List */}

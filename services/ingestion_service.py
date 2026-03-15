@@ -32,7 +32,7 @@ async def run_ingestion_background(
         )
 
 
-def process_zip_file(file_content, safe_filename, caseId, user_id):
+def process_zip_file(file_content, safe_filename, caseId, user_id, is_scanned=False):
     """Process a zip file: extract and start background ingestion for each entry.
     Returns (ingested_files, failed_files).
     """
@@ -75,7 +75,7 @@ def process_zip_file(file_content, safe_filename, caseId, user_id):
                     dest_path = f"documents/{extracted_safe_name}"
                     shutil.copy2(extracted_path, dest_path)
 
-                    page_data = parse_file_with_pages(dest_path)
+                    page_data = parse_file_with_pages(dest_path, force_ocr=is_scanned)
                     text = "\n".join(p.get("text", "") for p in page_data)
 
                     if text.strip():
@@ -112,7 +112,7 @@ def process_zip_file(file_content, safe_filename, caseId, user_id):
     return ingested_files, failed_files
 
 
-async def process_single_file(file_content, safe_filename, caseId, user_id, session_id=None):
+async def process_single_file(file_content, safe_filename, caseId, user_id, session_id=None, is_scanned=False):
     """Process a single uploaded file: save, parse, and start background ingestion."""
     doc_record = {
         "status": "Processing",
@@ -134,7 +134,7 @@ async def process_single_file(file_content, safe_filename, caseId, user_id, sess
     with open(file_location, "wb+") as file_object:
         file_object.write(file_content)
 
-    page_data = parse_file_with_pages(file_location)
+    page_data = parse_file_with_pages(file_location, force_ocr=is_scanned)
     text = "\n".join(p.get("text", "") for p in page_data)
 
     if not text.strip():

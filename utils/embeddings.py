@@ -1,17 +1,27 @@
 import os
 import functools
+import torch
 from sentence_transformers import SentenceTransformer
 
 # Multilingual embedding model (1024-dim, supports Hindi and other Indian languages)
 EMBED_MODEL = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
+EMBED_BATCH_SIZE = int(os.getenv("EMBED_BATCH_SIZE", "128"))
 
-_sentence_transformer = SentenceTransformer(EMBED_MODEL)
+# Auto-detect best available device
+_device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"[EMBED] Loading {EMBED_MODEL} on {_device}")
+
+_sentence_transformer = SentenceTransformer(EMBED_MODEL, device=_device)
+
+# Use half-precision on GPU for ~2x throughput
+if _device == "cuda":
+    _sentence_transformer = _sentence_transformer.half()
 
 
 # --- Cached query embedding (saves ~50-100ms per repeated query) ---
 @functools.lru_cache(maxsize=512)
 def _embed_cached(text: str) -> tuple:
-    return tuple(_sentence_transformer.encode(text).tolist())
+    return tuple(_sentence_transformer.encode(text, normalize_embeddings=True).tolist())
 
 
 class LocalEmbedder:
@@ -22,11 +32,17 @@ class LocalEmbedder:
     def embed_query(self, text: str) -> list:
         return list(_embed_cached(text))
 
-    def embed_documents(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+    def embed_documents(self, texts: list[str], batch_size: int | None = None) -> list[list[float]]:
         """Batch-encode multiple texts at once (3-10x faster than per-chunk calls)."""
         if not texts:
             return []
-        return self.model.encode(texts, batch_size=batch_size).tolist()
+        bs = batch_size or EMBED_BATCH_SIZE
+        return self.model.encode(
+            texts,
+            batch_size=bs,
+            show_progress_bar=True,
+            normalize_embeddings=True,
+        ).tolist()
 
 
 # Shared singleton embedder instance

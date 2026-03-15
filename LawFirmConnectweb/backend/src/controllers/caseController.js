@@ -371,7 +371,7 @@ const runTranscription = (filePath) => {
 
 const uploadDocument = async (req, res, next) => {
     try {
-        const { category } = req.body;
+        const { category, isScanned } = req.body;
         if (!req.files) { res.status(400); throw new Error('No files'); }
         
         const caseDoc = await Case.findById(req.params.id);
@@ -380,7 +380,7 @@ const uploadDocument = async (req, res, next) => {
         const processedDocuments = [];
 
         // Helper to process files (Zip extraction, Ingestion, Transcription)
-        const processFilesAndIngest = async (files, caseDoc, user, defaultCategory = 'General', authToken) => {
+        const processFilesAndIngest = async (files, caseDoc, user, defaultCategory = 'General', authToken, isScanned = 'false') => {
             const processedDocuments = [];
 
             // Helper function to process a single file
@@ -487,7 +487,7 @@ const uploadDocument = async (req, res, next) => {
                             
                             // Trigger ingestion for this file
                             console.log(`[DEBUG] Calling ingestToRAG for extracted file: ${path.basename(entryName)}`);
-                            await ingestToRAG(extractedFilePath, path.basename(entryName), caseDoc._id, authToken);
+                            await ingestToRAG(extractedFilePath, path.basename(entryName), caseDoc._id, authToken, isScanned);
                         }
                         
                         // Delete the zip file itself (we don't want it in documents)
@@ -517,7 +517,7 @@ const uploadDocument = async (req, res, next) => {
                     
                     // Trigger ingestion for regular files
                     if (f.path) {
-                        await ingestToRAG(f.path, f.originalname, caseDoc._id, authToken);
+                        await ingestToRAG(f.path, f.originalname, caseDoc._id, authToken, isScanned);
                     }
                 }
             }
@@ -525,7 +525,7 @@ const uploadDocument = async (req, res, next) => {
         };
 
         const authToken = req.headers.authorization; // Assuming token is passed in Authorization header
-        const newDocuments = await processFilesAndIngest(req.files, caseDoc, req.user, category, authToken);
+        const newDocuments = await processFilesAndIngest(req.files, caseDoc, req.user, category, authToken, isScanned || 'false');
         
         caseDoc.documents.push(...newDocuments);
         caseDoc.activityLog.push({
@@ -581,14 +581,15 @@ function getMimeType(filename) {
 }
 
 // Helper to trigger RAG ingestion
-async function ingestToRAG(filePath, filename, caseId, authToken) {
+async function ingestToRAG(filePath, filename, caseId, authToken, isScanned = 'false') {
     try {
         const PYTHON_SERVER = 'http://localhost:8000';
-        console.log(`Triggering RAG ingestion for ${filename} to ${PYTHON_SERVER}...`);
-        
+        console.log(`Triggering RAG ingestion for ${filename} to ${PYTHON_SERVER}... (isScanned: ${isScanned})`);
+
         const formData = new FormData();
         formData.append('file', fs.createReadStream(filePath), { filename });
         formData.append('caseId', String(caseId));
+        formData.append('isScanned', isScanned);
         
         // Call Python server ingestion endpoint
         await axios.post(`${PYTHON_SERVER}/ingest`, formData, {

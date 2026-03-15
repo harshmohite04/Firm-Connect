@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
+import Logo from '../../assets/logo.svg';
 import caseService from '../../services/caseService';
 import type {
     Case,
@@ -627,29 +628,219 @@ const InvestigatorAgent: React.FC = () => {
         setFactsPage(0);
     };
 
+    const printStyles = `
+        @page { margin: 15mm 12mm; }
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; max-width: 900px; margin: 0 auto; padding: 0 20px; line-height: 1.7; color: #1a1a1a; font-size: 14px; }
+
+        /* Header with logo */
+        .print-header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #7c3aed; padding-bottom: 16px; margin-bottom: 24px; }
+        .print-header img { height: 40px; max-width: 140px; object-fit: contain; }
+        .print-header .title { font-size: 1.4em; font-weight: 800; color: #1e1b4b; margin: 0; }
+        .print-header .subtitle { font-size: 0.75em; color: #64748b; margin: 2px 0 0 0; }
+
+        h1 { font-size: 1.5em; font-weight: 800; margin-bottom: 8px; }
+        h2 { font-size: 1.2em; font-weight: 700; margin-top: 1.5em; padding: 8px 12px; border-left: 4px solid #7c3aed; background: #f5f3ff; }
+        h3 { font-size: 1.05em; font-weight: 600; margin-top: 1.2em; }
+        p { margin: 0.6em 0; text-align: justify; }
+        ul, ol { padding-left: 24px; margin: 8px 0; }
+        li { margin: 4px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
+        th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; }
+        blockquote { border-left: 3px solid #cbd5e1; padding-left: 16px; margin: 12px 0; color: #475569; font-style: italic; }
+
+        /* Section header colored borders */
+        .section-violet { border-left: 4px solid #8b5cf6; background: #f5f3ff; padding: 8px 12px; }
+        .section-blue { border-left: 4px solid #3b82f6; background: #eff6ff; padding: 8px 12px; }
+        .section-amber { border-left: 4px solid #f59e0b; background: #fffbeb; padding: 8px 12px; }
+        .section-red { border-left: 4px solid #ef4444; background: #fef2f2; padding: 8px 12px; }
+        .section-emerald { border-left: 4px solid #10b981; background: #ecfdf5; padding: 8px 12px; }
+        .section-cyan { border-left: 4px solid #06b6d4; background: #ecfeff; padding: 8px 12px; }
+        .section-orange { border-left: 4px solid #f97316; background: #fff7ed; padding: 8px 12px; }
+
+        /* Risk/severity badges */
+        .badge-high, .badge-critical { background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75em; display: inline-block; }
+        .badge-medium { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75em; display: inline-block; }
+        .badge-low { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75em; display: inline-block; }
+
+        /* Dashboard stats table */
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+        .stat-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; text-align: center; }
+        .stat-box .stat-value { font-size: 1.5em; font-weight: 800; color: #1e1b4b; }
+        .stat-box .stat-label { font-size: 0.75em; color: #64748b; margin-top: 2px; }
+
+        /* Dashboard sections */
+        .db-section { margin-top: 24px; page-break-inside: avoid; }
+        .db-section-title { font-size: 1.1em; font-weight: 700; color: #1e1b4b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px; }
+        .db-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+        .db-card .card-title { font-weight: 600; color: #1e1b4b; margin-bottom: 4px; }
+        .db-card .card-text { font-size: 0.85em; color: #475569; }
+        .db-card .card-meta { font-size: 0.75em; color: #94a3b8; margin-top: 4px; }
+
+        /* Timeline */
+        .timeline-item { display: flex; gap: 12px; margin-bottom: 12px; padding-left: 8px; border-left: 2px solid #e2e8f0; }
+        .timeline-item .tl-date { font-size: 0.75em; font-weight: 600; color: #7c3aed; min-width: 90px; }
+        .timeline-item .tl-desc { font-size: 0.85em; color: #334155; }
+
+        /* Entity graph SVG */
+        svg { max-width: 100%; height: auto; }
+
+        /* Footer */
+        .print-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 0.7em; color: #94a3b8; text-align: center; }
+
+        @media print { body { margin: 0; } .print-header { break-after: avoid; } .db-section { break-inside: avoid; } }
+    `;
+
+    const buildPrintHeader = (subtitle: string) => `
+        <div class="print-header">
+            <img src="${Logo}" alt="Logo" />
+            <div>
+                <div class="title">Legal Intelligence Report</div>
+                <div class="subtitle">${subtitle}</div>
+            </div>
+        </div>
+    `;
+
+    const buildPrintFooter = () => `
+        <div class="print-footer">
+            Generated by AI Investigation Pipeline &bull; ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} &bull; Confidential
+        </div>
+    `;
+
     const handlePrint = () => {
         const contentEl = document.getElementById('investigator-print-content');
         if (!contentEl) return;
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html><head><title>Investigation Report</title>
-            <style>
-                body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 40px auto; padding: 0 20px; line-height: 1.7; color: #1a1a1a; font-size: 14px; }
-                h1 { font-size: 1.5em; font-weight: 800; margin-bottom: 8px; }
-                h2 { font-size: 1.2em; font-weight: 700; margin-top: 1.5em; padding: 8px 12px; border-left: 4px solid #7c3aed; background: #f5f3ff; }
-                h3 { font-size: 1.05em; font-weight: 600; margin-top: 1.2em; }
-                p { margin: 0.6em 0; text-align: justify; }
-                ul, ol { padding-left: 24px; margin: 8px 0; }
-                li { margin: 4px 0; }
-                table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9em; }
-                th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
-                th { background: #f8fafc; font-weight: 600; }
-                blockquote { border-left: 3px solid #cbd5e1; padding-left: 16px; margin: 12px 0; color: #475569; font-style: italic; }
-                @media print { body { margin: 0; } }
-            </style></head><body>${contentEl.innerHTML}</body></html>
-        `);
+
+        // Clone content and strip the in-app gradient header bar (it has icons that render huge without Tailwind)
+        const clone = contentEl.cloneNode(true) as HTMLElement;
+        const gradientHeader = clone.querySelector('.from-violet-600');
+        if (gradientHeader) {
+            gradientHeader.parentElement?.removeChild(gradientHeader);
+        }
+
+        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const reportIdStr = selectedReportId ? ` | Report #${selectedReportId.slice(-8)}` : '';
+
+        printWindow.document.write(`<!DOCTYPE html>
+            <html><head><title>Legal Intelligence Report</title>
+            <style>${printStyles}</style></head>
+            <body>
+                ${buildPrintHeader(`${reportDate}${reportIdStr}`)}
+                ${clone.innerHTML}
+                ${buildPrintFooter()}
+            </body></html>`);
+        printWindow.document.close();
+        printWindow.print();
+    };
+
+    const handlePrintDashboard = () => {
+        if (!structuredData && !stats) return;
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const reportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const reportIdStr = selectedReportId ? ` | Report #${selectedReportId.slice(-8)}` : '';
+
+        // Build stats section
+        let statsHtml = '';
+        if (stats) {
+            statsHtml = `<div class="stats-grid">
+                <div class="stat-box"><div class="stat-value">${stats.document_count ?? 0}</div><div class="stat-label">Documents Analyzed</div></div>
+                <div class="stat-box"><div class="stat-value">${stats.fact_count ?? 0}</div><div class="stat-label">Facts Extracted</div></div>
+                <div class="stat-box"><div class="stat-value">${stats.entity_count ?? 0}</div><div class="stat-label">Entities Found</div></div>
+                <div class="stat-box"><div class="stat-value">${stats.conflict_count ?? 0}</div><div class="stat-label">Conflicts</div></div>
+                <div class="stat-box"><div class="stat-value"><span class="badge-${(stats.overall_risk_level || 'low').toLowerCase()}">${stats.overall_risk_level || 'N/A'}</span></div><div class="stat-label">Risk Level</div></div>
+            </div>`;
+        }
+
+        // Entity graph SVG — find the large graph SVG (viewBox="0 0 700 420"), not small icon SVGs
+        let graphHtml = '';
+        const graphSvg = document.querySelector('#investigator-print-content svg[viewBox="0 0 700 420"]');
+        if (graphSvg) {
+            graphHtml = `<div class="db-section">
+                <div class="db-section-title">Entity Relationship Graph</div>
+                ${graphSvg.outerHTML}
+            </div>`;
+        }
+
+        // Evidence/Facts
+        let factsHtml = '';
+        if (structuredData && structuredData.facts.length > 0) {
+            const factCards = structuredData.facts.map(f =>
+                `<div class="db-card">
+                    <div class="card-title">${f.description || f.id}</div>
+                    ${f.source_doc_id ? `<div class="card-meta">Source: ${f.source_doc_id}</div>` : ''}
+                    ${f.confidence ? `<div class="card-meta">Confidence: ${(f.confidence * 100).toFixed(0)}%</div>` : ''}
+                </div>`
+            ).join('');
+            factsHtml = `<div class="db-section">
+                <div class="db-section-title">Evidence Cards (${structuredData.facts.length} facts)</div>
+                ${factCards}
+            </div>`;
+        }
+
+        // Timeline
+        let timelineHtml = '';
+        if (structuredData && structuredData.timeline.length > 0) {
+            const items = structuredData.timeline.map(t =>
+                `<div class="timeline-item">
+                    <div class="tl-date">${t.date || ''}</div>
+                    <div class="tl-desc">${t.event || t.description || ''}</div>
+                </div>`
+            ).join('');
+            timelineHtml = `<div class="db-section">
+                <div class="db-section-title">Timeline (${structuredData.timeline.length} events)</div>
+                ${items}
+            </div>`;
+        }
+
+        // Conflicts
+        let conflictsHtml = '';
+        if (structuredData && structuredData.conflicts.length > 0) {
+            const cards = structuredData.conflicts.map(c =>
+                `<div class="db-card">
+                    <div class="card-title">${c.description || 'Conflict'}</div>
+                    ${c.resolution_status ? `<div class="card-meta">Status: ${c.resolution_status}</div>` : ''}
+                    ${c.resolution_note ? `<div class="card-text" style="margin-top:4px">${c.resolution_note}</div>` : ''}
+                </div>`
+            ).join('');
+            conflictsHtml = `<div class="db-section">
+                <div class="db-section-title">Conflicts (${structuredData.conflicts.length})</div>
+                ${cards}
+            </div>`;
+        }
+
+        // Risks
+        let risksHtml = '';
+        if (structuredData && structuredData.risks.length > 0) {
+            const cards = structuredData.risks.map(r =>
+                `<div class="db-card">
+                    <div class="card-title">${r.description || r.title || 'Risk'}</div>
+                    ${r.severity ? `<div class="card-meta">Severity: <span class="badge-${r.severity.toLowerCase()}">${r.severity}</span></div>` : ''}
+                    ${r.mitigation ? `<div class="card-text" style="margin-top:4px"><strong>Mitigation:</strong> ${r.mitigation}</div>` : ''}
+                </div>`
+            ).join('');
+            risksHtml = `<div class="db-section">
+                <div class="db-section-title">Risk Assessment (${structuredData.risks.length})</div>
+                ${cards}
+            </div>`;
+        }
+
+        printWindow.document.write(`<!DOCTYPE html>
+            <html><head><title>Intelligence Board</title>
+            <style>${printStyles}</style></head>
+            <body>
+                ${buildPrintHeader(`Intelligence Board &bull; ${reportDate}${reportIdStr}`)}
+                ${statsHtml}
+                ${graphHtml}
+                ${factsHtml}
+                ${timelineHtml}
+                ${conflictsHtml}
+                ${risksHtml}
+                ${buildPrintFooter()}
+            </body></html>`);
         printWindow.document.close();
         printWindow.print();
     };
@@ -731,10 +922,10 @@ const InvestigatorAgent: React.FC = () => {
                         )}
 
                         {/* Print */}
-                        {report && !loading && viewMode === 'report' && (
-                            <button onClick={handlePrint}
+                        {report && !loading && (
+                            <button onClick={viewMode === 'report' ? handlePrint : handlePrintDashboard}
                                 className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                                title="Print report">
+                                title={viewMode === 'report' ? 'Print report' : 'Print intelligence board'}>
                                 <PrintIcon />
                             </button>
                         )}
